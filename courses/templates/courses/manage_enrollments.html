@@ -1,0 +1,774 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Enrollments - Instructor Panel{% endblock %}
+
+{% block page_title %}Manage Course Enrollments{% endblock %}
+
+{% block content %}
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center bg-primary text-white">
+            <div class="card-body">
+                <i class="fas fa-users fa-2x mb-2"></i>
+                <h4>{{ enrollments.paginator.count }}</h4>
+                <p class="mb-0">Total Enrollments</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-success text-white">
+            <div class="card-body">
+                <i class="fas fa-check-circle fa-2x mb-2"></i>
+                <h4>{{ active_enrollments|default:0 }}</h4>
+                <p class="mb-0">Active Students</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-warning text-white">
+            <div class="card-body">
+                <i class="fas fa-clock fa-2x mb-2"></i>
+                <h4>{{ pending_payments|default:0 }}</h4>
+                <p class="mb-0">Pending Payments</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center bg-info text-white">
+            <div class="card-body">
+                <i class="fas fa-trophy fa-2x mb-2"></i>
+                <h4>{{ completed_enrollments|default:0 }}</h4>
+                <p class="mb-0">Completed</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters and Actions -->
+<div class="card mb-4">
+    <div class="card-header bg-transparent">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-filter me-2"></i>Filter & Search Enrollments
+            </h5>
+            {% if request.user.role == 'superadmin' %}
+            <div>
+                <a href="{% url 'courses:admin_manual_enrollment' %}" class="btn btn-primary">
+                    <i class="fas fa-user-plus me-2"></i>Manual Enrollment
+                </a>
+                <div class="btn-group ms-2">
+                    <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                        <i class="fas fa-download me-2"></i>Export
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" onclick="exportData('excel')">
+                            <i class="fas fa-file-excel me-2"></i>Excel
+                        </a></li>
+                        <li><a class="dropdown-item" href="#" onclick="exportData('csv')">
+                            <i class="fas fa-file-csv me-2"></i>CSV
+                        </a></li>
+                        <li><a class="dropdown-item" href="#" onclick="exportData('pdf')">
+                            <i class="fas fa-file-pdf me-2"></i>PDF Report
+                        </a></li>
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <!-- Search -->
+            <div class="col-md-4">
+                <label for="search" class="form-label">Search Students</label>
+                <div class="input-group">
+                    <input type="text" 
+                           class="form-control" 
+                           id="search" 
+                           name="search" 
+                           value="{{ search_query }}" 
+                           placeholder="Student name, email, or course...">
+                    <button class="btn btn-outline-primary" type="submit">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Status Filter -->
+            <div class="col-md-2">
+                <label for="status" class="form-label">Status</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">All Status</option>
+                    {% for status_code, status_name in status_choices %}
+                        <option value="{{ status_code }}" {% if status_filter == status_code %}selected{% endif %}>
+                            {{ status_name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Course Filter -->
+            <div class="col-md-3">
+                <label for="course" class="form-label">Course</label>
+                <select class="form-select" id="course" name="course">
+                    <option value="">All Courses</option>
+                    {% for course in courses %}
+                        <option value="{{ course.id }}" {% if course_filter == course.id|stringformat:"s" %}selected{% endif %}>
+                            {{ course.course_code }} - {{ course.title }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Sort -->
+            <div class="col-md-2">
+                <label for="sort" class="form-label">Sort By</label>
+                <select class="form-select" id="sort" name="sort">
+                    <option value="-enrolled_at">Recently Enrolled</option>
+                    <option value="enrolled_at">Oldest First</option>
+                    <option value="student__last_name">Student Name</option>
+                    <option value="course__title">Course Name</option>
+                    <option value="-progress_percentage">Progress High-Low</option>
+                </select>
+            </div>
+            
+            <div class="col-md-1 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">Apply</button>
+            </div>
+        </form>
+        
+        <!-- Active Filters Display -->
+        {% if search_query or status_filter or course_filter %}
+        <div class="mt-3">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="text-muted">Active filters:</span>
+                
+                {% if search_query %}
+                    <span class="badge bg-primary">Search: "{{ search_query }}"</span>
+                {% endif %}
+                
+                {% if status_filter %}
+                    <span class="badge bg-secondary">Status: {{ status_filter|title }}</span>
+                {% endif %}
+                
+                {% if course_filter %}
+                    <span class="badge bg-info">Course Selected</span>
+                {% endif %}
+                
+                <a href="{% url 'courses:admin_manage_enrollments' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-times me-1"></i>Clear All
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Enrollments Table -->
+<div class="card">
+    <div class="card-header bg-transparent">
+        <h5 class="mb-0">
+            <i class="fas fa-list me-2"></i>
+            Enrollment Records
+            {% if enrollments %}
+                <small class="text-muted">({{ enrollments.start_index }}-{{ enrollments.end_index }} of {{ enrollments.paginator.count }})</small>
+            {% endif %}
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        {% if enrollments %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>
+                                <input type="checkbox" class="form-check-input" id="selectAll">
+                            </th>
+                            <th>Student</th>
+                            <th>Course</th>
+                            <th>Enrolled Date</th>
+                            <th>Status</th>
+                            <th>Progress</th>
+                            <th>Payment</th>
+                            <th>Grade</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for enrollment in enrollments %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" class="form-check-input enrollment-checkbox" 
+                                       value="{{ enrollment.id }}">
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    {% if enrollment.student.profile_picture %}
+                                        <img src="{{ enrollment.student.profile_picture.url }}" 
+                                             alt="{{ enrollment.student.get_full_name }}" 
+                                             class="rounded-circle me-2" 
+                                             style="width: 35px; height: 35px; object-fit: cover;">
+                                    {% else %}
+                                        <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-2 text-white" 
+                                             style="width: 35px; height: 35px;">
+                                            <i class="fas fa-user"></i>
+                                        </div>
+                                    {% endif %}
+                                    <div>
+                                        <div class="fw-bold">{{ enrollment.student.get_full_name|default:enrollment.student.username }}</div>
+                                        <small class="text-muted">{{ enrollment.student.email }}</small>
+                                        {% if enrollment.student.profile.student_id %}
+                                            <br><small class="text-muted">ID: {{ enrollment.student.profile.student_id }}</small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <div class="fw-bold">{{ enrollment.course.title }}</div>
+                                    <small class="text-muted">{{ enrollment.course.course_code }}</small>
+                                    <br><small class="text-muted">{{ enrollment.course.instructor.get_full_name }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div>{{ enrollment.enrolled_at|date:"M d, Y" }}</div>
+                                <small class="text-muted">{{ enrollment.enrolled_at|time:"H:i" }}</small>
+                            </td>
+                            <td>
+                                {% if enrollment.status == 'enrolled' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check me-1"></i>Active
+                                    </span>
+                                {% elif enrollment.status == 'completed' %}
+                                    <span class="badge bg-primary">
+                                        <i class="fas fa-graduation-cap me-1"></i>Completed
+                                    </span>
+                                {% elif enrollment.status == 'dropped' %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-times me-1"></i>Dropped
+                                    </span>
+                                {% elif enrollment.status == 'suspended' %}
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-pause me-1"></i>Suspended
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="progress mb-1" style="height: 8px;">
+                                    <div class="progress-bar" 
+                                         role="progressbar" 
+                                         style="width: {{ enrollment.progress_percentage }}%"
+                                         aria-valuenow="{{ enrollment.progress_percentage }}" 
+                                         aria-valuemin="0" 
+                                         aria-valuemax="100">
+                                    </div>
+                                </div>
+                                <small class="text-muted">{{ enrollment.progress_percentage|floatformat:1 }}%</small>
+                            </td>
+                            <td>
+                                <div>${{ enrollment.amount_paid }}</div>
+                                {% if enrollment.payment_status == 'completed' %}
+                                    <small class="text-success">
+                                        <i class="fas fa-check me-1"></i>Paid
+                                    </small>
+                                {% elif enrollment.payment_status == 'pending' %}
+                                    <small class="text-warning">
+                                        <i class="fas fa-clock me-1"></i>Pending
+                                    </small>
+                                {% elif enrollment.payment_status == 'waived' %}
+                                    <small class="text-info">
+                                        <i class="fas fa-gift me-1"></i>Waived
+                                    </small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if enrollment.grade %}
+                                    <span class="badge bg-secondary">{{ enrollment.grade }}</span>
+                                {% else %}
+                                    <span class="text-muted">--</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" 
+                                            class="btn btn-outline-primary" 
+                                            onclick="viewEnrollment({{ enrollment.id }})"
+                                            title="View Details">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button type="button" 
+                                            class="btn btn-outline-secondary" 
+                                            onclick="editEnrollment({{ enrollment.id }})"
+                                            title="Edit">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" 
+                                            class="btn btn-outline-success" 
+                                            onclick="sendEmail({{ enrollment.student.id }}, '{{ enrollment.student.email }}')"
+                                            title="Send Email">
+                                        <i class="fas fa-envelope"></i>
+                                    </button>
+                                    {% if request.user.role == 'superadmin' %}
+                                    <button type="button" 
+                                            class="btn btn-outline-danger" 
+                                            onclick="deleteEnrollment({{ enrollment.id }})"
+                                            title="Remove Enrollment">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if enrollments.has_other_pages %}
+            <nav aria-label="Enrollments pagination" class="mt-3">
+                <ul class="pagination justify-content-center">
+                    {% if enrollments.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ enrollments.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if course_filter %}&course={{ course_filter }}{% endif %}">
+                                <i class="fas fa-chevron-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    {% for num in enrollments.paginator.page_range %}
+                        {% if enrollments.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > enrollments.number|add:'-3' and num < enrollments.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if course_filter %}&course={{ course_filter }}{% endif %}">
+                                    {{ num }}
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if enrollments.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ enrollments.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if course_filter %}&course={{ course_filter }}{% endif %}">
+                                <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-users fa-4x text-muted mb-3"></i>
+                <h5 class="text-muted">No enrollments found</h5>
+                {% if search_query or status_filter or course_filter %}
+                    <p class="text-muted">No enrollments match your current filters.</p>
+                    <a href="{% url 'courses:admin_manage_enrollments' %}" class="btn btn-primary">
+                        <i class="fas fa-refresh me-2"></i>View All Enrollments
+                    </a>
+                {% else %}
+                    <p class="text-muted">No students have enrolled in courses yet.</p>
+                    {% if request.user.role == 'superadmin' %}
+                    <a href="{% url 'courses:manual_enrollment' %}" class="btn btn-primary">
+                        <i class="fas fa-user-plus me-2"></i>Add First Enrollment
+                    </a>
+                    {% endif %}
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Bulk Actions Bar -->
+<div id="bulkActionsBar" class="card mt-3" style="display: none;">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <span id="selectedCount">0</span> enrollments selected
+            </div>
+            <div class="btn-group">
+                <button type="button" class="btn btn-primary" onclick="bulkSendEmail()">
+                    <i class="fas fa-envelope me-2"></i>Send Email
+                </button>
+                <button type="button" class="btn btn-warning" onclick="bulkUpdateStatus()">
+                    <i class="fas fa-edit me-2"></i>Update Status
+                </button>
+                {% if request.user.role == 'superadmin' %}
+                <button type="button" class="btn btn-danger" onclick="bulkDelete()">
+                    <i class="fas fa-trash me-2"></i>Remove Selected
+                </button>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Email Modal -->
+<div class="modal fade" id="emailModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Send Email to Student</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="emailForm">
+                    <div class="mb-3">
+                        <label for="emailTo" class="form-label">To:</label>
+                        <input type="email" class="form-control" id="emailTo" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="emailTemplate" class="form-label">Email Template:</label>
+                        <select class="form-select" id="emailTemplate">
+                            <option value="">Custom Email</option>
+                            <option value="welcome">Welcome to Course</option>
+                            <option value="reminder">Course Reminder</option>
+                            <option value="completion">Course Completion</option>
+                            <option value="payment_reminder">Payment Reminder</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="emailSubject" class="form-label">Subject:</label>
+                        <input type="text" class="form-control" id="emailSubject" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="emailBody" class="form-label">Message:</label>
+                        <textarea class="form-control" id="emailBody" rows="8" required></textarea>
+                        <div class="form-text">
+                            Available variables: {student_name}, {course_name}, {instructor_name}, {enrollment_date}
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="sendEmailToStudent()">
+                    <i class="fas fa-paper-plane me-2"></i>Send Email
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Enrollment Modal -->
+<div class="modal fade" id="editModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Enrollment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editEnrollmentForm">
+                    <input type="hidden" id="editEnrollmentId">
+                    
+                    <div class="mb-3">
+                        <label for="editStatus" class="form-label">Status:</label>
+                        <select class="form-select" id="editStatus">
+                            <option value="enrolled">Enrolled</option>
+                            <option value="completed">Completed</option>
+                            <option value="dropped">Dropped</option>
+                            <option value="suspended">Suspended</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editProgress" class="form-label">Progress (%):</label>
+                        <input type="number" class="form-control" id="editProgress" min="0" max="100">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editGrade" class="form-label">Grade:</label>
+                        <select class="form-select" id="editGrade">
+                            <option value="">No Grade</option>
+                            <option value="A+">A+ (90-100)</option>
+                            <option value="A">A (85-89)</option>
+                            <option value="B+">B+ (80-84)</option>
+                            <option value="B">B (75-79)</option>
+                            <option value="C+">C+ (70-74)</option>
+                            <option value="C">C (65-69)</option>
+                            <option value="D">D (60-64)</option>
+                            <option value="F">F (Below 60)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="editPaymentStatus" class="form-label">Payment Status:</label>
+                        <select class="form-select" id="editPaymentStatus">
+                            <option value="pending">Pending</option>
+                            <option value="completed">Completed</option>
+                            <option value="waived">Waived</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="updateEnrollment()">
+                    <i class="fas fa-save me-2"></i>Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-submit form on filter change
+    document.addEventListener('DOMContentLoaded', function() {
+        ['status', 'course', 'sort'].forEach(function(id) {
+            const element = document.getElementById(id);
+            if (element) {
+                element.addEventListener('change', function() {
+                    this.form.submit();
+                });
+            }
+        });
+
+        // Checkbox functionality
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.enrollment-checkbox');
+        
+        if (selectAll) {
+            selectAll.addEventListener('change', function() {
+                checkboxes.forEach(checkbox => {
+                    checkbox.checked = this.checked;
+                });
+                updateBulkActions();
+            });
+        }
+
+        checkboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', updateBulkActions);
+        });
+    });
+
+    function updateBulkActions() {
+        const selected = document.querySelectorAll('.enrollment-checkbox:checked');
+        const bulkBar = document.getElementById('bulkActionsBar');
+        const selectedCount = document.getElementById('selectedCount');
+        
+        if (selected.length > 0) {
+            bulkBar.style.display = 'block';
+            selectedCount.textContent = selected.length;
+        } else {
+            bulkBar.style.display = 'none';
+        }
+    }
+
+    function viewEnrollment(enrollmentId) {
+        window.location.href = `/enrollment-details/${enrollmentId}/`;
+    }
+
+    function editEnrollment(enrollmentId) {
+        fetch(`/courses/api/enrollment/${enrollmentId}/`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('editEnrollmentId').value = enrollmentId;
+                document.getElementById('editStatus').value = data.status;
+                document.getElementById('editProgress').value = data.progress_percentage;
+                document.getElementById('editGrade').value = data.grade || '';
+                document.getElementById('editPaymentStatus').value = data.payment_status;
+                
+                new bootstrap.Modal(document.getElementById('editModal')).show();
+            })
+            .catch(error => {
+                alert('Error loading enrollment data');
+            });
+    }
+
+    function updateEnrollment() {
+        const enrollmentId = document.getElementById('editEnrollmentId').value;
+        const formData = {
+            status: document.getElementById('editStatus').value,
+            progress_percentage: document.getElementById('editProgress').value,
+            grade: document.getElementById('editGrade').value,
+            payment_status: document.getElementById('editPaymentStatus').value
+        };
+
+        fetch(`/courses/api/enrollment/${enrollmentId}/update/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify(formData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error updating enrollment: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error updating enrollment');
+        });
+    }
+
+    function sendEmail(studentId, email) {
+        document.getElementById('emailTo').value = email;
+        document.getElementById('emailSubject').value = '';
+        document.getElementById('emailBody').value = '';
+        
+        new bootstrap.Modal(document.getElementById('emailModal')).show();
+    }
+
+    function sendEmailToStudent() {
+        const emailData = {
+            to: document.getElementById('emailTo').value,
+            subject: document.getElementById('emailSubject').value,
+            body: document.getElementById('emailBody').value,
+            template: document.getElementById('emailTemplate').value
+        };
+
+        if (!emailData.subject || !emailData.body) {
+            alert('Please fill in both subject and message');
+            return;
+        }
+
+        fetch('/courses/send-student-email/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify(emailData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Email sent successfully!');
+                bootstrap.Modal.getInstance(document.getElementById('emailModal')).hide();
+            } else {
+                alert('Error sending email: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error sending email');
+        });
+    }
+
+    function deleteEnrollment(enrollmentId) {
+        if (confirm('Are you sure you want to remove this enrollment? This action cannot be undone.')) {
+            fetch(`/courses/api/enrollment/${enrollmentId}/delete/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error removing enrollment: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Error removing enrollment');
+            });
+        }
+    }
+
+    function exportData(format) {
+        const params = new URLSearchParams(window.location.search);
+        params.set('export', format);
+        window.location.href = '?' + params.toString();
+    }
+
+    function bulkSendEmail() {
+        const selected = Array.from(document.querySelectorAll('.enrollment-checkbox:checked'))
+                             .map(cb => cb.value);
+        
+        if (selected.length === 0) {
+            alert('Please select enrollments first');
+            return;
+        }
+
+        document.getElementById('emailTo').value = `${selected.length} students selected`;
+        new bootstrap.Modal(document.getElementById('emailModal')).show();
+    }
+
+    // Email template change handler
+    document.getElementById('emailTemplate').addEventListener('change', function() {
+        const template = this.value;
+        const subjectField = document.getElementById('emailSubject');
+        const bodyField = document.getElementById('emailBody');
+
+        const templates = {
+            'welcome': {
+                subject: 'Welcome to {course_name}!',
+                body: 'Dear {student_name},\n\nWelcome to {course_name}! We are excited to have you in our course.\n\nYour instructor {instructor_name} will guide you through this learning journey.\n\nEnrollment Date: {enrollment_date}\n\nBest regards,\nLMS Team'
+            },
+            'completion': {
+                subject: 'Congratulations on completing {course_name}!',
+                body: 'Dear {student_name},\n\nCongratulations on successfully completing {course_name}!\n\nYour certificate will be available soon in your student dashboard.\n\nBest regards,\n{instructor_name}'
+            },
+            'payment_reminder': {
+                subject: 'Payment Reminder - {course_name}',
+                body: 'Dear {student_name},\n\nThis is a reminder that payment for {course_name} is still pending.\n\nPlease complete your payment to continue accessing course materials.\n\nBest regards,\nLMS Team'
+            }
+        };
+
+        if (templates[template]) {
+            subjectField.value = templates[template].subject;
+            bodyField.value = templates[template].body;
+        } else {
+            subjectField.value = '';
+            bodyField.value = '';
+        }
+    });
+</script>
+
+<style>
+    .table th {
+        background-color: #f8f9fa;
+        border-top: none;
+        font-weight: 600;
+        color: #495057;
+    }
+
+    .progress {
+        border-radius: 10px;
+        background-color: #e9ecef;
+    }
+
+    .progress-bar {
+        border-radius: 10px;
+    }
+
+    .btn-group-sm > .btn {
+        border-radius: 4px;
+        margin: 0 1px;
+    }
+
+    .card {
+        border: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .badge {
+        font-size: 0.75em;
+    }
+
+    .table-responsive {
+        border-radius: 8px;
+    }
+
+    #bulkActionsBar {
+        border-left: 4px solid var(--bs-primary);
+    }
+</style>
+{% endblock %}

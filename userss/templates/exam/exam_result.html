@@ -1,0 +1,597 @@
+{% extends 'students/student_base.html' %}
+{% load exam_filters %}
+
+{% block title %}{{ attempt.exam.title }} - Result - LMS{% endblock %}
+{% block page_title %}Exam Result{% endblock %}
+
+{% block extra_css %}
+<style>
+    .result-container {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+    
+    .result-header {
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        color: white;
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .score-card {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        border-radius: 15px;
+        padding: 25px;
+        text-align: center;
+        margin-bottom: 25px;
+    }
+    
+    .score-card.failed {
+        background: linear-gradient(135deg, #ef4444, #dc2626);
+    }
+    
+    .score-display {
+        font-size: 3rem;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+    
+    .question-review {
+        background-color: white;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .question-header {
+        padding: 15px 20px;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .question-header.correct {
+        background-color: #d4edda;
+        border-left: 4px solid #28a745;
+    }
+    
+    .question-header.incorrect {
+        background-color: #f8d7da;
+        border-left: 4px solid #dc3545;
+    }
+    
+    .question-header.unanswered {
+        background-color: #fff3cd;
+        border-left: 4px solid #ffc107;
+    }
+    
+    .option-item {
+        padding: 12px 20px;
+        border-bottom: 1px solid #f8f9fa;
+        display: flex;
+        align-items: center;
+    }
+    
+    .option-label {
+        font-weight: bold;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+        background-color: #e9ecef;
+        color: #6c757d;
+    }
+    
+    .option-item.selected {
+        background-color: #e7f3ff;
+    }
+    
+    .option-item.correct {
+        background-color: #d4edda;
+    }
+    
+    .option-item.selected .option-label {
+        background-color: #0066cc;
+        color: white;
+    }
+    
+    .option-item.correct .option-label {
+        background-color: #28a745;
+        color: white;
+    }
+    
+    .stats-card {
+        background-color: white;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .stat-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid #f8f9fa;
+    }
+    
+    .stat-item:last-child {
+        border-bottom: none;
+    }
+    
+    .explanation-box {
+        background-color: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 10px;
+        border-left: 4px solid #17a2b8;
+    }
+    
+    .badge-large {
+        font-size: 1.1rem;
+        padding: 8px 15px;
+    }
+    
+    .circular-progress {
+        width: 120px;
+        height: 120px;
+        margin: 0 auto 20px;
+        position: relative;
+    }
+    
+    .circular-progress svg {
+        width: 100%;
+        height: 100%;
+        transform: rotate(-90deg);
+    }
+    
+    .circular-progress circle {
+        fill: none;
+        stroke-width: 8;
+        cx: 60;
+        cy: 60;
+        r: 52;
+    }
+    
+    .circle-bg {
+        stroke: #e9ecef;
+    }
+    
+    .circle-progress {
+        stroke: #28a745;
+        stroke-linecap: round;
+        stroke-dasharray: 326.73;
+        stroke-dashoffset: 326.73;
+        transition: stroke-dashoffset 1s ease-in-out;
+    }
+    
+    .circle-progress.failed {
+        stroke: #dc3545;
+    }
+    
+    .progress-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 1.5rem;
+        font-weight: bold;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="result-container">
+    <!-- Result Header -->
+    <div class="result-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h3 class="mb-2">{{ attempt.exam.title }}</h3>
+                <p class="mb-0">{{ attempt.exam.description }}</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="result-info">
+                    <small class="d-block">Attempt: {{ attempt.attempt_number }}</small>
+                    <small class="d-block">Submitted: {{ attempt.submitted_at|date:"M d, Y H:i" }}</small>
+                    {% if attempt.graded_at %}
+                    <small class="d-block">Graded: {{ attempt.graded_at|date:"M d, Y H:i" }}</small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Score Card -->
+            <div class="score-card {% if not attempt.is_passed %}failed{% endif %}">
+                <div class="circular-progress">
+                    <svg>
+                        <circle class="circle-bg"></circle>
+                        <circle class="circle-progress {% if not attempt.is_passed %}failed{% endif %}" 
+                                style="stroke-dashoffset: {{ 326.73|sub:attempt.percentage|mul:3.2673 }}"></circle>
+                    </svg>
+                    <div class="progress-text">{{ attempt.percentage|floatformat:1 }}%</div>
+                </div>
+                
+                <h4 class="mb-2">
+                    {% if attempt.is_passed %}
+                        <i class="fas fa-check-circle"></i> Congratulations! You Passed
+                    {% else %}
+                        <i class="fas fa-times-circle"></i> Keep Trying! You Can Do Better
+                    {% endif %}
+                </h4>
+                
+                <div class="score-details">
+                    <div class="score-display">
+                        {{ attempt.total_marks_obtained|floatformat:1 }} / {{ attempt.exam.total_marks }}
+                    </div>
+                    <p class="mb-0">
+                        {% if attempt.is_passed %}
+                            You have successfully passed this exam with {{ attempt.percentage|floatformat:1 }}%
+                        {% else %}
+                            You scored {{ attempt.percentage|floatformat:1 }}%. Passing score is {{ attempt.exam.passing_marks }}%
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+
+            <!-- MCQ Results Detail -->
+            {% if attempt.exam.exam_type == 'mcq' and mcq_responses %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list-ul"></i> Question-by-Question Review
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% for response in mcq_responses %}
+                    <div class="question-review">
+                        <div class="question-header {% if response.is_correct_answer %}correct{% elif response.selected_option %}incorrect{% else %}unanswered{% endif %}">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0">Question {{ response.question.order }}</h6>
+                                <div class="badges">
+                                    {% if response.is_correct_answer %}
+                                        <span class="badge bg-success">Correct</span>
+                                    {% elif response.selected_option %}
+                                        <span class="badge bg-danger">Incorrect</span>
+                                    {% else %}
+                                        <span class="badge bg-warning">Not Answered</span>
+                                    {% endif %}
+                                    <span class="badge bg-info">{{ response.question.marks }} mark{{ response.question.marks|pluralize }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="question-content p-3">
+                            <div class="question-text mb-3">
+                                <p class="mb-2">{{ response.question.question_text }}</p>
+                                {% if response.question.question_image %}
+                                    <div class="text-center my-2">
+                                        <img src="{{ response.question.question_image.url }}" 
+                                             alt="Question Image" 
+                                             class="img-fluid" 
+                                             style="max-height: 200px; border-radius: 8px;">
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="options">
+                                {% for option in response.question.options.all %}
+                                <div class="option-item 
+                                    {% if option == response.selected_option %}selected{% endif %}
+                                    {% if option.is_correct %}correct{% endif %}">
+                                    <span class="option-label">
+                                        {% if forloop.counter == 1 %}A{% elif forloop.counter == 2 %}B{% elif forloop.counter == 3 %}C{% elif forloop.counter == 4 %}D{% elif forloop.counter == 5 %}E{% elif forloop.counter == 6 %}F{% endif %}
+                                    </span>
+                                    <div class="option-content">
+                                        <span>{{ option.option_text }}</span>
+                                        {% if option == response.selected_option and not option.is_correct %}
+                                            <small class="text-danger ms-2">(Your Answer)</small>
+                                        {% elif option.is_correct %}
+                                            <small class="text-success ms-2">(Correct Answer)</small>
+                                        {% endif %}
+                                        {% if option.option_image %}
+                                            <div class="mt-1">
+                                                <img src="{{ option.option_image.url }}" 
+                                                     alt="Option Image" 
+                                                     class="img-fluid" 
+                                                     style="max-height: 100px; border-radius: 4px;">
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            
+                            {% if response.question.explanation %}
+                            <div class="explanation-box">
+                                <h6 class="text-info">
+                                    <i class="fas fa-lightbulb"></i> Explanation:
+                                </h6>
+                                <p class="mb-0">{{ response.question.explanation }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Q&A Results -->
+            {% if attempt.exam.exam_type == 'qa' %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit"></i> Your Answers
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if attempt.is_graded %}
+                        <p class="text-success">
+                            <i class="fas fa-check-circle"></i> 
+                            Your answers have been reviewed and graded.
+                        </p>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-clock"></i>
+                            Your answers are being reviewed by the instructor. Results will be available once grading is complete.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Assignment Results -->
+            {% if attempt.exam.exam_type == 'assignment' %}
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-upload"></i> Assignment Submission
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if attempt.is_graded %}
+                        <p class="text-success">
+                            <i class="fas fa-check-circle"></i> 
+                            Your assignment has been reviewed and graded.
+                        </p>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-clock"></i>
+                            Your assignment is being reviewed by the instructor. Results will be available once grading is complete.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Exam Statistics -->
+            <div class="stats-card">
+                <h6 class="text-primary mb-3">
+                    <i class="fas fa-chart-bar"></i> Exam Statistics
+                </h6>
+                
+                <div class="stat-item">
+                    <span>Total Questions:</span>
+                    <strong>{{ attempt.exam.get_total_questions }}</strong>
+                </div>
+                
+                {% if attempt.exam.exam_type == 'mcq' and mcq_responses %}
+                <div class="stat-item">
+                    <span>Correct Answers:</span>
+                    <strong class="text-success">{{ mcq_responses|count_correct_answers }}</strong>
+                </div>
+                
+                <div class="stat-item">
+                    <span>Incorrect Answers:</span>
+                    <strong class="text-danger">{{ mcq_responses|count_incorrect_answers }}</strong>
+                </div>
+                
+                <div class="stat-item">
+                    <span>Unanswered:</span>
+                    <strong class="text-warning">{{ mcq_responses|count_unanswered }}</strong>
+                </div>
+                {% endif %}
+                
+                <div class="stat-item">
+                    <span>Total Marks:</span>
+                    <strong>{{ attempt.exam.total_marks }}</strong>
+                </div>
+                
+                <div class="stat-item">
+                    <span>Marks Obtained:</span>
+                    <strong class="{% if attempt.is_passed %}text-success{% else %}text-danger{% endif %}">
+                        {{ attempt.total_marks_obtained|floatformat:1 }}
+                    </strong>
+                </div>
+                
+                <div class="stat-item">
+                    <span>Percentage:</span>
+                    <strong class="{% if attempt.is_passed %}text-success{% else %}text-danger{% endif %}">
+                        {{ attempt.percentage|floatformat:1 }}%
+                    </strong>
+                </div>
+                
+                <div class="stat-item">
+                    <span>Passing Score:</span>
+                    <strong>{{ attempt.exam.passing_marks }}%</strong>
+                </div>
+                
+                <div class="stat-item">
+                    <span>Result:</span>
+                    <strong>
+                        {% if attempt.is_passed %}
+                            <span class="badge bg-success badge-large">PASSED</span>
+                        {% else %}
+                            <span class="badge bg-danger badge-large">FAILED</span>
+                        {% endif %}
+                    </strong>
+                </div>
+            </div>
+
+            <!-- Performance Analysis -->
+            {% if attempt.exam.exam_type == 'mcq' and mcq_responses %}
+            <div class="stats-card">
+                <h6 class="text-info mb-3">
+                    <i class="fas fa-chart-line"></i> Performance Analysis
+                </h6>
+                
+                {% with total=mcq_responses|length correct=mcq_responses|count_correct_answers %}
+                {% if total > 0 %}
+                <div class="mb-3">
+                    <small class="text-muted">Accuracy Rate</small>
+                    <div class="progress">
+                        <div class="progress-bar bg-success" 
+                             style="width: {{ correct|percentage:total }}%">
+                        </div>
+                    </div>
+                    <small class="text-muted">{{ correct|percentage:total }}% accuracy</small>
+                </div>
+                {% endif %}
+                {% endwith %}
+                
+                <div class="performance-tips">
+                    <h6 class="text-secondary mb-2">Study Tips:</h6>
+                    <ul class="small">
+                        {% if attempt.is_passed %}
+                            <li>Great job! Keep up the good work</li>
+                            <li>Review any incorrect answers</li>
+                            <li>Share your success with others</li>
+                        {% else %}
+                            <li>Review the topics you missed</li>
+                            <li>Practice more questions</li>
+                            <li>Ask your instructor for help</li>
+                            <li>Don't give up - you can retake if allowed</li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Actions -->
+            <div class="stats-card">
+                <h6 class="text-secondary mb-3">
+                    <i class="fas fa-tools"></i> Actions
+                </h6>
+                
+                <div class="d-grid gap-2">
+                    <a href="{% url 'student_exams' %}" class="btn btn-primary">
+                        <i class="fas fa-arrow-left"></i> Back to Exams
+                    </a>
+                    
+                    {% if attempt.exam.allow_retake and attempt.attempt_number < attempt.exam.max_attempts %}
+                    <a href="{% url 'take_exam' attempt.exam.id %}" class="btn btn-warning">
+                        <i class="fas fa-redo"></i> Retake Exam
+                    </a>
+                    {% endif %}
+                    
+                    <button class="btn btn-outline-secondary" onclick="window.print()">
+                        <i class="fas fa-print"></i> Print Result
+                    </button>
+                    
+                    <button class="btn btn-outline-info" onclick="shareResult()">
+                        <i class="fas fa-share"></i> Share Result
+                    </button>
+                </div>
+            </div>
+
+            <!-- Motivational Message -->
+            <div class="card bg-light">
+                <div class="card-body text-center">
+                    {% if attempt.is_passed %}
+                        <i class="fas fa-trophy fa-2x text-warning mb-2"></i>
+                        <h6 class="text-success">Excellent Work!</h6>
+                        <p class="small text-muted mb-0">
+                            Your hard work has paid off. Keep learning and growing!
+                        </p>
+                    {% else %}
+                        <i class="fas fa-heart fa-2x text-danger mb-2"></i>
+                        <h6 class="text-primary">Don't Give Up!</h6>
+                        <p class="small text-muted mb-0">
+                            Every expert was once a beginner. Learn from this experience and try again!
+                        </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Animate the circular progress
+    setTimeout(function() {
+        let percentage = {{ attempt.percentage|floatformat:1 }};
+        let circumference = 326.73;
+        let offset = circumference - (percentage / 100) * circumference;
+        $('.circle-progress').css('stroke-dashoffset', offset);
+    }, 500);
+});
+
+function shareResult() {
+    if (navigator.share) {
+        navigator.share({
+            title: '{{ attempt.exam.title }} - Exam Result',
+            text: 'I scored {{ attempt.percentage|floatformat:1 }}% in {{ attempt.exam.title }}!',
+            url: window.location.href
+        });
+    } else {
+        // Fallback for browsers that don't support Web Share API
+        let text = `I scored {{ attempt.percentage|floatformat:1 }}% in {{ attempt.exam.title }}! ${window.location.href}`;
+        navigator.clipboard.writeText(text).then(function() {
+            alert('Result link copied to clipboard!');
+        });
+    }
+}
+
+// Print styles
+window.addEventListener('beforeprint', function() {
+    // Hide navigation and other non-essential elements when printing
+    $('.sidebar').hide();
+    $('.navbar').hide();
+});
+
+window.addEventListener('afterprint', function() {
+    // Show elements back after printing
+    $('.sidebar').show();
+    $('.navbar').show();
+});
+</script>
+
+<style media="print">
+    .sidebar, .navbar, .btn, button {
+        display: none !important;
+    }
+    
+    .result-container {
+        max-width: 100% !important;
+    }
+    
+    .col-lg-8 {
+        width: 100% !important;
+    }
+    
+    .score-card {
+        background: #f8f9fa !important;
+        color: #333 !important;
+        border: 2px solid #dee2e6;
+    }
+    
+    .question-review {
+        break-inside: avoid;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}

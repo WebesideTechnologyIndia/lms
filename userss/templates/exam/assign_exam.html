@@ -1,0 +1,598 @@
+{% extends 'base.html' %}
+
+{% block title %}Assign Exam - LMS Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">
+                        <i class="fas fa-user-plus text-success"></i>
+                        Assign Exam to Students
+                    </h4>
+                    <p class="text-muted mb-0">Assign exams to individual students, batches, or entire courses</p>
+                </div>
+                
+                <div class="card-body">
+                    <form method="post" id="assignExamForm">
+                        {% csrf_token %}
+                        
+                        <!-- Exam Selection -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary border-bottom pb-2">
+                                    <i class="fas fa-clipboard-list"></i> Select Exam
+                                </h5>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label class="form-label">Choose Exam *</label>
+                                <select name="exam_id" id="exam_id" class="form-select" required>
+                                    <option value="">-- Select an Exam --</option>
+                                    {% for exam in exams %}
+                                    <option value="{{ exam.id }}" data-type="{{ exam.exam_type }}" data-marks="{{ exam.total_marks }}">
+                                        {{ exam.title }} ({{ exam.get_exam_type_display }} - {{ exam.total_marks }} marks)
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Assignment Type *</label>
+                                <select name="assignment_type" id="assignment_type" class="form-select" required>
+                                    <option value="">-- Select Type --</option>
+                                    <option value="individual">Individual Student</option>
+                                    <option value="batch">Entire Batch</option>
+                                    <option value="course">Entire Course</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- Exam Details Display -->
+                        <div id="exam-details" class="row mb-4" style="display: none;">
+                            <div class="col-12">
+                                <div class="alert alert-info">
+                                    <h6 class="mb-2">Selected Exam Details:</h6>
+                                    <div id="exam-info"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Assignment Targets -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary border-bottom pb-2">
+                                    <i class="fas fa-users"></i> Assignment Targets
+                                </h5>
+                            </div>
+                        </div>
+                        
+                        <!-- Individual Students -->
+                        <div id="individual-section" style="display: none;">
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label class="form-label">Select Students</label>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <input type="text" id="student-search" class="form-control mb-2" placeholder="Search students...">
+                                        </div>
+                                        <div class="col-md-6">
+                                            <button type="button" id="select-all-students" class="btn btn-outline-primary btn-sm">
+                                                Select All
+                                            </button>
+                                            <button type="button" id="deselect-all-students" class="btn btn-outline-secondary btn-sm">
+                                                Deselect All
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="student-list border rounded p-3" style="max-height: 300px; overflow-y: auto;">
+                                        {% for student in students %}
+                                        <div class="form-check student-item">
+                                            <input class="form-check-input" type="checkbox" name="selected_students" 
+                                                   value="{{ student.id }}" id="student_{{ student.id }}">
+                                            <label class="form-check-label" for="student_{{ student.id }}">
+                                                <strong>{{ student.get_full_name|default:student.username }}</strong>
+                                                <small class="text-muted d-block">{{ student.email }}</small>
+                                            </label>
+                                        </div>
+                                        {% empty %}
+                                        <p class="text-muted">No students available</p>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                       <!-- Debug Info -->
+<div class="alert alert-info">
+    <strong>Debug Info:</strong><br>
+    Total Batches: {{ batches|length }}<br>
+    Total Students: {{ students|length }}<br>
+    Total Courses: {{ courses|length }}
+</div>
+
+<!-- Batch Section -->
+<div id="batch-section" style="display: none;">
+    <div class="row mb-3">
+        <div class="col-12">
+            <label class="form-label">Select Batches</label>
+            
+            {% if batches %}
+                <div class="row">
+                    {% for batch in batches %}
+                    <div class="col-md-6 mb-2">
+                        <div class="card">
+                            <div class="card-body p-3">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="selected_batches" 
+                                           value="{{ batch.id }}" id="batch_{{ batch.id }}">
+                                    <label class="form-check-label" for="batch_{{ batch.id }}">
+                                        <strong>{{ batch.name }}</strong>
+                                        <small class="text-muted d-block">
+                                            Course: {{ batch.course.title }}<br>
+                                            Instructor: {{ batch.instructor.get_full_name|default:batch.instructor.username }}
+                                        </small>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="text-muted">No active batches found. Please create some batches first.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+                        
+                        <!-- Course Selection -->
+                        <div id="course-section" style="display: none;">
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label class="form-label">Select Courses</label>
+                                    <div class="row">
+                                        {% for course in courses %}
+                                        <div class="col-md-6 mb-2">
+                                            <div class="card">
+                                                <div class="card-body p-3">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox" name="selected_courses" 
+                                                               value="{{ course.id }}" id="course_{{ course.id }}">
+                                                        <label class="form-check-label" for="course_{{ course.id }}">
+                                                            <strong>{{ course.title }}</strong>
+                                                            <small class="text-muted d-block">
+                                                                Code: {{ course.course_code }}
+                                                                <br>Students: <span class="course-student-count" data-course-id="{{ course.id }}">Loading...</span>
+                                                            </small>
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {% empty %}
+                                        <p class="text-muted">No courses available</p>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Custom Timing (Optional) -->
+                        <div class="row mb-4 mt-4">
+                            <div class="col-12">
+                                <h5 class="text-primary border-bottom pb-2">
+                                    <i class="fas fa-clock"></i> Custom Timing (Optional)
+                                </h5>
+                                <p class="text-muted">Override default exam timing for this assignment</p>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Custom Start Date & Time</label>
+                                <input type="datetime-local" name="custom_start_datetime" class="form-control">
+                                <div class="form-text">Leave empty to use exam's default start time</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Custom End Date & Time</label>
+                                <input type="datetime-local" name="custom_end_datetime" class="form-control">
+                                <div class="form-text">Leave empty to use exam's default end time</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Assignment Summary -->
+                        <div id="assignment-summary" class="row mb-4" style="display: none;">
+                            <div class="col-12">
+                                <div class="alert alert-success">
+                                    <h6 class="mb-2">Assignment Summary:</h6>
+                                    <div id="summary-content"></div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-success" id="assign-btn" disabled>
+                                        <i class="fas fa-user-plus"></i> Assign Exam
+                                    </button>
+                                    <a href="{% url 'exam_dashboard' %}" class="btn btn-secondary">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Recent Assignments -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-history text-info"></i>
+                        Recent Assignments
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_assignments %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Exam</th>
+                                    <th>Type</th>
+                                    <th>Target</th>
+                                    <th>Assigned By</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for assignment in recent_assignments %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ assignment.exam.title }}</strong>
+                                        <small class="text-muted d-block">{{ assignment.exam.get_exam_type_display }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ assignment.get_assignment_type_display }}</span>
+                                    </td>
+                                    <td>
+                                        {% if assignment.assignment_type == 'individual' %}
+                                            {{ assignment.student.get_full_name|default:assignment.student.username }}
+                                        {% elif assignment.assignment_type == 'batch' %}
+                                            {{ assignment.batch.name }}
+                                        {% else %}
+                                            {{ assignment.course.title }}
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ assignment.assigned_by.get_full_name|default:assignment.assigned_by.username }}</td>
+                                    <td>{{ assignment.assigned_at|date:"M d, Y H:i" }}</td>
+                                    <td>
+                                        {% if assignment.is_active %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Inactive</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">No recent assignments found</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Show/hide assignment sections based on type
+    $('#assignment_type').change(function() {
+        var type = $(this).val();
+        
+        $('#individual-section, #batch-section, #course-section').hide();
+        
+        if (type === 'individual') {
+            $('#individual-section').show();
+        } else if (type === 'batch') {
+            $('#batch-section').show();
+            loadBatchStudentCounts();
+        } else if (type === 'course') {
+            $('#course-section').show();
+            loadCourseStudentCounts();
+        }
+        
+        updateAssignButton();
+        updateSummary();
+    });
+    
+    // Show exam details when exam is selected
+    $('#exam_id').change(function() {
+        var selectedOption = $(this).find(':selected');
+        var examId = selectedOption.val();
+        
+        if (examId) {
+            // Show loading state
+            $('#exam-info').html('<div class="spinner-border spinner-border-sm me-2" role="status"></div>Loading exam details...');
+            $('#exam-details').show();
+            
+            // Fetch exam details via AJAX
+            $.ajax({
+                url: `/exams/ajax/load-exam-details/${examId}/`,
+                method: 'GET',
+                success: function(data) {
+                    if (data.success) {
+                        var exam = data.exam;
+                        var examInfo = `
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <strong>Title:</strong> ${exam.title}<br>
+                                    <strong>Type:</strong> ${exam.exam_type_display}<br>
+                                    <strong>Total Marks:</strong> ${exam.total_marks}<br>
+                                    <strong>Passing Marks:</strong> ${exam.passing_marks}
+                                </div>
+                                <div class="col-md-6">
+                                    <strong>Timing:</strong> ${exam.timing_type_display}<br>
+                                    <strong>Status:</strong> <span class="badge bg-${exam.status === 'published' ? 'success' : 'warning'}">${exam.status_display}</span><br>
+                                    <strong>Created:</strong> ${exam.created_at}
+                                </div>
+                            </div>
+                        `;
+                        
+                        // Add timing details if available
+                        if (exam.start_datetime || exam.end_datetime) {
+                            examInfo += `
+                                <div class="row mt-2 pt-2 border-top">
+                                    <div class="col-12">
+                                        <strong>Exam Schedule:</strong><br>
+                                        ${exam.start_datetime ? 'Start: ' + exam.start_datetime + '<br>' : ''}
+                                        ${exam.end_datetime ? 'End: ' + exam.end_datetime : ''}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        $('#exam-info').html(examInfo);
+                    } else {
+                        $('#exam-info').html('<div class="text-danger">Error loading exam details</div>');
+                    }
+                },
+                error: function() {
+                    // Fallback to basic info from option attributes
+                    var examType = selectedOption.data('type');
+                    var examMarks = selectedOption.data('marks');
+                    var examTitle = selectedOption.text();
+                    
+                    $('#exam-info').html(`
+                        <div class="row">
+                            <div class="col-md-6">
+                                <strong>Title:</strong> ${examTitle}<br>
+                                <strong>Type:</strong> ${examType}<br>
+                                <strong>Total Marks:</strong> ${examMarks}
+                            </div>
+                            <div class="col-md-6">
+                                <em>Additional details unavailable</em>
+                            </div>
+                        </div>
+                    `);
+                }
+            });
+        } else {
+            $('#exam-details').hide();
+        }
+        
+        updateAssignButton();
+        updateSummary();
+    });
+    
+    // Student search functionality
+    $('#student-search').on('input', function() {
+        var searchTerm = $(this).val().toLowerCase();
+        $('.student-item').each(function() {
+            var studentName = $(this).find('label').text().toLowerCase();
+            if (studentName.includes(searchTerm)) {
+                $(this).show();
+            } else {
+                $(this).hide();
+            }
+        });
+    });
+    
+    // Select/Deselect all students
+    $('#select-all-students').click(function() {
+        $('.student-item:visible input[type="checkbox"]').prop('checked', true);
+        updateSummary();
+    });
+    
+    $('#deselect-all-students').click(function() {
+        $('.student-item input[type="checkbox"]').prop('checked', false);
+        updateSummary();
+    });
+    
+    // Update summary when selections change
+    $('input[type="checkbox"]').change(function() {
+        updateAssignButton();
+        updateSummary();
+    });
+    
+    // Load student counts for batches
+    function loadBatchStudentCounts() {
+        $('.batch-student-count').each(function() {
+            var batchId = $(this).data('batch-id');
+            var element = $(this);
+            
+            $.ajax({
+                url: `/exams/api/batch/${batchId}/students/`,
+                method: 'GET',
+                success: function(data) {
+                    if (data.success) {
+                        element.text(data.total_count + ' students');
+                    } else {
+                        element.text('Error loading');
+                    }
+                },
+                error: function() {
+                    element.text('Unable to load');
+                }
+            });
+        });
+    }
+    
+    // Load student counts for courses
+    function loadCourseStudentCounts() {
+        $('.course-student-count').each(function() {
+            var courseId = $(this).data('course-id');
+            var element = $(this);
+            
+            $.ajax({
+                url: `/exams/api/course/${courseId}/students/`,
+                method: 'GET',
+                success: function(data) {
+                    if (data.success) {
+                        element.text(data.total_count + ' students');
+                    } else {
+                        element.text('Error loading');
+                    }
+                },
+                error: function() {
+                    element.text('Unable to load');
+                }
+            });
+        });
+    }
+    
+    // Update assign button state
+    function updateAssignButton() {
+        var examSelected = $('#exam_id').val();
+        var typeSelected = $('#assignment_type').val();
+        var targetsSelected = false;
+        
+        if (typeSelected === 'individual') {
+            targetsSelected = $('input[name="selected_students"]:checked').length > 0;
+        } else if (typeSelected === 'batch') {
+            targetsSelected = $('input[name="selected_batches"]:checked').length > 0;
+        } else if (typeSelected === 'course') {
+            targetsSelected = $('input[name="selected_courses"]:checked').length > 0;
+        }
+        
+        if (examSelected && typeSelected && targetsSelected) {
+            $('#assign-btn').prop('disabled', false);
+        } else {
+            $('#assign-btn').prop('disabled', true);
+        }
+    }
+    
+    // Update assignment summary
+    function updateSummary() {
+        var examTitle = $('#exam_id option:selected').text();
+        var assignmentType = $('#assignment_type option:selected').text();
+        var selectedCount = 0;
+        var selectedItems = [];
+        
+        if ($('#assignment_type').val() === 'individual') {
+            selectedCount = $('input[name="selected_students"]:checked').length;
+            $('input[name="selected_students"]:checked').each(function() {
+                var label = $(this).next('label').find('strong').text();
+                selectedItems.push(label);
+            });
+        } else if ($('#assignment_type').val() === 'batch') {
+            selectedCount = $('input[name="selected_batches"]:checked').length;
+            $('input[name="selected_batches"]:checked').each(function() {
+                var label = $(this).next('label').find('strong').text();
+                selectedItems.push(label);
+            });
+        } else if ($('#assignment_type').val() === 'course') {
+            selectedCount = $('input[name="selected_courses"]:checked').length;
+            $('input[name="selected_courses"]:checked').each(function() {
+                var label = $(this).next('label').find('strong').text();
+                selectedItems.push(label);
+            });
+        }
+        
+        if (selectedCount > 0 && $('#exam_id').val()) {
+            var summary = `
+                <strong>Exam:</strong> ${examTitle}<br>
+                <strong>Assignment Type:</strong> ${assignmentType}<br>
+                <strong>Selected:</strong> ${selectedCount} item(s)<br>
+            `;
+            
+            if (selectedItems.length <= 5) {
+                summary += `<strong>Items:</strong> ${selectedItems.join(', ')}`;
+            } else {
+                summary += `<strong>Items:</strong> ${selectedItems.slice(0, 5).join(', ')} and ${selectedItems.length - 5} more...`;
+            }
+            
+            $('#summary-content').html(summary);
+            $('#assignment-summary').show();
+        } else {
+            $('#assignment-summary').hide();
+        }
+    }
+    
+    // Form submission validation
+    $('#assignExamForm').submit(function(e) {
+        var examSelected = $('#exam_id').val();
+        var typeSelected = $('#assignment_type').val();
+        
+        if (!examSelected) {
+            e.preventDefault();
+            alert('Please select an exam to assign!');
+            return false;
+        }
+        
+        if (!typeSelected) {
+            e.preventDefault();
+            alert('Please select an assignment type!');
+            return false;
+        }
+        
+        var targetsSelected = false;
+        if (typeSelected === 'individual') {
+            targetsSelected = $('input[name="selected_students"]:checked').length > 0;
+            if (!targetsSelected) {
+                e.preventDefault();
+                alert('Please select at least one student!');
+                return false;
+            }
+        } else if (typeSelected === 'batch') {
+            targetsSelected = $('input[name="selected_batches"]:checked').length > 0;
+            if (!targetsSelected) {
+                e.preventDefault();
+                alert('Please select at least one batch!');
+                return false;
+            }
+        } else if (typeSelected === 'course') {
+            targetsSelected = $('input[name="selected_courses"]:checked').length > 0;
+            if (!targetsSelected) {
+                e.preventDefault();
+                alert('Please select at least one course!');
+                return false;
+            }
+        }
+        
+        return true;
+    });
+});
+</script>
+{% endblock %}

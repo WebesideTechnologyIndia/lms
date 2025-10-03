@@ -1,0 +1,514 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - LMS Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Fix EMI dropdown text color issues */
+#{{ form.emi_schedule.id_for_label }} {
+    background-color: #fff !important;
+    color: #000 !important;
+    border: 1px solid #ced4da;
+}
+
+#{{ form.emi_schedule.id_for_label }} option {
+    background-color: #fff !important;
+    color: #000 !important;
+    padding: 8px 12px;
+}
+
+/* Fix all form selects */
+.form-select {
+    background-color: #fff;
+    color: #000;
+}
+
+.form-select option {
+    background-color: #fff;
+    color: #000;
+}
+
+/* Override any dark theme styles */
+[data-bs-theme="dark"] .form-select,
+[data-bs-theme="dark"] .form-select option {
+    background-color: #fff !important;
+    color: #000 !important;
+}
+
+/* Ensure proper contrast */
+select.form-select:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fees:admin_fees_dashboard' %}">Fees</a></li>
+        <li class="breadcrumb-item active">{{ title }}</li>
+    </ol>
+</nav>
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-credit-card me-2 text-success"></i>{{ title }}
+        </h2>
+        <p class="text-muted mb-0">Record student payment transaction</p>
+    </div>
+    <div>
+        <a href="{% url 'fees:payment_history' %}" class="btn btn-outline-info">
+            <i class="fas fa-history me-2"></i>Payment History
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Payment Form -->
+        <div class="card shadow">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-money-bill-wave me-2"></i>Payment Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="paymentForm">
+                    {% csrf_token %}
+                    
+                    <!-- Student & Course Selection -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Student & Course Information</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.fee_assignment.id_for_label }}" class="form-label">Fee Assignment *</label>
+                            {{ form.fee_assignment }}
+                            {% if form.fee_assignment.errors %}
+                                <div class="text-danger small">{{ form.fee_assignment.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.emi_schedule.id_for_label }}" class="form-label">Specific EMI (Optional)</label>
+                            {{ form.emi_schedule }}
+                            {% if form.emi_schedule.errors %}
+                                <div class="text-danger small">{{ form.emi_schedule.errors.0 }}</div>
+                            {% endif %}
+                            <small class="text-muted">Select specific EMI if this payment is for a particular installment</small>
+                        </div>
+                    </div>
+
+                    <!-- Payment Amount -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-success border-bottom pb-2">Payment Amount</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.amount.id_for_label }}" class="form-label">Amount ($) *</label>
+                            {{ form.amount }}
+                            {% if form.amount.errors %}
+                                <div class="text-danger small">{{ form.amount.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.payment_date.id_for_label }}" class="form-label">Payment Date *</label>
+                            {{ form.payment_date }}
+                            {% if form.payment_date.errors %}
+                                <div class="text-danger small">{{ form.payment_date.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Payment Method & Transaction Details -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-info border-bottom pb-2">Payment Method & Transaction Details</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.payment_method.id_for_label }}" class="form-label">Payment Method *</label>
+                            {{ form.payment_method }}
+                            {% if form.payment_method.errors %}
+                                <div class="text-danger small">{{ form.payment_method.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.status.id_for_label }}" class="form-label">Payment Status *</label>
+                            {{ form.status }}
+                            {% if form.status.errors %}
+                                <div class="text-danger small">{{ form.status.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3" id="transaction-id-field">
+                            <label for="{{ form.transaction_id.id_for_label }}" class="form-label">Transaction ID</label>
+                            {{ form.transaction_id }}
+                            {% if form.transaction_id.errors %}
+                                <div class="text-danger small">{{ form.transaction_id.errors.0 }}</div>
+                            {% endif %}
+                            <small class="text-muted">Required for online payments</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.reference_number.id_for_label }}" class="form-label">Reference Number</label>
+                            {{ form.reference_number }}
+                            {% if form.reference_number.errors %}
+                                <div class="text-danger small">{{ form.reference_number.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3" id="bank-name-field" style="display: none;">
+                            <label for="{{ form.bank_name.id_for_label }}" class="form-label">Bank Name</label>
+                            {{ form.bank_name }}
+                            {% if form.bank_name.errors %}
+                                <div class="text-danger small">{{ form.bank_name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3" id="cheque-number-field" style="display: none;">
+                            <label for="{{ form.cheque_number.id_for_label }}" class="form-label">Cheque Number</label>
+                            {{ form.cheque_number }}
+                            {% if form.cheque_number.errors %}
+                                <div class="text-danger small">{{ form.cheque_number.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-secondary border-bottom pb-2">Additional Information</h6>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label for="{{ form.notes.id_for_label }}" class="form-label">Notes</label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="text-danger small">{{ form.notes.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'fees:manage_student_fees' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save me-2"></i>Record Payment
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Student Fee Summary -->
+        <div class="card shadow" id="fee-summary" style="display: none;">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-user me-2"></i>Student Fee Summary
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="student-info">
+                    <!-- Will be populated via AJAX -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Amount Buttons -->
+        <div class="card shadow mt-3">
+            <div class="card-header bg-warning text-dark">
+                <h6 class="mb-0">
+                    <i class="fas fa-bolt me-2"></i>Quick Amount Selection
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="setAmount('current_emi')" id="current-emi-btn" style="display: none;">
+                        <i class="fas fa-calendar me-2"></i>Current EMI: $<span id="current-emi-amount">0.00</span>
+                    </button>
+                    <button type="button" class="btn btn-outline-warning btn-sm" onclick="setAmount('overdue_emis')" id="overdue-emis-btn" style="display: none;">
+                        <i class="fas fa-exclamation-triangle me-2"></i>All Overdue: $<span id="overdue-amount">0.00</span>
+                    </button>
+                    <button type="button" class="btn btn-outline-success btn-sm" onclick="setAmount('full_amount')" id="full-amount-btn" style="display: none;">
+                        <i class="fas fa-check-circle me-2"></i>Full Pending: $<span id="full-amount">0.00</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Method Help -->
+        <div class="card shadow mt-3">
+            <div class="card-header bg-secondary text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Payment Method Guide
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="paymentHelp">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#online-help">
+                                Online Payments
+                            </button>
+                        </h2>
+                        <div id="online-help" class="accordion-collapse collapse" data-bs-parent="#paymentHelp">
+                            <div class="accordion-body">
+                                <small>Require Transaction ID. Include UPI reference, payment gateway transaction ID, or bank transfer reference.</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#cheque-help">
+                                Cheque Payments
+                            </button>
+                        </h2>
+                        <div id="cheque-help" class="accordion-collapse collapse" data-bs-parent="#paymentHelp">
+                            <div class="accordion-body">
+                                <small>Require Cheque Number and Bank Name. Mark as pending until cheque clearance.</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#cash-help">
+                                Cash Payments
+                            </button>
+                        </h2>
+                        <div id="cash-help" class="accordion-collapse collapse" data-bs-parent="#paymentHelp">
+                            <div class="accordion-body">
+                                <small>Record immediately as completed. Add reference number for internal tracking.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+    const feeAssignmentField = document.getElementById('{{ form.fee_assignment.id_for_label }}');
+    const emiScheduleField = document.getElementById('{{ form.emi_schedule.id_for_label }}');
+    const paymentMethodField = document.getElementById('{{ form.payment_method.id_for_label }}');
+    const amountField = document.getElementById('{{ form.amount.id_for_label }}');
+    
+    // Show/hide fields based on payment method
+    function togglePaymentFields() {
+        const method = paymentMethodField.value;
+        const transactionField = document.getElementById('transaction-id-field');
+        const bankField = document.getElementById('bank-name-field');
+        const chequeField = document.getElementById('cheque-number-field');
+        
+        // Reset visibility
+        bankField.style.display = 'none';
+        chequeField.style.display = 'none';
+        
+        if (['online', 'upi', 'card'].includes(method)) {
+            transactionField.querySelector('small').textContent = 'Required for online payments';
+        } else if (method === 'cheque') {
+            bankField.style.display = 'block';
+            chequeField.style.display = 'block';
+        } else if (method === 'bank_transfer') {
+            bankField.style.display = 'block';
+        }
+    }
+    
+    // Load EMI schedules when fee assignment changes
+    function loadEMISchedules() {
+        const assignmentId = feeAssignmentField.value;
+        
+        // Clear EMI dropdown and hide sections
+        emiScheduleField.innerHTML = '<option value="">Select EMI (Optional)</option>';
+        document.getElementById('fee-summary').style.display = 'none';
+        hideQuickAmountButtons();
+        
+        if (!assignmentId) {
+            return;
+        }
+        
+        // Show loading
+        emiScheduleField.innerHTML = '<option value="">Loading EMIs...</option>';
+        
+        // Use Django URL reverse - make sure this matches your URL pattern
+        const url = `/fees/ajax/get-emi-schedules/?assignment_id=${assignmentId}`;
+        
+        fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('EMI data received:', data); // Debug log
+                
+                // Clear loading
+                emiScheduleField.innerHTML = '<option value="">Select EMI (Optional)</option>';
+                
+                // Check if data has emis array (try both keys for compatibility)
+                const emisData = data.emis || data.emi_schedules;
+                if (emisData && Array.isArray(emisData)) {
+                    // Populate EMI options
+                    emisData.forEach(emi => {
+                        const option = document.createElement('option');
+                        option.value = emi.id;
+                        option.textContent = emi.text;
+                        option.dataset.amount = emi.amount;
+                        option.dataset.status = emi.status;
+                        emiScheduleField.appendChild(option);
+                    });
+                    
+                    // Show student fee summary if assignment_info exists
+                    if (data.assignment_info) {
+                        displayFeeInfo(data.assignment_info);
+                    }
+                } else {
+                    emiScheduleField.innerHTML = '<option value="">No EMIs found</option>';
+                }
+                
+                // Load payment amount suggestions
+                loadPaymentAmounts(assignmentId);
+            })
+            .catch(error => {
+                console.error('Error loading EMI schedules:', error);
+                emiScheduleField.innerHTML = '<option value="">Error loading EMIs</option>';
+                alert('Error loading EMI schedules. Please check console for details.');
+            });
+    }
+    
+    // Display fee information
+    function displayFeeInfo(assignmentInfo) {
+        const lockStatus = assignmentInfo.is_course_locked ? 
+            '<p class="text-danger mb-0"><i class="fas fa-lock me-1"></i>Course Locked</p>' : 
+            '<p class="text-success mb-0"><i class="fas fa-unlock me-1"></i>Course Active</p>';
+            
+        const feeInfo = `
+            <div class="mb-3">
+                <h6 class="text-primary">${assignmentInfo.student_name}</h6>
+                <p class="mb-1"><strong>Course:</strong> ${assignmentInfo.course_title}</p>
+                <p class="mb-1"><strong>Total Amount:</strong> $${assignmentInfo.total_amount}</p>
+                <p class="mb-1"><strong>Paid:</strong> $${assignmentInfo.amount_paid}</p>
+                <p class="mb-1"><strong>Pending:</strong> $${assignmentInfo.amount_pending}</p>
+                ${lockStatus}
+            </div>
+        `;
+        
+        document.getElementById('student-info').innerHTML = feeInfo;
+        document.getElementById('fee-summary').style.display = 'block';
+    }
+    
+    // Load payment amount options
+    function loadPaymentAmounts(assignmentId) {
+        const baseUrl = '/fees/ajax/calculate-payment/';
+        
+        // Current EMI amount
+        fetch(`${baseUrl}?assignment_id=${assignmentId}&payment_type=current_emi`)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Current EMI data:', data); // Debug log
+                if (data.success && data.amount > 0) {
+                    const amount = parseFloat(data.amount) || 0;
+                    document.getElementById('current-emi-amount').textContent = amount.toFixed(2);
+                    document.getElementById('current-emi-btn').style.display = 'block';
+                } else {
+                    document.getElementById('current-emi-btn').style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading current EMI:', error);
+                document.getElementById('current-emi-btn').style.display = 'none';
+            });
+            
+        // Overdue EMIs amount
+        fetch(`${baseUrl}?assignment_id=${assignmentId}&payment_type=overdue_emis`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.amount > 0) {
+                    const amount = parseFloat(data.amount) || 0;
+                    document.getElementById('overdue-amount').textContent = amount.toFixed(2);
+                    document.getElementById('overdue-emis-btn').style.display = 'block';
+                } else {
+                    document.getElementById('overdue-emis-btn').style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading overdue EMIs:', error);
+                document.getElementById('overdue-emis-btn').style.display = 'none';
+            });
+            
+        // Full course amount
+        fetch(`${baseUrl}?assignment_id=${assignmentId}&payment_type=full_course`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.amount > 0) {
+                    const amount = parseFloat(data.amount) || 0;
+                    document.getElementById('full-amount').textContent = amount.toFixed(2);
+                    document.getElementById('full-amount-btn').style.display = 'block';
+                } else {
+                    document.getElementById('full-amount-btn').style.display = 'none';
+                }
+            })
+            .catch(error => {
+                console.error('Error loading full amount:', error);
+                document.getElementById('full-amount-btn').style.display = 'none';
+            });
+    }
+    
+    // Hide quick amount buttons
+    function hideQuickAmountButtons() {
+        document.getElementById('current-emi-btn').style.display = 'none';
+        document.getElementById('overdue-emis-btn').style.display = 'none';
+        document.getElementById('full-amount-btn').style.display = 'none';
+    }
+    
+    // Set amount based on selection
+    window.setAmount = function(type) {
+        let amount = 0;
+        
+        switch(type) {
+            case 'current_emi':
+                amount = parseFloat(document.getElementById('current-emi-amount').textContent);
+                break;
+            case 'overdue_emis':
+                amount = parseFloat(document.getElementById('overdue-amount').textContent);
+                break;
+            case 'full_amount':
+                amount = parseFloat(document.getElementById('full-amount').textContent);
+                break;
+        }
+        
+        if (amount > 0) {
+            amountField.value = amount.toFixed(2);
+        }
+    };
+    
+    // Set amount when EMI is selected
+    function onEMIChange() {
+        const selectedOption = emiScheduleField.options[emiScheduleField.selectedIndex];
+        if (selectedOption && selectedOption.dataset.amount) {
+            amountField.value = parseFloat(selectedOption.dataset.amount).toFixed(2);
+        }
+    }
+    
+    // Event listeners
+    paymentMethodField.addEventListener('change', togglePaymentFields);
+    feeAssignmentField.addEventListener('change', loadEMISchedules);
+    emiScheduleField.addEventListener('change', onEMIChange);
+    
+    // Initial setup
+    togglePaymentFields();
+    if (feeAssignmentField.value) {
+        loadEMISchedules();
+    }
+});
+</script>
+{% endblock %}

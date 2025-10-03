@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Password Reset - Set New Password</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 400px;
+            margin: 100px auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="password"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        input[type="submit"] {
+            width: 100%;
+            padding: 12px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        input[type="submit"]:hover {
+            background-color: #c82333;
+        }
+        .error {
+            color: red;
+            margin-bottom: 15px;
+        }
+        .success {
+            color: green;
+            margin-bottom: 15px;
+        }
+        .info {
+            color: #6c757d;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        .password-requirements {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        .strength-indicator {
+            height: 5px;
+            background-color: #e9ecef;
+            border-radius: 3px;
+            margin-top: 5px;
+            overflow: hidden;
+        }
+        .strength-bar {
+            height: 100%;
+            transition: all 0.3s ease;
+            border-radius: 3px;
+        }
+        .strength-weak { background-color: #dc3545; width: 33%; }
+        .strength-medium { background-color: #ffc107; width: 66%; }
+        .strength-strong { background-color: #28a745; width: 100%; }
+        .match-indicator {
+            font-size: 12px;
+            margin-top: 5px;
+        }
+        .match-yes { color: #28a745; }
+        .match-no { color: #dc3545; }
+    </style>
+</head>
+<body>
+    <h2>Set New Password</h2>
+    
+    <div class="info">
+        Setting new password for: <strong>{{ email }}</strong>
+    </div>
+    
+    {% if error %}
+        <div class="error">{{ error }}</div>
+    {% endif %}
+    
+    {% if success %}
+        <div class="success">{{ success }}</div>
+    {% else %}
+        <form method="POST">
+            {% csrf_token %}
+            <div class="form-group">
+                <label for="new_password">New Password:</label>
+                <input type="password" name="new_password" id="new_password" placeholder="Enter new password" required>
+                <div class="password-requirements">
+                    Password must be at least 8 characters long
+                </div>
+                <div class="strength-indicator">
+                    <div class="strength-bar" id="strength-bar"></div>
+                </div>
+                <div id="strength-text" style="font-size: 12px; margin-top: 5px;"></div>
+            </div>
+            
+            <div class="form-group">
+                <label for="confirm_password">Confirm Password:</label>
+                <input type="password" name="confirm_password" id="confirm_password" placeholder="Confirm new password" required>
+                <div class="match-indicator" id="match-indicator"></div>
+            </div>
+            
+            <input type="submit" value="Reset Password" id="submit-btn">
+        </form>
+    {% endif %}
+
+    <script>
+        const newPassword = document.getElementById('new_password');
+        const confirmPassword = document.getElementById('confirm_password');
+        const strengthBar = document.getElementById('strength-bar');
+        const strengthText = document.getElementById('strength-text');
+        const matchIndicator = document.getElementById('match-indicator');
+        const submitBtn = document.getElementById('submit-btn');
+        
+        function checkPasswordStrength(password) {
+            let strength = 0;
+            let text = '';
+            
+            if (password.length >= 8) strength += 1;
+            if (/[a-z]/.test(password)) strength += 1;
+            if (/[A-Z]/.test(password)) strength += 1;
+            if (/[0-9]/.test(password)) strength += 1;
+            if (/[^a-zA-Z0-9]/.test(password)) strength += 1;
+            
+            strengthBar.className = 'strength-bar';
+            
+            if (strength <= 2) {
+                strengthBar.classList.add('strength-weak');
+                text = 'Weak';
+            } else if (strength <= 3) {
+                strengthBar.classList.add('strength-medium');
+                text = 'Medium';
+            } else {
+                strengthBar.classList.add('strength-strong');
+                text = 'Strong';
+            }
+            
+            strengthText.textContent = password.length > 0 ? `Strength: ${text}` : '';
+        }
+        
+        function checkPasswordMatch() {
+            const match = newPassword.value === confirmPassword.value;
+            
+            if (confirmPassword.value.length > 0) {
+                if (match) {
+                    matchIndicator.textContent = '✓ Passwords match';
+                    matchIndicator.className = 'match-indicator match-yes';
+                } else {
+                    matchIndicator.textContent = '✗ Passwords do not match';
+                    matchIndicator.className = 'match-indicator match-no';
+                }
+            } else {
+                matchIndicator.textContent = '';
+            }
+            
+            // Enable/disable submit button
+            const isValid = newPassword.value.length >= 8 && match && confirmPassword.value.length > 0;
+            submitBtn.disabled = !isValid;
+            submitBtn.style.backgroundColor = isValid ? '#dc3545' : '#ccc';
+        }
+        
+        newPassword.addEventListener('input', function() {
+            checkPasswordStrength(this.value);
+            checkPasswordMatch();
+        });
+        
+        confirmPassword.addEventListener('input', function() {
+            checkPasswordMatch();
+        });
+        
+        // Initial check
+        checkPasswordMatch();
+    </script>
+</body>
+</html>

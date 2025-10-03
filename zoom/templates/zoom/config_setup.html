@@ -1,0 +1,428 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Zoom Configuration Setup - LMS Admin{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+    .card {
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    }
+    .config-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    .step-indicator {
+        background: #f8f9fc;
+        border-left: 4px solid #5a5c69;
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    .test-result {
+        padding: 10px;
+        border-radius: 5px;
+        margin-top: 10px;
+    }
+    .test-success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    .test-failure {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    .credential-input {
+        font-family: 'Courier New', monospace;
+    }
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    .btn-gradient {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+    }
+    .btn-gradient:hover {
+        background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="card config-header mb-4">
+        <div class="card-body text-center">
+            <h1 class="mb-0">
+                <i class="fas fa-video fa-2x mb-3"></i>
+                <br>Zoom Integration Setup
+            </h1>
+            <p class="mb-0">Configure your Zoom API credentials to enable live sessions</p>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            
+            <!-- Setup Instructions -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle text-primary"></i> Setup Instructions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="step-indicator">
+                                <h6><i class="fas fa-globe"></i> Step 1</h6>
+                                <p class="small">Go to <a href="https://marketplace.zoom.us" target="_blank">marketplace.zoom.us</a></p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="step-indicator">
+                                <h6><i class="fas fa-plus-circle"></i> Step 2</h6>
+                                <p class="small">Create Server-to-Server OAuth App</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="step-indicator">
+                                <h6><i class="fas fa-key"></i> Step 3</h6>
+                                <p class="small">Get API credentials from App</p>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="step-indicator">
+                                <h6><i class="fas fa-check-circle"></i> Step 4</h6>
+                                <p class="small">Enter credentials below</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configuration Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog"></i> Zoom Configuration
+                        {% if config %}
+                            <span class="badge bg-success ms-2">Currently Configured</span>
+                        {% else %}
+                            <span class="badge bg-warning ms-2">Not Configured</span>
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="configForm">
+                        {% csrf_token %}
+                        
+                        <!-- Organization Details -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2 mb-3">
+                                    <i class="fas fa-building"></i> Organization Details
+                                </h6>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="organization_name" class="form-label">
+                                    Organization Name <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" name="organization_name" id="organization_name" 
+                                       class="form-control" placeholder="My LMS Organization"
+                                       value="{{ config.organization_name|default:'' }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="admin_email" class="form-label">
+                                    Admin Email <span class="text-danger">*</span>
+                                </label>
+                                <input type="email" name="admin_email" id="admin_email" 
+                                       class="form-control" placeholder="admin@yourlms.com"
+                                       value="{{ config.admin_email|default:'' }}" required>
+                            </div>
+                        </div>
+
+                        <!-- Zoom API Credentials -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2 mb-3">
+                                    <i class="fas fa-key"></i> Zoom API Credentials
+                                    <small class="text-muted">(Get from marketplace.zoom.us)</small>
+                                </h6>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="account_id" class="form-label">
+                                    Account ID <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" name="account_id" id="account_id" 
+                                       class="form-control credential-input" placeholder="Account ID"
+                                       value="{{ config.account_id|default:'' }}" required>
+                                <div class="form-text">Your Zoom Account ID</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="client_id" class="form-label">
+                                    Client ID <span class="text-danger">*</span>
+                                </label>
+                                <input type="text" name="client_id" id="client_id" 
+                                       class="form-control credential-input" placeholder="Client ID"
+                                       value="{{ config.client_id|default:'' }}" required>
+                                <div class="form-text">Your Zoom App Client ID</div>
+                            </div>
+                            <div class="col-md-6 mt-3">
+                                <label for="client_secret" class="form-label">
+                                    Client Secret <span class="text-danger">*</span>
+                                </label>
+                                <input type="password" name="client_secret" id="client_secret" 
+                                       class="form-control credential-input" placeholder="Client Secret"
+                                       value="{{ config.client_secret|default:'' }}" required>
+                                <div class="form-text">Your Zoom App Client Secret</div>
+                            </div>
+                            <div class="col-md-6 mt-3">
+                                <label for="secret_token" class="form-label">
+                                    Secret Token (Webhook)
+                                </label>
+                                <input type="text" name="secret_token" id="secret_token" 
+                                       class="form-control credential-input" placeholder="Secret Token"
+                                       value="{{ config.secret_token|default:'' }}">
+                                <div class="form-text">Optional: For webhook verification</div>
+                            </div>
+                        </div>
+
+                        <!-- Default Meeting Settings -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2 mb-3">
+                                    <i class="fas fa-video"></i> Default Meeting Settings
+                                </h6>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    <input type="checkbox" name="default_host_video" id="default_host_video" 
+                                           class="form-check-input" 
+                                           {% if config.default_host_video %}checked{% endif %}>
+                                    <label for="default_host_video" class="form-check-label">
+                                        <i class="fas fa-camera text-success"></i> Host Video On
+                                    </label>
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input type="checkbox" name="default_participant_video" id="default_participant_video" 
+                                           class="form-check-input"
+                                           {% if config.default_participant_video %}checked{% endif %}>
+                                    <label for="default_participant_video" class="form-check-label">
+                                        <i class="fas fa-users text-info"></i> Participant Video On
+                                    </label>
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input type="checkbox" name="default_mute_upon_entry" id="default_mute_upon_entry" 
+                                           class="form-check-input" 
+                                           {% if config.default_mute_upon_entry|default:True %}checked{% endif %}>
+                                    <label for="default_mute_upon_entry" class="form-check-label">
+                                        <i class="fas fa-microphone-slash text-warning"></i> Mute Upon Entry
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check mb-3">
+                                    <input type="checkbox" name="default_waiting_room" id="default_waiting_room" 
+                                           class="form-check-input"
+                                           {% if config.default_waiting_room|default:True %}checked{% endif %}>
+                                    <label for="default_waiting_room" class="form-check-label">
+                                        <i class="fas fa-clock text-primary"></i> Enable Waiting Room
+                                    </label>
+                                </div>
+                                <div class="form-check mb-3">
+                                    <input type="checkbox" name="default_join_before_host" id="default_join_before_host" 
+                                           class="form-check-input"
+                                           {% if config.default_join_before_host %}checked{% endif %}>
+                                    <label for="default_join_before_host" class="form-check-label">
+                                        <i class="fas fa-sign-in-alt text-secondary"></i> Join Before Host
+                                    </label>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="default_auto_recording" class="form-label">
+                                        <i class="fas fa-record-vinyl text-danger"></i> Auto Recording
+                                    </label>
+                                    <select name="default_auto_recording" id="default_auto_recording" class="form-select">
+                                        {% for value, label in recording_choices %}
+                                            <option value="{{ value }}" 
+                                                    {% if config.default_auto_recording == value or value == 'cloud' %}selected{% endif %}>
+                                                {{ label }}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Connection Test -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2 mb-3">
+                                    <i class="fas fa-plug"></i> Connection Test
+                                </h6>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="form-check">
+                                    <input type="checkbox" name="test_connection" id="test_connection" 
+                                           class="form-check-input" checked>
+                                    <label for="test_connection" class="form-check-label">
+                                        Test connection automatically after saving
+                                    </label>
+                                </div>
+                                
+                                <!-- Test Result Area -->
+                                <div id="testResult" style="display: none;"></div>
+                                
+                                {% if config and config.last_test_date %}
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            Last tested: {{ config.last_test_date|date:"M d, Y H:i" }}
+                                            - Status: 
+                                            {% if config.test_status == 'success' %}
+                                                <span class="text-success">Success</span>
+                                            {% elif config.test_status == 'failed' %}
+                                                <span class="text-danger">Failed</span>
+                                            {% else %}
+                                                <span class="text-muted">Not Tested</span>
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <button type="button" class="btn btn-outline-info w-100" id="testNowBtn">
+                                    <i class="fas fa-flask"></i> Test Now
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="row">
+                            <div class="col-12 text-center">
+                                <hr>
+                                <a href="{% url 'zoom:dashboard' %}" class="btn btn-secondary me-3">
+                                    <i class="fas fa-arrow-left"></i> Back to Dashboard
+                                </a>
+                                <button type="submit" class="btn btn-gradient btn-lg">
+                                    <i class="fas fa-save"></i> 
+                                    {% if config %}Update Configuration{% else %}Save Configuration{% endif %}
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const testNowBtn = document.getElementById('testNowBtn');
+        const testResult = document.getElementById('testResult');
+        
+        // Test connection button
+        testNowBtn.addEventListener('click', function() {
+            const btn = this;
+            const originalText = btn.innerHTML;
+            
+            // Show loading
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
+            btn.disabled = true;
+            
+            // Make AJAX request
+            fetch('{% url "zoom:test_connection" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                testResult.style.display = 'block';
+                if (data.success) {
+                    testResult.className = 'test-result test-success';
+                    testResult.innerHTML = `
+                        <i class="fas fa-check-circle"></i> 
+                        <strong>Success!</strong> ${data.message}
+                    `;
+                } else {
+                    testResult.className = 'test-result test-failure';
+                    testResult.innerHTML = `
+                        <i class="fas fa-times-circle"></i> 
+                        <strong>Failed!</strong> ${data.message}
+                    `;
+                }
+            })
+            .catch(error => {
+                testResult.style.display = 'block';
+                testResult.className = 'test-result test-failure';
+                testResult.innerHTML = `
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    <strong>Error!</strong> Could not test connection.
+                `;
+            })
+            .finally(() => {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            });
+        });
+        
+        // Form validation
+        document.getElementById('configForm').addEventListener('submit', function(e) {
+            const requiredFields = ['organization_name', 'admin_email', 'account_id', 'client_id', 'client_secret'];
+            let allFilled = true;
+            
+            requiredFields.forEach(field => {
+                const input = document.getElementById(field);
+                if (!input.value.trim()) {
+                    input.classList.add('is-invalid');
+                    allFilled = false;
+                } else {
+                    input.classList.remove('is-invalid');
+                }
+            });
+            
+            if (!allFilled) {
+                e.preventDefault();
+                alert('Please fill all required fields marked with *');
+                return false;
+            }
+            
+            // Show loading on submit
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+            submitBtn.disabled = true;
+        });
+        
+        // Toggle password visibility
+        const secretInput = document.getElementById('client_secret');
+        secretInput.addEventListener('dblclick', function() {
+            this.type = this.type === 'password' ? 'text' : 'password';
+        });
+    });
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

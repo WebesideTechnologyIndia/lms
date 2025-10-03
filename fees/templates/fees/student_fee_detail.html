@@ -1,0 +1,915 @@
+{% extends 'base.html' %}
+
+{% block title %}Student Fee Details - {{ assignment.student.get_full_name }} - LMS Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .student-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        padding: 30px;
+        color: white;
+        margin-bottom: 30px;
+    }
+    
+    .student-avatar-large {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        font-weight: bold;
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        border: 3px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        border: 1px solid #e3e6f0;
+        transition: all 0.3s ease;
+    }
+    
+    .info-card:hover {
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+        border-radius: 10px;
+        border-left: 4px solid;
+        padding: 20px;
+        transition: all 0.3s ease;
+    }
+    
+    .stat-card.total { border-left-color: #007bff; }
+    .stat-card.paid { border-left-color: #28a745; }
+    .stat-card.pending { border-left-color: #ffc107; }
+    .stat-card.overdue { border-left-color: #dc3545; }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        line-height: 1.2;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-left: 40px;
+        margin-bottom: 25px;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: 15px;
+        top: 0;
+        bottom: -25px;
+        width: 2px;
+        background: #e3e6f0;
+    }
+    
+    .timeline-item:last-child::before {
+        display: none;
+    }
+    
+    .timeline-marker {
+        position: absolute;
+        left: 8px;
+        top: 8px;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 3px solid #fff;
+        background: #007bff;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .timeline-marker.completed { background: #28a745; }
+    .timeline-marker.overdue { background: #dc3545; }
+    .timeline-marker.pending { background: #ffc107; }
+    
+    .emi-card {
+        border-radius: 8px;
+        border: 1px solid #e3e6f0;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+    }
+    
+    .emi-card:hover {
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+    }
+    
+    .emi-card.overdue {
+        border-left: 4px solid #dc3545;
+        background: #fff5f5;
+        animation: pulse-border 2s infinite;
+    }
+    
+    .emi-card.completed {
+        border-left: 4px solid #28a745;
+        background: #f8fff8;
+    }
+    
+    .emi-card.pending {
+        border-left: 4px solid #ffc107;
+        background: #fffef8;
+    }
+    
+    @keyframes pulse-border {
+        0% { border-left-color: #dc3545; }
+        50% { border-left-color: #ff6b7a; }
+        100% { border-left-color: #dc3545; }
+    }
+    
+    .payment-item {
+        background: #f8fff8;
+        border: 1px solid #d4edda;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+    }
+    
+    .progress-bar-custom {
+        height: 12px;
+        border-radius: 6px;
+        background: #e9ecef;
+        overflow: hidden;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #28a745, #20c997);
+        border-radius: 6px;
+        transition: width 0.8s ease;
+    }
+    
+    .action-btn {
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        border: none;
+    }
+    
+    .action-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    }
+    
+    .badge-status {
+        font-size: 0.75rem;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: 500;
+    }
+    
+    .section-header {
+        border-bottom: 2px solid #e3e6f0;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .section-header h4 {
+        color: #495057;
+        font-weight: 600;
+        margin: 0;
+    }
+    
+    .alert-overdue {
+        background: linear-gradient(135deg, #fff5f5 0%, #ffe6e6 100%);
+        border: 1px solid #f5c6cb;
+        border-radius: 10px;
+        color: #721c24;
+    }
+    
+    .nav-tabs .nav-link {
+        border-radius: 8px 8px 0 0;
+        font-weight: 500;
+        transition: all 0.2s ease;
+    }
+    
+    .nav-tabs .nav-link.active {
+        background: linear-gradient(135deg, #007bff, #0056b3);
+        color: white;
+        border-color: #007bff;
+    }
+    
+    .tab-content {
+        background: white;
+        border-radius: 0 8px 8px 8px;
+        border: 1px solid #dee2e6;
+        border-top: none;
+        padding: 20px;
+    }
+
+    .completion-celebration {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        border-radius: 15px;
+        padding: 40px;
+        text-align: center;
+        color: white;
+        margin-bottom: 20px;
+    }
+
+    .completion-icon {
+        font-size: 5rem;
+        margin-bottom: 20px;
+        animation: bounceIn 1s ease-out;
+    }
+
+    @keyframes bounceIn {
+        0% { transform: scale(0.3); opacity: 0; }
+        50% { transform: scale(1.05); }
+        70% { transform: scale(0.9); }
+        100% { transform: scale(1); opacity: 1; }
+    }
+
+    @keyframes fadeInUp {
+        from {
+            opacity: 0;
+            transform: translate3d(0, 40px, 0);
+        }
+        to {
+            opacity: 1;
+            transform: translate3d(0, 0, 0);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fees:admin_fees_dashboard' %}">Fees</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fees:manage_student_fees' %}">Manage Student Fees</a></li>
+        <li class="breadcrumb-item active">{{ assignment.student.get_full_name }}</li>
+    </ol>
+</nav>
+
+<!-- CSRF Token -->
+{% csrf_token %}
+
+<!-- Student Header -->
+<div class="student-header">
+    <div class="row align-items-center">
+        <div class="col-auto">
+            <div class="student-avatar-large">
+                {{ assignment.student.first_name.0|upper }}{{ assignment.student.last_name.0|upper }}
+            </div>
+        </div>
+        <div class="col">
+            <h2 class="mb-1 fw-bold">{{ assignment.student.get_full_name }}</h2>
+            <p class="mb-2 opacity-75">
+                <i class="fas fa-envelope me-2"></i>{{ assignment.student.email }}
+                <span class="mx-3">|</span>
+                <i class="fas fa-graduation-cap me-2"></i>{{ assignment.course.title }}
+            </p>
+            <div class="d-flex align-items-center">
+                <span class="badge bg-light text-dark me-2">{{ assignment.course.course_code }}</span>
+                {% if assignment.status == 'active' %}
+                    <span class="badge bg-success">Active Enrollment</span>
+                {% elif assignment.status == 'completed' %}
+                    <span class="badge bg-primary">Completed</span>
+                {% elif assignment.status == 'suspended' %}
+                    <span class="badge bg-warning">Suspended</span>
+                {% endif %}
+                
+                {% if assignment.is_course_locked %}
+                    <span class="badge bg-danger ms-2">
+                        <i class="fas fa-lock me-1"></i>Course Locked
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-auto">
+            <div class="d-flex gap-2">
+                {% if not is_payment_complete %}
+                    <a href="{% url 'fees:quick_payment' assignment.id %}" class="btn btn-light action-btn">
+                        <i class="fas fa-credit-card me-2"></i>Record Payment
+                    </a>
+                {% endif %}
+                <button class="btn btn-light action-btn" onclick="sendReminder({{ assignment.id }})">
+                    <i class="fas fa-envelope me-2"></i>Send Reminder
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Complete Celebration -->
+{% if is_payment_complete %}
+<div class="completion-celebration">
+    <div class="completion-icon">
+        <i class="fas fa-trophy"></i>
+    </div>
+    <h2 class="mb-3">Payment Completed!</h2>
+    <p class="mb-4 fs-5">Congratulations! {{ assignment.student.get_full_name }} has successfully completed all payment obligations for {{ assignment.course.title }}.</p>
+    <div class="row justify-content-center">
+        <div class="col-auto">
+            <div class="badge bg-light text-success fs-6 px-3 py-2">
+                <i class="fas fa-check-circle me-2"></i>Total Paid: ${{ total_paid|floatformat:2 }}
+            </div>
+        </div>
+        <div class="col-auto">
+            <div class="badge bg-light text-primary fs-6 px-3 py-2">
+                <i class="fas fa-calendar-check me-2"></i>Completed on: {{ assignment.updated_at|date:"M d, Y" }}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Overdue Alert -->
+{% if overdue_amount > 0 and not is_payment_complete %}
+<div class="alert alert-overdue mb-4">
+    <div class="d-flex align-items-center">
+        <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+        <div>
+            <h5 class="mb-1">Payment Overdue!</h5>
+            <p class="mb-0">This student has <strong>${{ overdue_amount|floatformat:2 }}</strong> in overdue payments across <strong>{{ overdue_emis.count }}</strong> installment(s).</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stat-card total">
+            <div class="stat-value text-primary">${{ assignment.total_amount|floatformat:2 }}</div>
+            <div class="stat-label">Total Amount</div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stat-card paid">
+            <div class="stat-value text-success">${{ total_paid|floatformat:2 }}</div>
+            <div class="stat-label">Amount Paid</div>
+            <div class="mt-2">
+                <small class="text-success fw-semibold">
+                    {% widthratio total_paid assignment.total_amount 100 %}% Complete
+                </small>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stat-card pending">
+            <div class="stat-value text-warning">
+                ${{ assignment.total_amount|add:0|floatformat:2|add:"-"|add:total_paid|floatformat:2 }}
+            </div>
+            <div class="stat-label">Amount Pending</div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="stat-card overdue">
+            <div class="stat-value text-danger">${{ overdue_amount|floatformat:2 }}</div>
+            <div class="stat-label">Overdue Amount</div>
+            {% if overdue_emis.count > 0 %}
+                <div class="mt-2">
+                    <small class="text-danger fw-semibold">{{ overdue_emis.count }} Overdue EMI(s)</small>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Payment Progress -->
+<div class="info-card mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0">
+                <i class="fas fa-chart-line me-2 text-primary"></i>Payment Progress
+            </h5>
+            <span class="text-muted">
+                {% widthratio total_paid assignment.total_amount 100 %}% Complete
+            </span>
+        </div>
+        <div class="progress-bar-custom">
+            <div class="progress-fill" style="width: {% widthratio total_paid assignment.total_amount 100 %}%"></div>
+        </div>
+        <div class="d-flex justify-content-between mt-2">
+            <small class="text-muted">$0</small>
+            <small class="text-muted">${{ assignment.total_amount|floatformat:2 }}</small>
+        </div>
+    </div>
+</div>
+
+<!-- Fee Structure Information -->
+<div class="info-card mb-4">
+    <div class="card-body">
+        <div class="section-header">
+            <h4><i class="fas fa-info-circle me-2 text-info"></i>Fee Structure Details</h4>
+        </div>
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-borderless">
+                    <tr>
+                        <td class="fw-semibold text-muted">Fee Structure:</td>
+                        <td>
+                            <span class="badge bg-info text-white">{{ assignment.fee_structure.name }}</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="fw-semibold text-muted">Payment Type:</td>
+                        <td>{{ assignment.fee_structure.get_payment_type_display }}</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-semibold text-muted">Assignment Date:</td>
+                        <td>{{ assignment.assigned_date|date:"M d, Y" }}</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <table class="table table-borderless">
+                    <tr>
+                        <td class="fw-semibold text-muted">Course Duration:</td>
+                        <td>{{ assignment.course.duration_months }} months</td>
+                    </tr>
+                    <tr>
+                        <td class="fw-semibold text-muted">Status:</td>
+                        <td>
+                            {% if assignment.status == 'active' %}
+                                <span class="badge bg-success">{{ assignment.get_status_display }}</span>
+                            {% elif assignment.status == 'completed' %}
+                                <span class="badge bg-primary">{{ assignment.get_status_display }}</span>
+                            {% else %}
+                                <span class="badge bg-warning">{{ assignment.get_status_display }}</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td class="fw-semibold text-muted">Last Updated:</td>
+                        <td>{{ assignment.updated_at|date:"M d, Y g:i A" }}</td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tabbed Content -->
+<div class="info-card">
+    <div class="card-body">
+        <!-- Nav Tabs -->
+        <ul class="nav nav-tabs" id="detailTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="emi-tab" data-bs-toggle="tab" data-bs-target="#emi-schedule" type="button" role="tab">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    {% if is_payment_complete %}
+                        Payment Complete
+                    {% else %}
+                        EMI Schedule ({{ emi_schedules.count }})
+                        {% if overdue_emis.count > 0 %}
+                            <span class="badge bg-danger ms-2">{{ overdue_emis.count }} Overdue</span>
+                        {% endif %}
+                    {% endif %}
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="payments-tab" data-bs-toggle="tab" data-bs-target="#payment-history" type="button" role="tab">
+                    <i class="fas fa-credit-card me-2"></i>Payment History ({{ payments.count }})
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="access-tab" data-bs-toggle="tab" data-bs-target="#course-access" type="button" role="tab">
+                    <i class="fas fa-key me-2"></i>Course Access
+                </button>
+            </li>
+        </ul>
+
+        <!-- Tab Content -->
+        <div class="tab-content" id="detailTabsContent">
+            <!-- EMI Schedule Tab -->
+            <div class="tab-pane fade show active" id="emi-schedule" role="tabpanel">
+                {% if is_payment_complete %}
+                    <!-- Payment Complete Display -->
+                    <div class="text-center py-5">
+                        <i class="fas fa-check-circle text-success mb-4" style="font-size: 4rem;"></i>
+                        <h4 class="text-success mb-3">All Payments Completed!</h4>
+                        <p class="text-muted mb-4">Student has successfully completed all payment obligations for this course.</p>
+                        
+                        <div class="row justify-content-center">
+                            <div class="col-md-8">
+                                <div class="alert alert-success border-success">
+                                    <div class="row text-center">
+                                        <div class="col-md-4">
+                                            <div class="fw-bold text-success">${{ total_paid|floatformat:2 }}</div>
+                                            <small class="text-muted">Total Paid</small>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="fw-bold text-success">100%</div>
+                                            <small class="text-muted">Complete</small>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="fw-bold text-success">{{ payments.count }}</div>
+                                            <small class="text-muted">Payment(s) Made</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <p class="text-muted">
+                            <i class="fas fa-trophy text-warning me-2"></i>
+                            No pending EMIs or outstanding amounts remain.
+                        </p>
+                    </div>
+                {% elif emi_schedules %}
+                    <!-- EMI Timeline -->
+                    <div class="timeline">
+                        {% for emi in emi_schedules %}
+                        <div class="timeline-item">
+                            <div class="timeline-marker {% if emi.status == 'completed' %}completed{% elif emi.status == 'overdue' %}overdue{% else %}pending{% endif %}"></div>
+                            <div class="emi-card {{ emi.status }}">
+                                <div class="card-body">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-2">
+                                            <div class="text-center">
+                                                <div class="fw-bold text-primary">EMI #{{ emi.installment_number }}</div>
+                                                <small class="text-muted">Installment</small>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="fw-semibold text-dark">${{ emi.amount|floatformat:2 }}</div>
+                                            <small class="text-muted">Amount Due</small>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="fw-semibold">{{ emi.due_date|date:"M d, Y" }}</div>
+                                            <small class="text-muted">Due Date</small>
+                                            {% if emi.status == 'overdue' %}
+                                                <br><small class="text-danger fw-bold">
+                                                    <i class="fas fa-exclamation-triangle me-1"></i>
+                                                    {% now "Y-m-d" as today %}
+                                                    {{ emi.due_date|timesince:today }} overdue
+                                                </small>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-2">
+                                            {% if emi.status == 'paid' %}
+                                                <span class="badge bg-success badge-status">Paid</span>
+                                            {% elif emi.status == 'overdue' %}
+                                                <span class="badge bg-danger badge-status">Overdue</span>
+                                            {% elif emi.status == 'waived' %}
+                                                <span class="badge bg-info badge-status">Waived</span>
+                                            {% else %}
+                                                <span class="badge bg-warning badge-status">Pending</span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-2 text-end">
+                                            {% if emi.status != 'paid' and emi.status != 'waived' %}
+                                                <a href="{% url 'fees:quick_payment' assignment.id %}?emi={{ emi.id }}" class="btn btn-sm btn-success action-btn">
+                                                    <i class="fas fa-credit-card me-1"></i>Pay Now
+                                                </a>
+                                            {% else %}
+                                                <i class="fas fa-check-circle text-success fa-lg"></i>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    {% if emi.status == 'paid' and emi.paid_date %}
+                                        <div class="row mt-2">
+                                            <div class="col-md-6 offset-md-2">
+                                                <small class="text-success">
+                                                    <i class="fas fa-calendar-check me-1"></i>
+                                                    Paid on {{ emi.paid_date|date:"M d, Y" }}
+                                                </small>
+                                                {% if emi.late_fee_applied > 0 %}
+                                                    <br><small class="text-warning">
+                                                        <i class="fas fa-exclamation-circle me-1"></i>
+                                                        Late fee applied: ${{ emi.late_fee_applied|floatformat:2 }}
+                                                    </small>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-calendar-times text-muted mb-3" style="font-size: 3rem;"></i>
+                        <h5 class="text-muted">No EMI Schedule Found</h5>
+                        <p class="text-muted">This fee assignment doesn't have an EMI schedule configured.</p>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Payment History Tab -->
+            <div class="tab-pane fade" id="payment-history" role="tabpanel">
+                {% if payments %}
+                    {% for payment in payments %}
+                    <div class="payment-item">
+                        <div class="row align-items-center">
+                            <div class="col-md-3">
+                                <div class="fw-bold text-success">${{ payment.amount|floatformat:2 }}</div>
+                                <small class="text-muted">{{ payment.get_payment_method_display }}</small>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="fw-semibold">{{ payment.payment_date|date:"M d, Y" }}</div>
+                                <small class="text-muted">{{ payment.created_at|time:"g:i A" }}</small>
+                            </div>
+                            <div class="col-md-4">
+                                {% if payment.transaction_id %}
+                                    <div class="fw-semibold">TxnID: {{ payment.transaction_id }}</div>
+                                {% endif %}
+                                {% if payment.reference_number %}
+                                    <div class="fw-semibold">Ref: {{ payment.reference_number }}</div>
+                                {% endif %}
+                                {% if payment.notes %}
+                                    <small class="text-muted">{{ payment.notes|truncatechars:50 }}</small>
+                                {% endif %}
+                                {% if not payment.transaction_id and not payment.reference_number and not payment.notes %}
+                                    <small class="text-muted">No additional details</small>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <span class="badge bg-success">Completed</span>
+                                <br><small class="text-muted">by {{ payment.recorded_by.get_full_name }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-credit-card text-muted mb-3" style="font-size: 3rem;"></i>
+                        <h5 class="text-muted">No Payments Yet</h5>
+                        <p class="text-muted mb-4">No payments have been recorded for this student.</p>
+                        {% if not is_payment_complete %}
+                            <a href="{% url 'fees:quick_payment' assignment.id %}" class="btn btn-primary action-btn">
+                                <i class="fas fa-plus me-2"></i>Record First Payment
+                            </a>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Course Access Tab -->
+            <div class="tab-pane fade" id="course-access" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="fw-semibold mb-3">Current Access Status</h6>
+                        <div class="card border-0 bg-light">
+                            <div class="card-body">
+                                <div class="d-flex align-items-center">
+                                    {% if assignment.is_course_locked %}
+                                        <i class="fas fa-lock text-danger fa-2x me-3"></i>
+                                        <div>
+                                            <div class="fw-bold text-danger">Course Locked</div>
+                                            <small class="text-muted">Student cannot access course content</small>
+                                        </div>
+                                    {% else %}
+                                        <i class="fas fa-unlock text-success fa-2x me-3"></i>
+                                        <div>
+                                            <div class="fw-bold text-success">Course Unlocked</div>
+                                            <small class="text-muted">Student has full access to course content</small>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="mt-3">
+                                    {% if assignment.is_course_locked %}
+                                        <button class="btn btn-success btn-sm action-btn" onclick="unlockCourse({{ assignment.id }})">
+                                            <i class="fas fa-unlock me-2"></i>Unlock Course
+                                        </button>
+                                    {% else %}
+                                        <button class="btn btn-warning btn-sm action-btn" onclick="lockCourse({{ assignment.id }})">
+                                            <i class="fas fa-lock me-2"></i>Lock Course
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="fw-semibold mb-3">Batch Access Controls</h6>
+                        {% if batch_controls %}
+                            {% for control in batch_controls %}
+                            <div class="card border-0 bg-light mb-2">
+                                <div class="card-body py-2">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <div class="fw-semibold">{{ control.batch.name }}</div>
+                                            <small class="text-muted">{{ control.batch.course.title }}</small>
+                                        </div>
+                                        <div>
+                                            {% if control.is_locked %}
+                                                <span class="badge bg-danger">Locked</span>
+                                            {% else %}
+                                                <span class="badge bg-success">Active</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-3">
+                                <i class="fas fa-users text-muted mb-2" style="font-size: 2rem;"></i>
+                                <p class="text-muted mb-0">No batch assignments found</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize tabs
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Bootstrap tabs
+        var triggerTabList = [].slice.call(document.querySelectorAll('#detailTabs button'));
+        triggerTabList.forEach(function (triggerEl) {
+            var tabTrigger = new bootstrap.Tab(triggerEl);
+        });
+        
+        // Animate progress bar on load
+        setTimeout(function() {
+            const progressFill = document.querySelector('.progress-fill');
+            if (progressFill) {
+                const currentWidth = progressFill.style.width;
+                progressFill.style.width = '0%';
+                setTimeout(() => {
+                    progressFill.style.width = currentWidth;
+                }, 100);
+            }
+        }, 500);
+        
+        // Add smooth scrolling for timeline
+        const timelineItems = document.querySelectorAll('.timeline-item');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.animation = 'fadeInUp 0.6s ease-out';
+                }
+            });
+        });
+        
+        timelineItems.forEach(item => {
+            observer.observe(item);
+        });
+    });
+
+    function lockCourse(assignmentId) {
+        if (confirm('Are you sure you want to lock this course for the student? This will prevent them from accessing course content.')) {
+            showLoadingState('locking course');
+            
+            fetch(`/fees/admin/student-fees/${assignmentId}/lock/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoadingState();
+                if (data.success) {
+                    showSuccessMessage('Course locked successfully!');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showErrorMessage('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                hideLoadingState();
+                console.error('Error:', error);
+                showErrorMessage('An error occurred while locking the course.');
+            });
+        }
+    }
+
+    function unlockCourse(assignmentId) {
+        const unlockDate = prompt('Enter unlock date (YYYY-MM-DD) or leave empty for immediate unlock:');
+        if (unlockDate === null) return; // User cancelled
+        
+        showLoadingState('unlocking course');
+        
+        fetch(`/fees/admin/student-fees/${assignmentId}/unlock/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCsrfToken(),
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `unlock_date=${unlockDate || ''}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoadingState();
+            if (data.success) {
+                showSuccessMessage('Course unlocked successfully!');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showErrorMessage('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            hideLoadingState();
+            console.error('Error:', error);
+            showErrorMessage('An error occurred while unlocking the course.');
+        });
+    }
+
+    function sendReminder(assignmentId) {
+        if (confirm('Send payment reminder to this student via email?')) {
+            showLoadingState('sending reminder');
+            
+            fetch(`/fees/ajax/send-reminder/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCsrfToken(),
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `assignment_id=${assignmentId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoadingState();
+                if (data.success) {
+                    showSuccessMessage('Payment reminder sent successfully!');
+                } else {
+                    showErrorMessage('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                hideLoadingState();
+                console.error('Error:', error);
+                showErrorMessage('An error occurred while sending the reminder.');
+            });
+        }
+    }
+    
+    // Utility functions
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    }
+    
+    function showLoadingState(action) {
+        const loadingDiv = document.createElement('div');
+        loadingDiv.id = 'loading-overlay';
+        loadingDiv.innerHTML = `
+            <div class="d-flex justify-content-center align-items-center position-fixed top-0 start-0 w-100 h-100" style="background-color: rgba(0,0,0,0.5); z-index: 9999;">
+                <div class="text-center text-white">
+                    <div class="spinner-border mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <div>Please wait, ${action}...</div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(loadingDiv);
+    }
+    
+    function hideLoadingState() {
+        const loadingDiv = document.getElementById('loading-overlay');
+        if (loadingDiv) {
+            loadingDiv.remove();
+        }
+    }
+    
+    function showSuccessMessage(message) {
+        showToast(message, 'success');
+    }
+    
+    function showErrorMessage(message) {
+        showToast(message, 'error');
+    }
+    
+    function showToast(message, type) {
+        const toastDiv = document.createElement('div');
+        toastDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+        toastDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 350px;';
+        toastDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(toastDiv);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (toastDiv.parentNode) {
+                toastDiv.remove();
+            }
+        }, 5000);
+    }
+</script>
+{% endblock %}

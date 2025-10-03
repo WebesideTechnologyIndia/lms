@@ -1,0 +1,320 @@
+<!-- templates/email_management/dashboard.html -->
+{% extends 'base.html' %}
+
+{% block title %}Email Management Dashboard - LMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .border-left-primary {
+        border-left: 4px solid var(--primary-color) !important;
+    }
+    .border-left-success {
+        border-left: 4px solid var(--success-color) !important;
+    }
+    .border-left-info {
+        border-left: 4px solid #17a2b8 !important;
+    }
+    .border-left-warning {
+        border-left: 4px solid var(--warning-color) !important;
+    }
+    .progress-sm {
+        height: 0.5rem;
+    }
+    .text-gray-800 {
+        color: #5a5c69 !important;
+    }
+    .text-gray-300 {
+        color: #d1d3e2 !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-envelope-open-text"></i> Email Management Dashboard</h2>
+    <div class="btn-group">
+        <a href="{% url 'manage_email_templates' %}" class="btn btn-primary">
+            <i class="fas fa-edit"></i> Manage Templates
+        </a>
+        <a href="{% url 'bulk_email' %}" class="btn btn-success">
+            <i class="fas fa-paper-plane"></i> Send Bulk Email
+        </a>
+        <a href="{% url 'email_limit_settings' %}" class="btn btn-warning">
+            <i class="fas fa-cog"></i> Settings
+        </a>
+    </div>
+</div>
+
+<!-- Email Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Today's Emails
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ today_summary.total_emails_sent|default:0 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-envelope fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Success Rate
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {% if today_summary.total_emails_sent > 0 %}
+                                {{ today_summary.successful_emails|floatformat:0 }}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Daily Limit
+                        </div>
+                        <div class="row no-gutters align-items-center">
+                            <div class="col-auto">
+                                <div class="h5 mb-0 mr-3 font-weight-bold text-gray-800">
+                                    {{ today_summary.total_emails_sent|default:0 }}/{{ email_limit_setting.email_limit_per_day|default:50 }}
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div class="progress progress-sm mr-2">
+                                    <div class="progress-bar bg-info" role="progressbar"
+                                         style="width: {% widthratio today_summary.total_emails_sent|default:0 email_limit_setting.email_limit_per_day|default:50 100 %}%">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clipboard-list fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-3 col-md-6 mb-4">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Failed Emails
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800">
+                            {{ today_summary.failed_emails|default:0 }}
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-exclamation-triangle fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row">
+    <div class="col-xl-8 col-lg-7">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Email Trends (Last 7 Days)</h6>
+            </div>
+            <div class="card-body">
+                <div class="chart-area">
+                    <canvas id="emailChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-4 col-lg-5">
+        <div class="card shadow mb-4">
+            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                <h6 class="m-0 font-weight-bold text-primary">Email Templates</h6>
+                <a href="{% url 'manage_email_templates' %}" class="btn btn-sm btn-primary">
+                    <i class="fas fa-edit"></i> Manage
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="list-group list-group-flush">
+                    {% for template in email_templates %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">{{ template.name }}</h6>
+                                <small class="text-muted">{{ template.get_template_type_display }}</small>
+                            </div>
+                            <span class="badge {% if template.is_active %}bg-success{% else %}bg-secondary{% endif %}">
+                                {% if template.is_active %}Active{% else %}Inactive{% endif %}
+                            </span>
+                        </div>
+                    {% empty %}
+                        <div class="list-group-item text-center text-muted">
+                            No templates available
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Email Logs -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+        <h6 class="m-0 font-weight-bold text-primary">Recent Email Logs</h6>
+        <a href="{% url 'email_logs' %}" class="btn btn-sm btn-outline-primary">
+            <i class="fas fa-list"></i> View All
+        </a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Status</th>
+                        <th>Recipient</th>
+                        <th>Subject</th>
+                        <th>Template</th>
+                        <th>Sent Time</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in recent_emails %}
+                        <tr>
+                            <td>
+                                {% if log.is_sent_successfully %}
+                                    <span class="badge bg-success"><i class="fas fa-check"></i> Success</span>
+                                {% else %}
+                                    <span class="badge bg-danger"><i class="fas fa-times"></i> Failed</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ log.recipient_email }}</td>
+                            <td>{{ log.subject|truncatechars:30 }}</td>
+                            <td>
+                                {% if log.template_used %}
+                                    {{ log.template_used.name }}
+                                {% else %}
+                                    Default
+                                {% endif %}
+                            </td>
+                            <td>{{ log.sent_time|date:"M d, H:i" }}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#emailModal{{ log.id }}">
+                                    <i class="fas fa-eye"></i> View
+                                </button>
+                            </td>
+                        </tr>
+
+                        <!-- Email Detail Modal -->
+                        <div class="modal fade" id="emailModal{{ log.id }}" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">Email Details</h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <p><strong>To:</strong> {{ log.recipient_email }}</p>
+                                        <p><strong>Subject:</strong> {{ log.subject }}</p>
+                                        <p><strong>Sent:</strong> {{ log.sent_time }}</p>
+                                        {% if log.error_message %}
+                                            <p><strong>Error:</strong> <span class="text-danger">{{ log.error_message }}</span></p>
+                                        {% endif %}
+                                        <hr>
+                                        <div style="max-height: 400px; overflow-y: auto;">
+                                            {{ log.email_body|linebreaks }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted">No email logs available</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // Email Chart
+    const ctx = document.getElementById('emailChart').getContext('2d');
+    const emailChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [
+                {% for stat in weekly_stats %}
+                    '{{ stat.date|date:"M d" }}'{% if not forloop.last %},{% endif %}
+                {% endfor %}
+            ],
+            datasets: [{
+                label: 'Emails Sent',
+                data: [
+                    {% for stat in weekly_stats %}
+                        {{ stat.total_emails_sent }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                tension: 0.1
+            }, {
+                label: 'Successful',
+                data: [
+                    {% for stat in weekly_stats %}
+                        {{ stat.successful_emails }}{% if not forloop.last %},{% endif %}
+                    {% endfor %}
+                ],
+                borderColor: 'rgb(54, 162, 235)',
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                tension: 0.1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

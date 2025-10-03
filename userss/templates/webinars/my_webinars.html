@@ -1,0 +1,328 @@
+{% extends 'webinars/base.html' %}
+
+{% block title %}My Webinars - Learning Platform{% endblock %}
+
+{% block breadcrumb %}
+<div class="container">
+    <div class="webinar-breadcrumb">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'webinars:webinar_landing' %}">Home</a></li>
+                <li class="breadcrumb-item active">My Webinars</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block quick_actions %}
+<div class="container">
+    <div class="quick-actions">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h6 class="mb-2 mb-md-0">
+                    <i class="fas fa-user-check me-2"></i>My Learning Dashboard
+                </h6>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{% url 'webinars:webinar_list' %}" class="quick-action-btn">
+                    <i class="fas fa-search"></i>Find More Webinars
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="page-header-card">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h1><i class="fas fa-video me-3"></i>My Webinars</h1>
+                        <p class="lead">Track your learning journey and manage your webinar registrations</p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <div class="stats-mini">
+                            <div class="stat-item">
+                                <span class="stat-number">{{ upcoming_registrations|length }}</span>
+                                <span class="stat-label">Upcoming</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number">{{ past_registrations|length }}</span>
+                                <span class="stat-label">Completed</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Upcoming Webinars -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="section-header">
+                <h2><i class="fas fa-calendar-alt me-2"></i>Upcoming Webinars</h2>
+                <p class="text-muted">Webinars you're registered for that haven't started yet</p>
+            </div>
+
+            {% if upcoming_registrations %}
+            <div class="row">
+                {% for registration in upcoming_registrations %}
+                <div class="col-lg-6 col-xl-4 mb-4">
+                    <div class="my-webinar-card upcoming">
+                        {% if registration.webinar.thumbnail %}
+                            <img src="{{ registration.webinar.thumbnail.url }}" class="webinar-image" alt="{{ registration.webinar.title }}">
+                        {% else %}
+                            <div class="webinar-image-placeholder">
+                                <i class="fas fa-video"></i>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="webinar-content">
+                            <!-- Status Badge -->
+                            <div class="webinar-status">
+                                <span class="badge bg-success">
+                                    <i class="fas fa-clock me-1"></i>Upcoming
+                                </span>
+                                {% if registration.webinar.webinar_type == 'free' %}
+                                    <span class="badge bg-primary ms-1">FREE</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark ms-1">₹{{ registration.webinar.price }}</span>
+                                {% endif %}
+                            </div>
+
+                            <h4 class="webinar-title">{{ registration.webinar.title }}</h4>
+                            <p class="webinar-description">{{ registration.webinar.short_description|truncatechars:80 }}</p>
+
+                            <!-- Webinar Details -->
+                            <div class="webinar-details">
+                                <div class="detail-item">
+                                    <i class="fas fa-calendar text-primary"></i>
+                                    <span>{{ registration.webinar.scheduled_date|date:"M d, Y" }}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-clock text-success"></i>
+                                    <span>{{ registration.webinar.scheduled_date|time:"h:i A" }}</span>
+                                </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-hourglass-half text-info"></i>
+                                    <span>{{ registration.webinar.duration_minutes }} minutes</span>
+                                </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-user text-warning"></i>
+                                    <span>{{ registration.webinar.instructor.get_full_name }}</span>
+                                </div>
+                            </div>
+
+                            <!-- Registration Info -->
+                            <div class="registration-info">
+                                <small class="text-muted">
+                                    <i class="fas fa-check-circle text-success me-1"></i>
+                                    Registered on {{ registration.registered_at|date:"M d, Y" }}
+                                </small>
+                            </div>
+
+                            <!-- Actions -->
+                            <div class="webinar-actions">
+                                <a href="{% url 'webinars:webinar_detail' registration.webinar.slug %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye me-1"></i>View Details
+                                </a>
+                                
+                                {% if registration.webinar.webinar_link %}
+                                    <a href="{{ registration.webinar.webinar_link }}" target="_blank" class="btn btn-success btn-sm">
+                                        <i class="fas fa-external-link-alt me-1"></i>Join Now
+                                    </a>
+                                {% endif %}
+                            </div>
+
+                            <!-- Countdown Timer -->
+                            <div class="countdown-timer" data-date="{{ registration.webinar.scheduled_date|date:'c' }}">
+                                <div class="countdown-display">
+                                    <div class="countdown-item">
+                                        <span class="countdown-number days">00</span>
+                                        <span class="countdown-label">Days</span>
+                                    </div>
+                                    <div class="countdown-item">
+                                        <span class="countdown-number hours">00</span>
+                                        <span class="countdown-label">Hours</span>
+                                    </div>
+                                    <div class="countdown-item">
+                                        <span class="countdown-number minutes">00</span>
+                                        <span class="countdown-label">Minutes</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-calendar-plus"></i>
+                <h4>No Upcoming Webinars</h4>
+                <p>You haven't registered for any upcoming webinars yet.</p>
+                <a href="{% url 'webinars:webinar_list' %}" class="btn btn-primary">
+                    <i class="fas fa-search me-2"></i>Browse Webinars
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Past Webinars -->
+    <div class="row">
+        <div class="col-12">
+            <div class="section-header">
+                <h2><i class="fas fa-history me-2"></i>Past Webinars</h2>
+                <p class="text-muted">Webinars you've attended or completed</p>
+            </div>
+
+            {% if past_registrations %}
+            <div class="past-webinars-container">
+                {% for registration in past_registrations %}
+                <div class="past-webinar-row">
+                    <div class="row align-items-center">
+                        <div class="col-md-2">
+                            {% if registration.webinar.thumbnail %}
+                                <img src="{{ registration.webinar.thumbnail.url }}" class="past-webinar-thumb" alt="{{ registration.webinar.title }}">
+                            {% else %}
+                                <div class="past-webinar-thumb-placeholder">
+                                    <i class="fas fa-video"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-5">
+                            <h5 class="past-webinar-title">{{ registration.webinar.title }}</h5>
+                            <p class="past-webinar-description">{{ registration.webinar.short_description|truncatechars:100 }}</p>
+                            <div class="past-webinar-meta">
+                                <span class="meta-item">
+                                    <i class="fas fa-user me-1"></i>{{ registration.webinar.instructor.get_full_name }}
+                                </span>
+                                <span class="meta-item">
+                                    <i class="fas fa-hourglass-half me-1"></i>{{ registration.webinar.duration_minutes }} minutes
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <div class="past-webinar-date">
+                                <div class="date-display">
+                                    <span class="date-day">{{ registration.webinar.scheduled_date|date:"d" }}</span>
+                                    <span class="date-month">{{ registration.webinar.scheduled_date|date:"M" }}</span>
+                                    <span class="date-year">{{ registration.webinar.scheduled_date|date:"Y" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <div class="past-webinar-status">
+                                <span class="badge bg-secondary">
+                                    <i class="fas fa-check me-1"></i>Completed
+                                </span>
+                                {% if registration.webinar.webinar_type == 'free' %}
+                                    <span class="badge bg-light text-dark mt-1">FREE</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark mt-1">₹{{ registration.webinar.price }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-1">
+                            <div class="past-webinar-actions">
+                                <a href="{% url 'webinars:webinar_detail' registration.webinar.slug %}" class="btn btn-outline-secondary btn-sm" title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                
+                                {% if registration.webinar.recording_link %}
+                                    <a href="{{ registration.webinar.recording_link }}" target="_blank" class="btn btn-outline-primary btn-sm mt-1" title="Watch Recording">
+                                        <i class="fas fa-play"></i>
+                                    </a>
+                                {% endif %}
+                                
+                                {% if registration.webinar.certificate_available and registration.attended %}
+                                    <a href="{% url 'webinars:download_certificate' registration.id %}" class="btn btn-outline-success btn-sm mt-1" title="Download Certificate">
+                                        <i class="fas fa-certificate"></i>
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="past-webinar-footer">
+                        <small class="text-muted">
+                            <i class="fas fa-calendar-check me-1"></i>
+                            Registered on {{ registration.registered_at|date:"M d, Y" }}
+                            {% if registration.attended %}
+                                <span class="text-success ms-2">
+                                    <i class="fas fa-check-circle me-1"></i>Attended
+                                </span>
+                            {% else %}
+                                <span class="text-warning ms-2">
+                                    <i class="fas fa-exclamation-circle me-1"></i>Did not attend
+                                </span>
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fas fa-history"></i>
+                <h4>No Past Webinars</h4>
+                <p>You haven't completed any webinars yet.</p>
+                <a href="{% url 'webinars:webinar_list' %}" class="btn btn-primary">
+                    <i class="fas fa-search me-2"></i>Browse Webinars
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Countdown Timer JavaScript -->
+<script>
+function initCountdownTimers() {
+    const timers = document.querySelectorAll('.countdown-timer');
+    
+    timers.forEach(timer => {
+        const targetDate = new Date(timer.getAttribute('data-date'));
+        const daysElement = timer.querySelector('.days');
+        const hoursElement = timer.querySelector('.hours');
+        const minutesElement = timer.querySelector('.minutes');
+        
+        function updateCountdown() {
+            const now = new Date().getTime();
+            const distance = targetDate.getTime() - now;
+            
+            if (distance < 0) {
+                timer.innerHTML = '<div class="countdown-expired">Webinar has started!</div>';
+                return;
+            }
+            
+            const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+            
+            daysElement.textContent = days.toString().padStart(2, '0');
+            hoursElement.textContent = hours.toString().padStart(2, '0');
+            minutesElement.textContent = minutes.toString().padStart(2, '0');
+        }
+        
+        updateCountdown();
+        setInterval(updateCountdown, 1000 * 60); // Update every minute
+    });
+}
+
+// Initialize countdown timers when page loads
+document.addEventListener('DOMContentLoaded', initCountdownTimers);
+</script>
+
+{% endblock %}

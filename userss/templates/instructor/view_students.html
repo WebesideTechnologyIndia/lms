@@ -1,0 +1,291 @@
+<!-- templates/instructor/view_students.html -->
+{% extends 'instructor_base.html' %}
+
+{% block title %}My Students{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">My Students</h1>
+            <p class="text-muted mb-0">View students across all your courses and batches</p>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Course Students
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_course_students }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-user-graduate fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Batch Students
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_batch_students }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Total Courses
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_courses }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-book fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Total Batches
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_batches }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-layer-group fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Section -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Search Students</h6>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-8">
+                    <input type="text" class="form-control" name="search" 
+                           placeholder="Search by student name, username, or email..." 
+                           value="{{ search_query }}">
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-2"></i>Search
+                    </button>
+                    {% if search_query %}
+                        <a href="{% url 'instructor_view_students' %}" class="btn btn-secondary ms-2">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Course-wise Students -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Students by Course</h6>
+        </div>
+        <div class="card-body">
+            {% if instructor_courses %}
+                <div class="accordion" id="coursesAccordion">
+                    {% for course in instructor_courses %}
+                    <div class="accordion-item mb-3">
+                        <h2 class="accordion-header" id="heading{{ course.id }}">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" 
+                                    data-bs-target="#collapse{{ course.id }}" aria-expanded="false">
+                                <div class="d-flex justify-content-between align-items-center w-100">
+                                    <div>
+                                        <strong>{{ course.course_code }}</strong> - {{ course.title }}
+                                    </div>
+                                    <div class="me-3">
+                                        <span class="badge bg-primary">{{ course.enrollments.count }} students</span>
+                                        <span class="badge bg-secondary">{{ course.batches.count }} batches</span>
+                                    </div>
+                                </div>
+                            </button>
+                        </h2>
+                        <div id="collapse{{ course.id }}" class="accordion-collapse collapse" 
+                             data-bs-parent="#coursesAccordion">
+                            <div class="accordion-body">
+                                <!-- Course Details Button -->
+                                <div class="mb-3">
+                                    <a href="{% url 'instructor_course_detail' course.id %}" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-eye me-1"></i>View Course Details
+                                    </a>
+                                </div>
+                                
+                                <!-- Direct Course Students -->
+                                {% with course.enrollments.all as enrollments %}
+                                {% if enrollments %}
+                                <h6 class="text-primary mb-3">Direct Course Enrollments ({{ enrollments.count }})</h6>
+                                <div class="row">
+                                    {% for enrollment in enrollments %}
+                                    <div class="col-md-6 col-lg-4 mb-3">
+                                        <div class="card border-primary">
+                                            <div class="card-body p-3">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar me-3">
+                                                        {% if enrollment.student.profile_picture %}
+                                                            <img src="{{ enrollment.student.profile_picture.url }}" 
+                                                                 class="rounded-circle" width="40" height="40" alt="Avatar">
+                                                        {% else %}
+                                                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" 
+                                                                 style="width: 40px; height: 40px;">
+                                                                <i class="fas fa-user text-white"></i>
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="flex-grow-1">
+                                                        <h6 class="mb-1">{{ enrollment.student.get_full_name|default:enrollment.student.username }}</h6>
+                                                        <small class="text-muted">{{ enrollment.student.email }}</small>
+                                                        <div class="mt-1">
+                                                            <span class="badge bg-{{ enrollment.status|yesno:'success,warning' }}">
+                                                                {{ enrollment.get_status_display }}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                {% endwith %}
+                                
+                                <!-- Batch Students -->
+                                {% for batch in course.batches.all %}
+                                {% with batch.enrollments.all as batch_enrollments %}
+                                {% if batch_enrollments %}
+                                <h6 class="text-success mb-3 mt-4">
+                                    Batch: {{ batch.name }} ({{ batch_enrollments.count }} students)
+                                </h6>
+                                <div class="row">
+                                    {% for enrollment in batch_enrollments %}
+                                    <div class="col-md-6 col-lg-4 mb-3">
+                                        <div class="card border-success">
+                                            <div class="card-body p-3">
+                                                <div class="d-flex align-items-center">
+                                                    <div class="avatar me-3">
+                                                        {% if enrollment.student.profile_picture %}
+                                                            <img src="{{ enrollment.student.profile_picture.url }}" 
+                                                                 class="rounded-circle" width="40" height="40" alt="Avatar">
+                                                        {% else %}
+                                                            <div class="bg-success rounded-circle d-flex align-items-center justify-content-center" 
+                                                                 style="width: 40px; height: 40px;">
+                                                                <i class="fas fa-user text-white"></i>
+                                                            </div>
+                                                        {% endif %}
+                                                    </div>
+                                                    <div class="flex-grow-1">
+                                                        <h6 class="mb-1">{{ enrollment.student.get_full_name|default:enrollment.student.username }}</h6>
+                                                        <small class="text-muted">{{ enrollment.student.email }}</small>
+                                                        <div class="mt-1">
+                                                            <span class="badge bg-success">Batch Student</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                {% endwith %}
+                                {% endfor %}
+                                
+                                <!-- No Students Message -->
+                                {% if not course.enrollments.all and not course.batches.all %}
+                                <div class="text-center py-3">
+                                    <p class="text-muted">No students enrolled in this course yet.</p>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <!-- Empty State -->
+                <div class="text-center py-5">
+                    <div class="mb-4">
+                        <i class="fas fa-users fa-4x text-gray-300"></i>
+                    </div>
+                    <h4 class="text-gray-600">No Courses Found</h4>
+                    <p class="text-gray-500">You don't have any courses assigned yet.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Custom CSS -->
+<style>
+.border-left-primary {
+    border-left: 0.25rem solid #4e73df !important;
+}
+
+.border-left-success {
+    border-left: 0.25rem solid #1cc88a !important;
+}
+
+.border-left-info {
+    border-left: 0.25rem solid #36b9cc !important;
+}
+
+.border-left-warning {
+    border-left: 0.25rem solid #f6c23e !important;
+}
+
+.accordion-button:not(.collapsed) {
+    background-color: #f8f9fc;
+    color: #5a5c69;
+}
+
+.card.border-primary {
+    border-color: #4e73df !important;
+}
+
+.card.border-success {
+    border-color: #1cc88a !important;
+}
+
+.avatar img {
+    object-fit: cover;
+}
+</style>
+{% endblock %}

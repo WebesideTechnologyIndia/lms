@@ -1,0 +1,103 @@
+<!-- courses/templates/courses/simple_lesson_form.html -->
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-book-open me-2"></i>
+                        {{ title }}
+                    </h4>
+                </div>
+
+                <div class="card-body">
+                    <!-- Course and Module Info -->
+                    <div class="mb-3">
+                        <small class="text-muted">
+                            Course: <strong>{{ course.title }}</strong>
+                            | Module: <strong>{{ module.title }}</strong>
+                        </small>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+
+                        <!-- Title Field -->
+                        <div class="mb-3">
+                            <label for="{{ form.title.id_for_label }}" class="form-label">
+                                <strong>Lesson Title</strong>
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.title.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Description Field -->
+                        <div class="mb-4">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">
+                                <strong>Lesson Description</strong>
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                            <div class="text-danger small mt-1">
+                                {% for error in form.description.errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                            <div class="form-text">
+                                Lesson ke bare mein detail mein likho - students ko kya sikhege, kya topics cover honge,
+                                etc.
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'courses:module_lessons' course.id module.id %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-1"></i>
+                                Back to Lessons
+                            </a>
+
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i>
+                                {{ button_text }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Help Section -->
+            <div class="mt-3">
+                <div class="card border-info">
+                    <div class="card-body">
+                        <h6 class="text-info">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Tips:
+                        </h6>
+                        <ul class="small mb-0">
+                            <li>Title clear aur descriptive rakho</li>
+                            <li>Description mein lesson ka summary aur main topics mention karo</li>
+                            <li>Baad mein lesson ke andar content add kar sakte ho</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

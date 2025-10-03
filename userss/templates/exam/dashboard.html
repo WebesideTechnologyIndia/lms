@@ -1,0 +1,514 @@
+{% extends 'base.html' %}
+
+{% block title %}Exam Management Dashboard - LMS Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">
+                        <i class="fas fa-clipboard-list text-primary"></i>
+                        Exam Management Dashboard
+                    </h4>
+                    <p class="text-muted mb-0">Create, manage, and monitor all exams from one place</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'create_exam' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Create New Exam
+                    </a>
+                    <a href="{% url 'assign_exam' %}" class="btn btn-success">
+                        <i class="fas fa-user-plus"></i> Assign Exam
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="mb-0">{{ total_exams }}</h3>
+                            <p class="mb-0">Total Exams</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-clipboard-list fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-primary-dark">
+                    <small>
+                        <i class="fas fa-eye"></i>
+                        <a href="{% url 'exam_submissions' %}" class="text-white">View all exams</a>
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="mb-0">{{ published_exams }}</h3>
+                            <p class="mb-0">Published Exams</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-success-dark">
+                    <small>
+                        <i class="fas fa-rocket"></i>
+                        Active and ready for students
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="mb-0">{{ draft_exams }}</h3>
+                            <p class="mb-0">Draft Exams</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-edit fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-warning-dark">
+                    <small>
+                        <i class="fas fa-clock"></i>
+                        Pending completion
+                    </small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h3 class="mb-0">{{ total_attempts }}</h3>
+                            <p class="mb-0">Total Attempts</p>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="fas fa-users fa-2x"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-footer bg-info-dark">
+                    <small>
+                        <i class="fas fa-chart-line"></i>
+                        Student submissions
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions Row -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-bolt text-primary"></i>
+                        Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-lg-2 col-md-4 col-6 mb-3">
+                            <a href="{% url 'create_exam' %}" class="btn btn-outline-primary w-100">
+                                <i class="fas fa-plus fa-lg mb-2 d-block"></i>
+                                <small>Create Exam</small>
+                            </a>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-6 mb-3">
+                            <a href="{% url 'assign_exam' %}" class="btn btn-outline-success w-100">
+                                <i class="fas fa-user-plus fa-lg mb-2 d-block"></i>
+                                <small>Assign Exam</small>
+                            </a>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-6 mb-3">
+                            <a href="{% url 'exam_submissions' %}" class="btn btn-outline-info w-100">
+                                <i class="fas fa-list-alt fa-lg mb-2 d-block"></i>
+                                <small>View Submissions</small>
+                            </a>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-6 mb-3">
+                            <a href="{% url 'pending_grading' %}" class="btn btn-outline-warning w-100">
+                                <i class="fas fa-clock fa-lg mb-2 d-block"></i>
+                                <small>Pending Grading</small>
+                                {% if pending_grading > 0 %}
+                                <span class="badge bg-warning text-dark">{{ pending_grading }}</span>
+                                {% endif %}
+                            </a>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-6 mb-3">
+                            <a href="#" class="btn btn-outline-secondary w-100">
+                                <i class="fas fa-chart-bar fa-lg mb-2 d-block"></i>
+                                <small>Analytics</small>
+                            </a>
+                        </div>
+                        <div class="col-lg-2 col-md-4 col-6 mb-3">
+                            <a href="#" class="btn btn-outline-dark w-100">
+                                <i class="fas fa-cog fa-lg mb-2 d-block"></i>
+                                <small>Settings</small>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Row -->
+    <div class="row">
+        <!-- Recent Exams -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-clock text-info"></i>
+                        Recent Exams
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if recent_exams %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Exam</th>
+                                    <th>Type</th>
+                                    <th>Status</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for exam in recent_exams %}
+                                <tr>
+                                    <td>
+                                        <div>
+                                            <a href="{% url 'admin_exam_detail' exam.id %}"
+                                                class="text-decoration-none">
+                                                <strong>{{ exam.title }}</strong>
+                                            </a>
+                                            <small class="text-muted d-block">{{ exam.total_marks }} marks</small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if exam.exam_type == 'mcq' %}
+                                        <span class="badge bg-primary">MCQ</span>
+                                        {% elif exam.exam_type == 'qa' %}
+                                        <span class="badge bg-info">Q&A</span>
+                                        {% else %}
+                                        <span class="badge bg-warning">Assignment</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if exam.status == 'published' %}
+                                        <span class="badge bg-success">Published</span>
+                                        {% elif exam.status == 'draft' %}
+                                        <span class="badge bg-warning">Draft</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ exam.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <small>{{ exam.created_at|date:"M d, Y" }}</small>
+                                    </td>
+                                    <td>
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle"
+                                                type="button" data-bs-toggle="dropdown">
+                                                Actions
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                {% if exam.status == 'draft' %}
+                                                {% if exam.exam_type == 'mcq' %}
+                                                <li><a class="dropdown-item"
+                                                        href="{% url 'add_mcq_questions' exam.id %}">
+                                                        <i class="fas fa-edit"></i> Continue Setup
+                                                    </a></li>
+                                                {% elif exam.exam_type == 'qa' %}
+                                                <li><a class="dropdown-item"
+                                                        href="{% url 'add_qa_questions' exam.id %}">
+                                                        <i class="fas fa-edit"></i> Continue Setup
+                                                    </a></li>
+                                                {% else %}
+                                                <li><a class="dropdown-item"
+                                                        href="{% url 'setup_assignment' exam.id %}">
+                                                        <i class="fas fa-edit"></i> Continue Setup
+                                                    </a></li>
+                                                {% endif %}
+                                                {% else %}
+                                                <li><a class="dropdown-item"
+                                                        href="{% url 'assign_exam' %}?exam={{ exam.id }}">
+                                                        <i class="fas fa-user-plus"></i> Assign to Students
+                                                    </a></li>
+                                                {% endif %}
+                                                <li><a class="dropdown-item"
+                                                        href="{% url 'admin_exam_detail' exam.id %}">
+                                                        <i class="fas fa-eye"></i> View Details
+                                                    </a></li>
+                                                <li>
+                                                    <hr class="dropdown-divider">
+                                                </li>
+                                                <li><a class="dropdown-item text-danger"
+                                                        href="{% url 'delete_exam' exam.id %}">
+                                                        <i class="fas fa-trash"></i> Delete
+                                                    </a></li>
+                                            </ul>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                        <h6 class="text-muted">No exams created yet</h6>
+                        <p class="text-muted mb-3">Get started by creating your first exam</p>
+                        <a href="{% url 'create_exam' %}" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Create First Exam
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Recent Attempts -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-user-check text-success"></i>
+                        Recent Attempts
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if recent_attempts %}
+                    {% for attempt in recent_attempts %}
+                    <div class="d-flex align-items-center mb-3">
+                        <div
+                            class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                            {{ attempt.student.first_name|first|default:attempt.student.username|first }}
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-0">{{ attempt.student.get_full_name|default:attempt.student.username }}</h6>
+                            <small class="text-muted">{{ attempt.exam.title }}</small>
+                            <div class="d-flex justify-content-between">
+                                <small class="text-muted">{{ attempt.started_at|timesince }} ago</small>
+                                {% if attempt.status == 'submitted' %}
+                                <span class="badge bg-success badge-sm">Submitted</span>
+                                {% elif attempt.status == 'in_progress' %}
+                                <span class="badge bg-primary badge-sm">In Progress</span>
+                                {% else %}
+                                <span class="badge bg-secondary badge-sm">{{ attempt.get_status_display }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    <div class="text-center">
+                        <a href="{% url 'exam_submissions' %}" class="btn btn-sm btn-outline-primary">
+                            View All Submissions
+                        </a>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-3">
+                        <i class="fas fa-inbox fa-2x text-muted mb-2"></i>
+                        <p class="text-muted mb-0">No attempts yet</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Exam Type Distribution -->
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-chart-pie text-info"></i>
+                        Exam Types
+                    </h6>
+                </div>
+                <div class="card-body">
+                    {% if exam_types %}
+                    {% for exam_type in exam_types %}
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <div>
+                            {% if exam_type.exam_type == 'mcq' %}
+                            <i class="fas fa-check-circle text-primary"></i> MCQ
+                            {% elif exam_type.exam_type == 'qa' %}
+                            <i class="fas fa-edit text-info"></i> Q&A
+                            {% else %}
+                            <i class="fas fa-file-upload text-warning"></i> Assignment
+                            {% endif %}
+                        </div>
+                        <span class="badge bg-secondary">{{ exam_type.count }}</span>
+                    </div>
+                    {% endfor %}
+                    {% else %}
+                    <p class="text-muted mb-0">No data available</p>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Tips -->
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i class="fas fa-lightbulb text-warning"></i>
+                        Quick Tips
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <small>MCQ exams are auto-graded instantly</small>
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <small>Q&A exams require manual grading</small>
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <small>Assignments support file uploads</small>
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            <small>Set timing controls for better management</small>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+
+<script>
+    $(document).ready(function () {
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+
+        // Auto-refresh recent attempts every 30 seconds
+        setInterval(function () {
+            // You can implement AJAX refresh here if needed
+        }, 30000);
+
+        // Add click tracking for quick actions
+        $('.btn').on('click', function () {
+            var action = $(this).find('small').text() || $(this).text();
+            console.log('Quick action clicked:', action);
+        });
+    });
+</script>
+
+<style>
+    .bg-primary-dark {
+        background-color: rgba(13, 110, 253, 0.9) !important;
+    }
+
+    .bg-success-dark {
+        background-color: rgba(25, 135, 84, 0.9) !important;
+    }
+
+    .bg-warning-dark {
+        background-color: rgba(255, 193, 7, 0.9) !important;
+    }
+
+    .bg-info-dark {
+        background-color: rgba(13, 202, 240, 0.9) !important;
+    }
+
+    .avatar-sm {
+        width: 40px;
+        height: 40px;
+        font-size: 14px;
+    }
+
+    .card-footer a {
+        text-decoration: none;
+    }
+
+    .card-footer a:hover {
+        text-decoration: underline;
+    }
+
+    .table-hover tbody tr:hover {
+        background-color: rgba(0, 0, 0, 0.075);
+    }
+
+    .badge-sm {
+        font-size: 0.7em;
+    }
+
+    .quick-action-btn {
+        transition: all 0.2s ease;
+        min-height: 80px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+
+    .quick-action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .card {
+        transition: all 0.2s ease;
+    }
+
+    .card:hover {
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .stats-card {
+        transition: all 0.3s ease;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-3px);
+    }
+
+    @media (max-width: 768px) {
+        .quick-action-btn {
+            min-height: 60px;
+        }
+
+        .quick-action-btn i {
+            font-size: 1rem !important;
+        }
+    }
+</style>
+
+{% endblock %}

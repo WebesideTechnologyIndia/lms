@@ -1,0 +1,606 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Email Template - LMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .form-card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        border: 1px solid rgba(0, 0, 0, 0.125);
+    }
+    
+    .template-preview {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 0.375rem;
+        padding: 1rem;
+        min-height: 200px;
+    }
+    
+    .variable-tag {
+        background-color: #e3f2fd;
+        border: 1px solid #2196f3;
+        color: #1976d2;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 0.8em;
+        cursor: pointer;
+    }
+    
+    .variable-tag:hover {
+        background-color: #2196f3;
+        color: white;
+    }
+    
+    .form-floating textarea {
+        min-height: 200px;
+    }
+    
+    .preview-section {
+        position: sticky;
+        top: 20px;
+    }
+    
+    .char-count {
+        font-size: 0.8em;
+        color: #6c757d;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-plus-circle text-success"></i> Create Email Template</h2>
+        <p class="text-muted mb-0">Design and create new email templates for automated communications</p>
+    </div>
+    <div>
+        <a href="{% url 'manage_template_types' %}" class="btn btn-outline-info me-2">
+            <i class="fas fa-tags"></i> Manage Template Types
+        </a>
+        <a href="{% url 'manage_email_templates' %}" class="btn btn-secondary me-2">
+            <i class="fas fa-list"></i> View Templates
+        </a>
+        <a href="{% url 'email_dashboard' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Check if no template types exist -->
+{% if not template_types %}
+    <div class="alert alert-warning" role="alert">
+        <div class="d-flex align-items-center">
+            <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
+            <div>
+                <h5 class="alert-heading">No Template Types Available</h5>
+                <p class="mb-2">You need to create at least one template type before you can create email templates.</p>
+                <hr>
+                <a href="{% url 'manage_template_types' %}" class="btn btn-warning">
+                    <i class="fas fa-plus"></i> Create Template Type
+                </a>
+            </div>
+        </div>
+    </div>
+{% else %}
+
+<!-- Main Form -->
+<div class="row">
+    <!-- Form Column -->
+    <div class="col-lg-8">
+        <div class="card form-card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0"><i class="fas fa-edit"></i> Template Details</h5>
+            </div>
+            <div class="card-body">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                            {% if message.tags == 'success' %}
+                                <i class="fas fa-check-circle"></i>
+                            {% elif message.tags == 'error' %}
+                                <i class="fas fa-exclamation-circle"></i>
+                            {% endif %}
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="POST" id="templateForm">
+                    {% csrf_token %}
+                    
+                    <!-- Template Name -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <input type="text" class="form-control" id="name" name="name" placeholder="Template Name" required>
+                                <label for="name"><i class="fas fa-tag"></i> Template Name</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <select class="form-select" id="template_type" name="template_type" required>
+                                    <option value="">Select Template Type</option>
+                                    {% for type_id, type_name in template_types %}
+                                        <option value="{{ type_id }}" 
+                                            {% if selected_template_type and selected_template_type == type_id|stringformat:"s" %}selected{% endif %}>
+                                            {{ type_name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <label for="template_type"><i class="fas fa-category"></i> Template Type</label>
+                            </div>
+                            <div class="form-text">
+                                <small>
+                                    Don't see the type you need? 
+                                    <a href="{% url 'manage_template_types' %}" target="_blank">Create a new template type</a>
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Email Subject -->
+                    <div class="mb-4">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="subject" name="subject" placeholder="Email Subject" required maxlength="200">
+                            <label for="subject"><i class="fas fa-heading"></i> Email Subject</label>
+                        </div>
+                        <div class="form-text">
+                            <span class="char-count" id="subject-count">0/200 characters</span>
+                        </div>
+                    </div>
+
+                    <!-- Email Body -->
+                    <div class="mb-4">
+                        <label for="email_body" class="form-label">
+                            <i class="fas fa-file-text"></i> Email Content
+                        </label>
+                        <textarea class="form-control" id="email_body" name="email_body" rows="12" placeholder="Write your email content here..." required></textarea>
+                        <div class="form-text">
+                            <span class="char-count" id="body-count">0 characters</span>
+                        </div>
+                    </div>
+
+                    <!-- Template Variables Helper -->
+                    <div class="mb-4">
+                        <label class="form-label">
+                            <i class="fas fa-code"></i> Available Variables
+                        </label>
+                        <div class="border rounded p-3 bg-light">
+                            <p class="small text-muted mb-2">Click on any variable to insert it into your template:</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                <span class="variable-tag" onclick="insertVariable('{{username}}')">{username}</span>
+                                <span class="variable-tag" onclick="insertVariable('{{email}}')">{email}</span>
+                                <span class="variable-tag" onclick="insertVariable('{{first_name}}')">{first_name}</span>
+                                <span class="variable-tag" onclick="insertVariable('{{last_name}}')">{last_name}</span>
+                                <span class="variable-tag" onclick="insertVariable('{{full_name}}')">{full_name}</span>
+                                <span class="variable-tag" onclick="insertVariable('{{date}}')">{date}</span>
+                                <span class="variable-tag" onclick="insertVariable('{{time}}')">{time}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Template Status -->
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="is_active" name="is_active" checked>
+                            <label class="form-check-label" for="is_active">
+                                <i class="fas fa-toggle-on text-success"></i> Active Template
+                            </label>
+                            <div class="form-text">Active templates can be used for sending emails</div>
+                        </div>
+                    </div>
+
+                    <!-- Submit Buttons -->
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <button type="button" class="btn btn-outline-secondary" onclick="previewTemplate()">
+                            <i class="fas fa-eye"></i> Preview
+                        </button>
+                        <button type="reset" class="btn btn-outline-warning">
+                            <i class="fas fa-undo"></i> Reset
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-save"></i> Create Template
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Column -->
+    <div class="col-lg-4">
+        <div class="preview-section">
+            <!-- Template Guide -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-info-circle"></i> Template Guide</h6>
+                </div>
+                <div class="card-body">
+                    <h6>Current Template Types:</h6>
+                    <ul class="list-unstyled small">
+                        {% for type_id, type_name in template_types %}
+                            <li><strong>{{ type_name }}</strong></li>
+                        {% endfor %}
+                    </ul>
+                    
+                    <hr>
+                    
+                    <h6>Available Variables:</h6>
+                    <ul class="list-unstyled small">
+                        <li><code>{username}</code> - User's username</li>
+                        <li><code>{email}</code> - User's email address</li>
+                        <li><code>{first_name}</code> - User's first name</li>
+                        <li><code>{last_name}</code> - User's last name</li>
+                        <li><code>{full_name}</code> - Full name</li>
+                        <li><code>{date}</code> - Current date</li>
+                        <li><code>{time}</code> - Current time</li>
+                    </ul>
+
+                    <hr>
+
+                    <div class="text-center">
+                        <a href="{% url 'manage_template_types' %}" class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-tags"></i> Manage Types
+                        </a>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Preview -->
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="mb-0"><i class="fas fa-eye"></i> Live Preview</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Subject:</strong>
+                        <div id="preview-subject" class="template-preview small">
+                            Subject will appear here...
+                        </div>
+                    </div>
+                    <div>
+                        <strong>Content:</strong>
+                        <div id="preview-content" class="template-preview small">
+                            Email content will appear here...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card mt-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="loadSampleTemplate('welcome')">
+                            <i class="fas fa-user-plus"></i> Load Welcome Sample
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-info" onclick="loadSampleTemplate('announcement')">
+                            <i class="fas fa-bullhorn"></i> Load Announcement Sample
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-warning" onclick="validateTemplate()">
+                            <i class="fas fa-check"></i> Validate Template
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="previewModalLabel">
+                    <i class="fas fa-eye"></i> Template Preview
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Raw Template:</h6>
+                        <div class="bg-light p-3 rounded mb-3">
+                            <div><strong>Subject:</strong> <span id="modal-raw-subject"></span></div>
+                            <div><strong>Body:</strong></div>
+                            <pre id="modal-raw-body" style="white-space: pre-wrap; font-size: 0.9em;"></pre>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Rendered Preview:</h6>
+                        <div class="border p-3 rounded mb-3">
+                            <div><strong>Subject:</strong> <span id="modal-rendered-subject"></span></div>
+                            <div><strong>Body:</strong></div>
+                            <div id="modal-rendered-body" style="white-space: pre-wrap; font-size: 0.9em;"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Close
+                </button>
+                <button type="button" class="btn btn-primary" onclick="submitForm()">
+                    <i class="fas fa-save"></i> Save Template
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Validation Modal -->
+<div class="modal fade" id="validationModal" tabindex="-1" aria-labelledby="validationModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="validationModalLabel">
+                    <i class="fas fa-check-circle"></i> Template Validation
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="validationResults">
+                <!-- Validation results will be inserted here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Character counters
+    document.getElementById('subject').addEventListener('input', function() {
+        const count = this.value.length;
+        document.getElementById('subject-count').textContent = `${count}/200 characters`;
+        updatePreview();
+    });
+
+    document.getElementById('email_body').addEventListener('input', function() {
+        const count = this.value.length;
+        document.getElementById('body-count').textContent = `${count} characters`;
+        updatePreview();
+    });
+
+    // Live preview update
+    function updatePreview() {
+        const subject = document.getElementById('subject').value || 'Subject will appear here...';
+        const body = document.getElementById('email_body').value || 'Email content will appear here...';
+        
+        // Replace variables with sample data for preview
+        const sampleData = {
+            '{{username}}': 'john_doe',
+            '{{email}}': 'john.doe@example.com',
+            '{{first_name}}': 'John',
+            '{{last_name}}': 'Doe',
+            '{{full_name}}': 'John Doe',
+            '{{date}}': new Date().toLocaleDateString(),
+            '{{time}}': new Date().toLocaleTimeString()
+        };
+        
+        let previewSubject = subject;
+        let previewBody = body;
+        
+        Object.keys(sampleData).forEach(variable => {
+            const regex = new RegExp(variable.replace(/[{}]/g, '\\$&'), 'g');
+            previewSubject = previewSubject.replace(regex, sampleData[variable]);
+            previewBody = previewBody.replace(regex, sampleData[variable]);
+        });
+        
+        document.getElementById('preview-subject').textContent = previewSubject;
+        document.getElementById('preview-content').textContent = previewBody;
+    }
+
+    // Insert variable into textarea
+    function insertVariable(variable) {
+        const textarea = document.getElementById('email_body');
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = textarea.value;
+        
+        textarea.value = text.substring(0, start) + variable + text.substring(end);
+        textarea.focus();
+        textarea.setSelectionRange(start + variable.length, start + variable.length);
+        
+        updatePreview();
+    }
+
+    // Load sample templates
+    function loadSampleTemplate(type) {
+        const samples = {
+            welcome: {
+                name: 'Welcome Email Template',
+                subject: 'Welcome to Our LMS Platform, {{first_name}}!',
+                body: `Dear {{first_name}},
+
+Welcome to our Learning Management System! We're excited to have you join our educational community.
+
+Your account details:
+- Username: {{username}}
+- Email: {{email}}
+- Registration Date: {{date}}
+
+To get started:
+1. Log in to your account using your credentials
+2. Complete your profile information
+3. Explore the available courses
+4. Contact support if you need assistance
+
+We're here to support your learning journey!
+
+Best regards,
+LMS Team`
+            },
+            announcement: {
+                name: 'Announcement Email Template',
+                subject: 'Important Announcement - {{date}}',
+                body: `Dear {{first_name}},
+
+We have an important announcement to share with you.
+
+[Your announcement content goes here]
+
+This message was sent to: {{email}}
+Date: {{date}} at {{time}}
+
+If you have any questions, please don't hesitate to contact us.
+
+Best regards,
+LMS Administration Team`
+            }
+        };
+
+        if (samples[type]) {
+            const sample = samples[type];
+            document.getElementById('name').value = sample.name;
+            document.getElementById('subject').value = sample.subject;
+            document.getElementById('email_body').value = sample.body;
+            updatePreview();
+            
+            // Update character counts
+            document.getElementById('subject').dispatchEvent(new Event('input'));
+            document.getElementById('email_body').dispatchEvent(new Event('input'));
+        }
+    }
+
+    // Preview template
+    function previewTemplate() {
+        const subject = document.getElementById('subject').value;
+        const body = document.getElementById('email_body').value;
+        
+        if (!subject || !body) {
+            alert('Please fill in both subject and email body to preview.');
+            return;
+        }
+        
+        // Sample data for preview
+        const sampleData = {
+            '{{username}}': 'john_doe',
+            '{{email}}': 'john.doe@example.com',
+            '{{first_name}}': 'John',
+            '{{last_name}}': 'Doe',
+            '{{full_name}}': 'John Doe',
+            '{{date}}': new Date().toLocaleDateString(),
+            '{{time}}': new Date().toLocaleTimeString()
+        };
+        
+        // Set raw content
+        document.getElementById('modal-raw-subject').textContent = subject;
+        document.getElementById('modal-raw-body').textContent = body;
+        
+        // Set rendered content
+        let renderedSubject = subject;
+        let renderedBody = body;
+        
+        Object.keys(sampleData).forEach(variable => {
+            const regex = new RegExp(variable.replace(/[{}]/g, '\\$&'), 'g');
+            renderedSubject = renderedSubject.replace(regex, sampleData[variable]);
+            renderedBody = renderedBody.replace(regex, sampleData[variable]);
+        });
+        
+        document.getElementById('modal-rendered-subject').textContent = renderedSubject;
+        document.getElementById('modal-rendered-body').textContent = renderedBody;
+        
+        // Show modal
+        new bootstrap.Modal(document.getElementById('previewModal')).show();
+    }
+
+    // Validate template
+    function validateTemplate() {
+        const name = document.getElementById('name').value;
+        const templateType = document.getElementById('template_type').value;
+        const subject = document.getElementById('subject').value;
+        const body = document.getElementById('email_body').value;
+        
+        const errors = [];
+        const warnings = [];
+        const suggestions = [];
+        
+        // Basic validation
+        if (!name) errors.push('Template name is required');
+        if (!templateType) errors.push('Template type is required');
+        if (!subject) errors.push('Email subject is required');
+        if (!body) errors.push('Email body is required');
+        
+        // Content validation
+        if (subject && subject.length > 200) errors.push('Subject line is too long (max 200 characters)');
+        if (subject && subject.length < 10) warnings.push('Subject line is quite short');
+        if (body && body.length < 50) warnings.push('Email body seems very short');
+        
+        // Variable usage suggestions
+        if (body && !body.includes('{{first_name}}') && !body.includes('{{username}}')) {
+            suggestions.push('Consider personalizing your email with {{first_name}} or {{username}}');
+        }
+        
+        // Display results
+        let resultsHTML = '';
+        
+        if (errors.length === 0) {
+            resultsHTML += '<div class="alert alert-success"><i class="fas fa-check-circle"></i> Template validation passed!</div>';
+        } else {
+            resultsHTML += '<div class="alert alert-danger"><strong>Errors:</strong><ul class="mb-0">';
+            errors.forEach(error => resultsHTML += `<li>${error}</li>`);
+            resultsHTML += '</ul></div>';
+        }
+        
+        if (warnings.length > 0) {
+            resultsHTML += '<div class="alert alert-warning"><strong>Warnings:</strong><ul class="mb-0">';
+            warnings.forEach(warning => resultsHTML += `<li>${warning}</li>`);
+            resultsHTML += '</ul></div>';
+        }
+        
+        if (suggestions.length > 0) {
+            resultsHTML += '<div class="alert alert-info"><strong>Suggestions:</strong><ul class="mb-0">';
+            suggestions.forEach(suggestion => resultsHTML += `<li>${suggestion}</li>`);
+            resultsHTML += '</ul></div>';
+        }
+        
+        document.getElementById('validationResults').innerHTML = resultsHTML;
+        new bootstrap.Modal(document.getElementById('validationModal')).show();
+    }
+
+    // Submit form from modal
+    function submitForm() {
+        document.getElementById('templateForm').submit();
+    }
+
+    // Form validation before submit
+    document.getElementById('templateForm').addEventListener('submit', function(e) {
+        const name = document.getElementById('name').value.trim();
+        const templateType = document.getElementById('template_type').value;
+        const subject = document.getElementById('subject').value.trim();
+        const body = document.getElementById('email_body').value.trim();
+        
+        if (!name || !templateType || !subject || !body) {
+            e.preventDefault();
+            alert('Please fill in all required fields!');
+            return false;
+        }
+        
+        // Show loading state
+        const submitBtn = this.querySelector('button[type="submit"]');
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Creating...';
+        submitBtn.disabled = true;
+    });
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', function() {
+        updatePreview();
+        
+        // Focus on name field
+        document.getElementById('name').focus();
+    });
+</script>
+{% endblock %}

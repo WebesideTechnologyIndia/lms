@@ -1,0 +1,320 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - LMS Admin{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'webinars:admin_webinar_dashboard' %}">Webinars</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'webinars:admin_manage_categories' %}">Categories</a></li>
+        <li class="breadcrumb-item active">{{ title }}</li>
+    </ol>
+</nav>
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-tag me-2"></i>{{ title }}
+        </h2>
+        <p class="text-muted mb-0">
+            {% if category %}
+                Edit category details and settings
+            {% else %}
+                Create a new webinar category
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<!-- Messages -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Category Form -->
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-tag me-2"></i>Category Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Category Name -->
+                    <div class="mb-3">
+                        <label for="name" class="form-label">
+                            <i class="fas fa-heading me-2"></i>Category Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" 
+                               class="form-control" 
+                               id="name" 
+                               name="name" 
+                               value="{% if category %}{{ category.name }}{% endif %}"
+                               placeholder="Enter category name"
+                               required
+                               maxlength="100">
+                        <div class="form-text">
+                            <span class="text-muted">Character count: </span>
+                            <span id="nameCount">{% if category %}{{ category.name|length }}{% else %}0{% endif %}</span>/100
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-3">
+                        <label for="description" class="form-label">
+                            <i class="fas fa-align-left me-2"></i>Description
+                        </label>
+                        <textarea class="form-control" 
+                                  id="description" 
+                                  name="description" 
+                                  rows="4"
+                                  placeholder="Describe this category (optional)">{% if category %}{{ category.description }}{% endif %}</textarea>
+                        <div class="form-text">
+                            <span class="text-muted">Character count: </span>
+                            <span id="descCount">{% if category %}{{ category.description|length }}{% else %}0{% endif %}</span>/500
+                        </div>
+                    </div>
+
+                    {% if category %}
+                    <!-- Active Status (only for edit) -->
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" 
+                                   type="checkbox" 
+                                   id="is_active" 
+                                   name="is_active"
+                                   {% if category.is_active %}checked{% endif %}>
+                            <label class="form-check-label" for="is_active">
+                                <i class="fas fa-toggle-on me-2"></i>Active Category
+                            </label>
+                        </div>
+                        <div class="form-text">
+                            Inactive categories won't appear in webinar creation forms
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Form Actions -->
+                    <div class="d-flex gap-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            {% if category %}Update Category{% else %}Create Category{% endif %}
+                        </button>
+                        <a href="{% url 'webinars:admin_manage_categories' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Categories
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Help Sidebar -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Category Guidelines
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6><i class="fas fa-check text-success me-2"></i>Good Category Names</h6>
+                    <ul class="small">
+                        <li>Technology & Programming</li>
+                        <li>Business & Marketing</li>
+                        <li>Design & Creative</li>
+                        <li>Health & Wellness</li>
+                    </ul>
+                </div>
+                
+                <div class="mb-3">
+                    <h6><i class="fas fa-times text-danger me-2"></i>Avoid</h6>
+                    <ul class="small">
+                        <li>Very generic names like "Other"</li>
+                        <li>Duplicate or similar categories</li>
+                        <li>Too specific categories</li>
+                    </ul>
+                </div>
+
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Note:</strong> Categories with existing webinars cannot be deleted.
+                </div>
+            </div>
+        </div>
+
+        {% if category %}
+        <div class="card shadow-sm mt-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Category Stats
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h4 class="text-primary mb-0">{{ category.webinars.count }}</h4>
+                            <small class="text-muted">Total Webinars</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success mb-0">{{ category.active_webinars_count }}</h4>
+                        <small class="text-muted">Active Webinars</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Character counting
+        const nameInput = document.getElementById('name');
+        const nameCount = document.getElementById('nameCount');
+        const descInput = document.getElementById('description');
+        const descCount = document.getElementById('descCount');
+
+        if (nameInput && nameCount) {
+            nameInput.addEventListener('input', function() {
+                nameCount.textContent = this.value.length;
+                if (this.value.length > 100) {
+                    nameCount.classList.add('text-danger');
+                } else {
+                    nameCount.classList.remove('text-danger');
+                }
+            });
+        }
+
+        if (descInput && descCount) {
+            descInput.addEventListener('input', function() {
+                descCount.textContent = this.value.length;
+                if (this.value.length > 500) {
+                    descCount.classList.add('text-danger');
+                } else {
+                    descCount.classList.remove('text-danger');
+                }
+            });
+        }
+
+        // Form validation
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(e) {
+            const nameField = document.getElementById('name');
+            
+            if (!nameField.value.trim()) {
+                e.preventDefault();
+                nameField.classList.add('is-invalid');
+                alert('Category name is required.');
+                nameField.focus();
+                return;
+            }
+
+            if (nameField.value.length > 100) {
+                e.preventDefault();
+                alert('Category name must be 100 characters or less.');
+                nameField.focus();
+                return;
+            }
+        });
+
+        // Remove validation classes on input
+        const inputs = form.querySelectorAll('.form-control');
+        inputs.forEach(input => {
+            input.addEventListener('input', function() {
+                if (this.value.trim()) {
+                    this.classList.remove('is-invalid');
+                }
+            });
+        });
+    });
+</script>
+
+<style>
+    .card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .form-control:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .form-control.is-invalid:focus {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+        border: none;
+        border-radius: 8px;
+        padding: 10px 25px;
+        font-weight: 600;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #0b5ed7, #0a58ca);
+        transform: translateY(-1px);
+    }
+    
+    .breadcrumb {
+        background: transparent;
+        padding: 0;
+    }
+    
+    .breadcrumb-item a {
+        color: #0d6efd;
+        text-decoration: none;
+    }
+    
+    .breadcrumb-item a:hover {
+        text-decoration: underline;
+    }
+    
+    .card-header h5 {
+        font-weight: 600;
+    }
+    
+    .alert-warning {
+        background-color: #fff3cd;
+        border-color: #ffecb5;
+        color: #664d03;
+    }
+    
+    .form-text {
+        font-size: 0.875rem;
+    }
+    
+    .form-check-input:checked {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
+    }
+    
+    @media (max-width: 768px) {
+        .col-lg-4 {
+            margin-top: 2rem;
+        }
+    }
+</style>
+{% endblock %}

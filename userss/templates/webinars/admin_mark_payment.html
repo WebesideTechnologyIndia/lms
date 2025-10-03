@@ -1,0 +1,384 @@
+<!-- templates/webinars/admin_mark_payment.html -->
+{% extends 'base.html' %}
+
+{% block title %}Mark Payment - {{ registration.get_full_name }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'webinars:admin_webinar_dashboard' %}">Webinars</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'webinars:admin_registrations' webinar.slug %}">{{ webinar.title|truncatechars:30 }}</a></li>
+        <li class="breadcrumb-item active">Mark Payment</li>
+    </ol>
+</nav>
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-credit-card me-2 text-success"></i>Mark Payment as Completed
+        </h2>
+        <p class="text-muted mb-0">Confirm payment for webinar registration</p>
+    </div>
+    <div>
+        <a href="{% url 'webinars:admin_registrations' webinar.slug %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Registrations
+        </a>
+    </div>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Payment Confirmation Card -->
+        <div class="card payment-confirmation-card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>Payment Confirmation Required
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Registration Details -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">
+                            <i class="fas fa-user me-2"></i>Participant Details
+                        </h6>
+                        <div class="info-group">
+                            <div class="info-item">
+                                <strong>Name:</strong> {{ registration.get_full_name }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Email:</strong> {{ registration.email }}
+                            </div>
+                            {% if registration.phone_number %}
+                            <div class="info-item">
+                                <strong>Phone:</strong> {{ registration.phone_number }}
+                            </div>
+                            {% endif %}
+                            {% if registration.company %}
+                            <div class="info-item">
+                                <strong>Company:</strong> {{ registration.company }}
+                                {% if registration.designation %}
+                                    <br><small class="text-muted">{{ registration.designation }}</small>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                            <div class="info-item">
+                                <strong>User Type:</strong> 
+                                <span class="badge bg-primary">{{ registration.user.role|title }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-muted mb-3">
+                            <i class="fas fa-video me-2"></i>Webinar Details
+                        </h6>
+                        <div class="info-group">
+                            <div class="info-item">
+                                <strong>Title:</strong> {{ webinar.title }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Date:</strong> {{ webinar.scheduled_date|date:"F j, Y" }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Time:</strong> {{ webinar.scheduled_date|time:"g:i A" }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Duration:</strong> {{ webinar.duration_minutes }} minutes
+                            </div>
+                            <div class="info-item">
+                                <strong>Instructor:</strong> {{ webinar.instructor.get_full_name }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment Details -->
+                <div class="payment-details-section">
+                    <h6 class="text-muted mb-3">
+                        <i class="fas fa-rupee-sign me-2"></i>Payment Information
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="payment-summary p-3 bg-light rounded">
+                                <div class="row align-items-center">
+                                    <div class="col-8">
+                                        <div class="payment-info">
+                                            <strong>Registration ID:</strong> #{{ registration.id }}<br>
+                                            <strong>Registration Date:</strong> {{ registration.registered_at|date:"M j, Y - g:i A" }}<br>
+                                            <strong>Current Status:</strong> 
+                                            <span class="badge bg-warning text-dark">
+                                                <i class="fas fa-clock me-1"></i>Payment Pending
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="col-4 text-end">
+                                        <div class="amount-display">
+                                            <h3 class="text-success mb-0">₹{{ webinar.price }}</h3>
+                                            <small class="text-muted">Amount Due</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="upgrade-info p-3 bg-info bg-opacity-10 rounded">
+                                <h6 class="text-info mb-2">
+                                    <i class="fas fa-arrow-up me-1"></i>Account Upgrade
+                                </h6>
+                                <p class="small mb-0">
+                                    After payment confirmation, user will be upgraded from 
+                                    <strong>Student</strong> to <strong>Webinar User</strong>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Warning Notice -->
+                <div class="alert alert-warning d-flex align-items-center mt-4">
+                    <i class="fas fa-exclamation-triangle me-3 fs-4"></i>
+                    <div>
+                        <strong>Important:</strong> Only mark this payment as completed if you have verified that the payment has been received. 
+                        This action will:
+                        <ul class="mb-0 mt-2">
+                            <li>Confirm the user's registration for the webinar</li>
+                            <li>Upgrade their account from <strong>Student</strong> to <strong>Webinar User</strong></li>
+                            <li>Send them a confirmation email</li>
+                            <li>Grant access to webinar materials</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Payment Confirmation Form -->
+                <form method="post" class="payment-form mt-4">
+                    {% csrf_token %}
+                    
+                    <div class="form-group mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="verificationCheck" required>
+                            <label class="form-check-label" for="verificationCheck">
+                                <strong>I have verified that the payment of ₹{{ webinar.price }} has been received for this registration</strong>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-4">
+                        <label for="adminNotes" class="form-label">Admin Notes (Optional)</label>
+                        <textarea class="form-control" id="adminNotes" name="admin_notes" rows="3" 
+                                  placeholder="Add any notes about this payment confirmation..."></textarea>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <button type="submit" class="btn btn-success btn-lg me-md-2" id="confirmBtn" disabled>
+                            <i class="fas fa-check me-2"></i>Confirm Payment & Upgrade User
+                        </button>
+                        <a href="{% url 'webinars:admin_registrations' webinar.slug %}" 
+                           class="btn btn-outline-secondary btn-lg">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Quick Actions Card -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-tools me-2"></i>Quick Actions
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <button class="btn btn-outline-primary w-100 mb-2" onclick="sendPaymentReminder()">
+                            <i class="fas fa-envelope me-2"></i>Send Payment Reminder
+                        </button>
+                    </div>
+                    <div class="col-md-6">
+                        <button class="btn btn-outline-info w-100 mb-2" onclick="viewUserProfile()">
+                            <i class="fas fa-user me-2"></i>View User Profile
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .payment-confirmation-card {
+        border: none;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border-radius: 12px;
+    }
+    
+    .info-group {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid #0d6efd;
+    }
+    
+    .info-item {
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .info-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+    
+    .payment-summary {
+        border-left: 4px solid #28a745;
+    }
+    
+    .amount-display h3 {
+        font-weight: bold;
+        font-size: 2rem;
+    }
+    
+    .upgrade-info {
+        border-left: 4px solid #0dcaf0;
+    }
+    
+    .form-check {
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid #ffc107;
+    }
+    
+    .form-check-input:checked {
+        background-color: #28a745;
+        border-color: #28a745;
+    }
+    
+    .btn-success {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        border: none;
+        font-weight: 600;
+    }
+    
+    .btn-success:hover:not(:disabled) {
+        background: linear-gradient(135deg, #1e7e34, #17a2b8);
+        transform: translateY(-1px);
+    }
+    
+    .btn-success:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    
+    .card {
+        border: none;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border-radius: 12px;
+    }
+    
+    .breadcrumb {
+        background: transparent;
+        padding: 0;
+    }
+    
+    .breadcrumb-item a {
+        color: #0d6efd;
+        text-decoration: none;
+    }
+    
+    .breadcrumb-item a:hover {
+        text-decoration: underline;
+    }
+    
+    .alert {
+        border: none;
+        border-radius: 10px;
+    }
+    
+    @media (max-width: 768px) {
+        .amount-display h3 {
+            font-size: 1.5rem;
+        }
+        
+        .d-md-flex .btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+        
+        .info-group {
+            margin-bottom: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Enable/disable confirm button based on checkbox
+        const checkbox = document.getElementById('verificationCheck');
+        const confirmBtn = document.getElementById('confirmBtn');
+        
+        checkbox.addEventListener('change', function() {
+            confirmBtn.disabled = !this.checked;
+        });
+        
+        // Form submission handling
+        const form = document.querySelector('.payment-form');
+        form.addEventListener('submit', function(e) {
+            if (!checkbox.checked) {
+                e.preventDefault();
+                alert('Please verify that payment has been received before confirming.');
+                return;
+            }
+            
+            if (!confirm('Are you sure you want to mark this payment as completed? This will upgrade the user account and send confirmation email.')) {
+                e.preventDefault();
+                return;
+            }
+            
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+        });
+    });
+    
+    function sendPaymentReminder() {
+        if (!confirm('Send payment reminder to {{ registration.email }}?')) {
+            return;
+        }
+        
+        fetch(`/webinars/admin/registration/{{ registration.id }}/send-payment-reminder/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Payment reminder sent successfully!');
+            } else {
+                alert('Failed to send reminder: ' + data.error);
+            }
+        })
+        .catch(error => {
+            alert('Error sending reminder. Please try again.');
+            console.error('Error:', error);
+        });
+    }
+    
+    function viewUserProfile() {
+        window.open(`/admin/users/{{ registration.user.id }}/`, '_blank');
+    }
+</script>
+{% endblock %}

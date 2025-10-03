@@ -1,0 +1,284 @@
+{% extends 'instructor_base.html' %}
+
+{% block title %}Exam Dashboard - Instructor Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        padding: 1.5rem;
+        color: white;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .stats-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stats-label {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+    
+    .exam-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        margin-bottom: 1rem;
+    }
+    
+    .exam-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    
+    .exam-type-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    
+    .mcq-badge { background: #e3f2fd; color: #1976d2; }
+    .qa-badge { background: #f3e5f5; color: #7b1fa2; }
+    .assignment-badge { background: #e8f5e8; color: #388e3c; }
+    
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    
+    .published-badge { background: #e8f5e8; color: #2e7d32; }
+    .draft-badge { background: #fff3e0; color: #f57c00; }
+    .archived-badge { background: #fafafa; color: #616161; }
+    
+    .quick-action-btn {
+        padding: 0.5rem 1rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Exam Management Dashboard</h1>
+            <p class="text-muted">Manage your exams, view submissions, and track performance</p>
+        </div>
+        <div>
+            <a href="{% url 'instructor_create_exam' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create New Exam
+            </a>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card">
+                <div class="stats-number">{{ total_exams }}</div>
+                <div class="stats-label">
+                    <i class="fas fa-clipboard-list me-2"></i>Total Exams
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card" style="background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);">
+                <div class="stats-number">{{ published_exams }}</div>
+                <div class="stats-label">
+                    <i class="fas fa-check-circle me-2"></i>Published Exams
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);">
+                <div class="stats-number">{{ total_attempts }}</div>
+                <div class="stats-label">
+                    <i class="fas fa-users me-2"></i>Total Attempts
+                </div>
+            </div>
+        </div>
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);">
+                <div class="stats-number">{{ pending_grading }}</div>
+                <div class="stats-label">
+                    <i class="fas fa-clock me-2"></i>Pending Grading
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Recent Exams -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Recent Exams</h5>
+                        <a href="{% url 'instructor_my_exams' %}" class="btn btn-sm btn-outline-primary">View All</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if recent_exams %}
+                        {% for exam in recent_exams %}
+                        <div class="exam-card card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="card-title mb-2">{{ exam.title }}</h6>
+                                        <p class="card-text text-muted small mb-2">{{ exam.description|truncatechars:100 }}</p>
+                                        <div class="d-flex gap-2 mb-2">
+                                            <span class="exam-type-badge {{ exam.exam_type }}-badge">
+                                                {{ exam.get_exam_type_display }}
+                                            </span>
+                                            <span class="status-badge {{ exam.status }}-badge">
+                                                {{ exam.get_status_display }}
+                                            </span>
+                                        </div>
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar me-1"></i>Created {{ exam.created_at|date:"M d, Y" }}
+                                        </small>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                                                Actions
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li><a class="dropdown-item" href="#"><i class="fas fa-eye me-2"></i>View</a></li>
+                                                <li><a class="dropdown-item" href="#"><i class="fas fa-edit me-2"></i>Edit</a></li>
+                                                <li><a class="dropdown-item" href="{% url 'instructor_assign_exam' %}"><i class="fas fa-user-plus me-2"></i>Assign</a></li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                            <h5 class="text-muted">No Exams Created Yet</h5>
+                            <p class="text-muted mb-3">Start by creating your first exam</p>
+                            <a href="{% url 'instructor_create_exam' %}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Create First Exam
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions & Stats -->
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'instructor_create_exam' %}" class="btn btn-primary quick-action-btn">
+                            <i class="fas fa-plus me-2"></i>Create New Exam
+                        </a>
+                        <a href="{% url 'instructor_assign_exam' %}" class="btn btn-outline-primary quick-action-btn">
+                            <i class="fas fa-user-plus me-2"></i>Assign Exams
+                        </a>
+                        <a href="{% url 'instructor_exam_submissions' %}" class="btn btn-outline-success quick-action-btn">
+                            <i class="fas fa-clipboard-check me-2"></i>View Submissions
+                        </a>
+                        {% if pending_grading > 0 %}
+                        <a href="{% url 'instructor_exam_submissions' %}?grading=ungraded" class="btn btn-outline-warning quick-action-btn">
+                            <i class="fas fa-clock me-2"></i>Pending Grading ({{ pending_grading }})
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Exam Types Chart -->
+            {% if exam_types %}
+            <div class="chart-container">
+                <h6 class="mb-3">Exam Types Distribution</h6>
+                {% for exam_type in exam_types %}
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <span class="exam-type-badge {{ exam_type.exam_type }}-badge">
+                        {{ exam_type.exam_type|upper }}
+                    </span>
+                    <span class="fw-bold">{{ exam_type.count }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Recent Activity -->
+            {% if recent_attempts %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Recent Activity</h5>
+                </div>
+                <div class="card-body">
+                    {% for attempt in recent_attempts|slice:":5" %}
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="me-3">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                <i class="fas fa-user fa-sm"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1 fs-6">{{ attempt.student.get_full_name|default:attempt.student.username }}</h6>
+                            <p class="mb-0 text-muted small">{{ attempt.exam.title }}</p>
+                            <small class="text-muted">{{ attempt.started_at|timesince }} ago</small>
+                        </div>
+                        <div>
+                            {% if attempt.status == 'submitted' %}
+                                <span class="badge bg-success">Submitted</span>
+                            {% elif attempt.status == 'in_progress' %}
+                                <span class="badge bg-warning">In Progress</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ attempt.get_status_display }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh pending grading count every 5 minutes
+    setInterval(function() {
+        // You can add AJAX call here to refresh pending grading count
+    }, 300000);
+</script>
+{% endblock %}

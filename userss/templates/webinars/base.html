@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Webinars - Learning Platform{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    {% block extra_css %}{% endblock %}
+    
+    <style>
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #28a745;
+            --info-color: #17a2b8;
+            --warning-color: #ffc107;
+            --danger-color: #dc3545;
+            --light-color: #f8f9fa;
+            --dark-color: #343a40;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+
+        /* Webinar Navigation */
+        .webinar-navbar {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1rem 0;
+            margin-bottom: 0;
+        }
+
+        .webinar-navbar .navbar-brand {
+            color: white !important;
+            font-weight: 700;
+            font-size: 1.5rem;
+        }
+
+        .webinar-navbar .nav-link {
+            color: rgba(255,255,255,0.9) !important;
+            font-weight: 500;
+            padding: 0.5rem 1rem !important;
+            border-radius: 6px;
+            transition: all 0.3s ease;
+            margin: 0 0.25rem;
+        }
+
+        .webinar-navbar .nav-link:hover,
+        .webinar-navbar .nav-link.active {
+            background-color: rgba(255,255,255,0.2);
+            color: white !important;
+        }
+
+        .webinar-navbar .dropdown-menu {
+            border: none;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 8px;
+        }
+
+        /* User Info */
+        .user-info {
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .user-avatar {
+            width: 35px;
+            height: 35px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+
+        /* Quick Actions */
+        .quick-actions {
+            background: white;
+            padding: 1rem;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 2rem;
+        }
+
+        .quick-action-btn {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .quick-action-btn:hover {
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .quick-action-btn.secondary {
+            background: linear-gradient(135deg, var(--info-color), var(--success-color));
+        }
+
+        .quick-action-btn.outline {
+            background: transparent;
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+        }
+
+        .quick-action-btn.outline:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* Content Area */
+        .main-content {
+            min-height: calc(100vh - 200px);
+        }
+
+        /* Breadcrumb */
+        .webinar-breadcrumb {
+            background: transparent;
+            padding: 1rem 0;
+        }
+
+        .webinar-breadcrumb .breadcrumb {
+            background: white;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .webinar-breadcrumb .breadcrumb-item a {
+            color: var(--primary-color);
+            text-decoration: none;
+        }
+
+        .webinar-breadcrumb .breadcrumb-item a:hover {
+            text-decoration: underline;
+        }
+
+        /* Footer */
+        .webinar-footer {
+            background: var(--dark-color);
+            color: white;
+            padding: 2rem 0;
+            margin-top: 3rem;
+        }
+
+        .webinar-footer a {
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+        }
+
+        .webinar-footer a:hover {
+            color: white;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .webinar-navbar .navbar-nav {
+                text-align: center;
+                margin-top: 1rem;
+            }
+
+            .quick-actions {
+                text-align: center;
+            }
+
+            .quick-action-btn {
+                width: 100%;
+                margin-bottom: 0.5rem;
+                justify-content: center;
+            }
+        }
+
+        /* Utility Classes */
+        .text-gradient {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .bg-gradient-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        }
+
+        .shadow-custom {
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .border-radius-custom {
+            border-radius: 12px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Webinar Navigation -->
+    <nav class="navbar navbar-expand-lg webinar-navbar">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'webinars:webinar_landing' %}">
+                <i class="fas fa-video me-2"></i>Webinars
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#webinarNavbar">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="webinarNavbar">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'webinar_landing' %}active{% endif %}" 
+                           href="{% url 'webinars:webinar_landing' %}">
+                            <i class="fas fa-home me-1"></i>Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'webinar_list' %}active{% endif %}" 
+                           href="{% url 'webinars:webinar_list' %}">
+                            <i class="fas fa-list me-1"></i>All Webinars
+                        </a>
+                    </li>
+                    {% if user.is_authenticated and user.role in 'student,webinar_user' %}
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'my_webinars' %}active{% endif %}" 
+                           href="{% url 'webinars:my_webinars' %}">
+                            <i class="fas fa-user-check me-1"></i>My Webinars
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    <!-- Categories Dropdown -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                            <i class="fas fa-tags me-1"></i>Categories
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'webinars:webinar_list' %}">All Categories</a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item" href="{% url 'webinars:webinar_list' %}?type=free">Free Webinars</a></li>
+                            <li><a class="dropdown-item" href="{% url 'webinars:webinar_list' %}?type=paid">Paid Webinars</a></li>
+                            <li><a class="dropdown-item" href="{% url 'webinars:webinar_list' %}?status=upcoming">Upcoming</a></li>
+                        </ul>
+                    </li>
+                </ul>
+                
+                <!-- User Info -->
+                <div class="d-flex align-items-center">
+                    {% if user.is_authenticated %}
+                        <div class="user-info me-3">
+                            <div class="user-avatar">
+                                {{ user.first_name|first|upper }}{{ user.last_name|first|upper }}
+                            </div>
+                            <div class="user-details">
+                                <div class="user-name">{{ user.get_full_name }}</div>
+                                <small class="user-role">{{ user.get_role_display }}</small>
+                            </div>
+                        </div>
+                        
+                        <!-- User Dropdown -->
+                        <div class="dropdown">
+                            <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="fas fa-user-cog"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                {% if user.role in 'student,webinar_user' %}
+                                <li><a class="dropdown-item" href="{% url 'webinars:my_webinars' %}">
+                                    <i class="fas fa-video me-2"></i>My Webinars
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                {% endif %}
+                                
+                                {% if user.role in 'superadmin,instructor' %}
+                                <li><a class="dropdown-item" href="{% url 'webinars:admin_webinar_dashboard' %}">
+                                    <i class="fas fa-tachometer-alt me-2"></i>Admin Dashboard
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                {% endif %}
+                                
+                                <li><a class="dropdown-item" href="/profile/">
+                                    <i class="fas fa-user me-2"></i>Profile
+                                </a></li>
+                                <li><a class="dropdown-item" href="{% url 'user_login' %}">
+                                    <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                </a></li>
+                            </ul>
+                        </div>
+                    {% else %}
+                        <a href="/login/" class="btn btn-outline-light me-2">
+                            <i class="fas fa-sign-in-alt me-1"></i>Login
+                        </a>
+                        <a href="/register/" class="btn btn-light">
+                            <i class="fas fa-user-plus me-1"></i>Register
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Breadcrumb (Optional) -->
+    {% block breadcrumb %}{% endblock %}
+
+    <!-- Quick Actions (Optional) -->
+    {% block quick_actions %}
+    {% if user.is_authenticated and user.role in 'student,webinar_user' %}
+    <div class="container">
+        <div class="quick-actions">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h6 class="mb-2 mb-md-0">
+                        <i class="fas fa-rocket me-2"></i>Quick Actions
+                    </h6>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <a href="{% url 'webinars:webinar_list' %}" class="quick-action-btn me-2">
+                        <i class="fas fa-search"></i>Find Webinars
+                    </a>
+                    <a href="{% url 'webinars:my_webinars' %}" class="quick-action-btn secondary">
+                        <i class="fas fa-video"></i>My Webinars
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endblock %}
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="container">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-custom" role="alert">
+            {% if message.tags == 'success' %}
+                <i class="fas fa-check-circle me-2"></i>
+            {% elif message.tags == 'error' or message.tags == 'danger' %}
+                <i class="fas fa-exclamation-triangle me-2"></i>
+            {% elif message.tags == 'warning' %}
+                <i class="fas fa-exclamation-circle me-2"></i>
+            {% elif message.tags == 'info' %}
+                <i class="fas fa-info-circle me-2"></i>
+            {% endif %}
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="webinar-footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <h5><i class="fas fa-video me-2"></i>Webinars Platform</h5>
+                    <p class="mb-0">Learn, grow, and connect with expert-led webinars.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <div class="footer-links">
+                        <a href="{% url 'webinars:webinar_list' %}" class="me-3">All Webinars</a>
+                        {% if user.is_authenticated %}
+                            <a href="{% url 'webinars:my_webinars' %}" class="me-3">My Webinars</a>
+                        {% endif %}
+                        <a href="/help/" class="me-3">Help</a>
+                        <a href="/contact/">Contact</a>
+                    </div>
+                    <div class="mt-2">
+                        <small>&copy; 2025 Learning Platform. All rights reserved.</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JavaScript -->
+    <script>
+        // Auto-hide alerts after 5 seconds
+        document.addEventListener('DOMContentLoaded', function() {
+            const alerts = document.querySelectorAll('.alert');
+            alerts.forEach(function(alert) {
+                setTimeout(function() {
+                    const bsAlert = new bootstrap.Alert(alert);
+                    bsAlert.close();
+                }, 5000);
+            });
+        });
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

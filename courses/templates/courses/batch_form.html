@@ -1,0 +1,314 @@
+<!-- courses/templates/courses/batch_form.html -->
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+    {% if batch %}Edit Batch{% else %}Create Batch{% endif %} - {{ course.title }}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.content-type-option {
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.content-type-option:hover {
+    border-color: #007bff;
+    background-color: #f8f9ff;
+}
+
+.content-type-option.selected {
+    border-color: #007bff;
+    background-color: #e7f3ff;
+}
+
+.content-type-option input[type="radio"] {
+    transform: scale(1.2);
+}
+
+.step-indicator {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 30px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            
+            <!-- Page Header -->
+            <div class="mb-4">
+                <h2>
+                    <i class="fas fa-plus-circle me-2"></i>
+                    {% if batch %}Edit Batch{% else %}Create New Batch{% endif %}
+                </h2>
+                <p class="text-muted">{{ course.title }} - {{ course.course_code }}</p>
+            </div>
+
+            <!-- Form -->
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="post" id="batchForm">
+                        {% csrf_token %}
+                        
+                        <!-- Hidden Fields -->
+                        <input type="hidden" name="course" value="{{ course.id }}">
+                        {% if not batch %}
+                        <input type="hidden" name="status" value="active">
+                        {% endif %}
+                        
+                        <!-- Basic Information -->
+                        <div class="step-indicator">
+                            <h5><i class="fas fa-info-circle me-2"></i>Basic Information</h5>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label for="{{ form.name.id_for_label }}" class="form-label">
+                                    <strong>Batch Name</strong> <span class="text-danger">*</span>
+                                </label>
+                                {{ form.name }}
+                                {% if form.name.errors %}
+                                    <div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>
+                                {% endif %}
+                                <div class="form-text">e.g., "Spring 2025 Batch", "Weekend Evening Batch"</div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <label for="{{ form.max_students.id_for_label }}" class="form-label">
+                                    <strong>Max Students</strong> <span class="text-danger">*</span>
+                                </label>
+                                {{ form.max_students }}
+                                {% if form.max_students.errors %}
+                                    <div class="text-danger small mt-1">{{ form.max_students.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label for="{{ form.start_date.id_for_label }}" class="form-label">
+                                    <strong>Start Date</strong> <span class="text-danger">*</span>
+                                </label>
+                                {{ form.start_date }}
+                                {% if form.start_date.errors %}
+                                    <div class="text-danger small mt-1">{{ form.start_date.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <label for="{{ form.end_date.id_for_label }}" class="form-label">
+                                    <strong>End Date</strong> <span class="text-danger">*</span>
+                                </label>
+                                {{ form.end_date }}
+                                {% if form.end_date.errors %}
+                                    <div class="text-danger small mt-1">{{ form.end_date.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Content Selection -->
+                        <div class="step-indicator">
+                            <h5><i class="fas fa-book-open me-2"></i>Content Setup</h5>
+                            <p class="mb-0 text-muted">Choose how to set up content for this batch</p>
+                        </div>
+
+                        <div class="mb-4">
+                            <div class="content-type-option selected" data-value="copy">
+                                <div class="d-flex align-items-start">
+                                    <input type="radio" name="content_type" value="copy" 
+                                           class="form-check-input me-3 mt-1" 
+                                           {% if not batch or batch.content_type == 'copy' %}checked{% endif %}>
+                                    <div>
+                                        <h6><i class="fas fa-copy text-info me-2"></i>Copy Course Content</h6>
+                                        <p class="text-muted mb-0">
+                                            Copy all modules and lessons from the main course. 
+                                            Perfect for running the same curriculum with different student groups.
+                                        </p>
+                                        <small class="text-success">
+                                            <i class="fas fa-check me-1"></i>Recommended for most cases
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="content-type-option" data-value="fresh">
+                                <div class="d-flex align-items-start">
+                                    <input type="radio" name="content_type" value="fresh" 
+                                           class="form-check-input me-3 mt-1"
+                                           {% if batch and batch.content_type == 'fresh' %}checked{% endif %}>
+                                    <div>
+                                        <h6><i class="fas fa-plus-circle text-success me-2"></i>Fresh Content</h6>
+                                        <p class="text-muted mb-0">
+                                            Start with empty syllabus. You'll create modules and lessons from scratch. 
+                                            Good for customized or experimental courses.
+                                        </p>
+                                        <small class="text-info">
+                                            <i class="fas fa-info-circle me-1"></i>You'll add content after creating the batch
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Instructor Assignment -->
+                        <div class="step-indicator">
+                            <h5><i class="fas fa-chalkboard-teacher me-2"></i>Instructor Assignment</h5>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="{{ form.instructor.id_for_label }}" class="form-label">
+                                <strong>Primary Instructor</strong> <span class="text-danger">*</span>
+                            </label>
+                            {{ form.instructor }}
+                            {% if form.instructor.errors %}
+                                <div class="text-danger small mt-1">{{ form.instructor.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">Who will be teaching this batch?</div>
+                        </div>
+
+                        <!-- Status Field (if editing) -->
+                        {% if batch %}
+                        <div class="mb-4">
+                            <label for="{{ form.status.id_for_label }}" class="form-label">
+                                <strong>Status</strong>
+                            </label>
+                            {{ form.status }}
+                            {% if form.status.errors %}
+                                <div class="text-danger small mt-1">{{ form.status.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+
+                        <!-- Form Errors -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {% for error in form.non_field_errors %}
+                                    <div>{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+
+                        <!-- Debug Information (remove after testing) -->
+                        <div class="alert alert-info mb-3" style="font-size: 12px;">
+                            <strong>Debug Info:</strong>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="debugForm()">Check Form Data</button>
+                        </div>
+
+                        <!-- Submit Buttons -->
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'courses:batch_list' course.id %}" class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Cancel
+                            </a>
+                            
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-2"></i>
+                                {% if batch %}Update Batch{% else %}Create Batch{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Content type selection styling
+    const contentOptions = document.querySelectorAll('.content-type-option');
+    const radioButtons = document.querySelectorAll('input[name="content_type"]');
+    
+    // Set initial selected state
+    contentOptions.forEach(option => {
+        const radio = option.querySelector('input[type="radio"]');
+        if (radio && radio.checked) {
+            option.classList.add('selected');
+        } else {
+            option.classList.remove('selected');
+        }
+    });
+    
+    // Handle content type selection
+    contentOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            const radio = this.querySelector('input[type="radio"]');
+            
+            // Clear all selections
+            contentOptions.forEach(opt => opt.classList.remove('selected'));
+            
+            // Select current option
+            radio.checked = true;
+            this.classList.add('selected');
+        });
+    });
+    
+    // Form validation and debugging
+    document.getElementById('batchForm').addEventListener('submit', function(e) {
+        console.log('Form submission started...');
+        
+        // Debug form data
+        const formData = new FormData(this);
+        console.log('Form data:');
+        for (let [key, value] of formData.entries()) {
+            console.log(`${key}: ${value}`);
+        }
+        
+        const startDate = document.getElementById('id_start_date').value;
+        const endDate = document.getElementById('id_end_date').value;
+        const batchName = document.getElementById('id_name').value.trim();
+        
+        if (!batchName) {
+            alert('Please enter a batch name');
+            e.preventDefault();
+            return;
+        }
+        
+        if (!startDate || !endDate) {
+            alert('Please select both start and end dates');
+            e.preventDefault();
+            return;
+        }
+        
+        if (new Date(startDate) >= new Date(endDate)) {
+            alert('End date must be after start date');
+            e.preventDefault();
+            return;
+        }
+    });
+});
+
+// Debug function
+function debugForm() {
+    const form = document.getElementById('batchForm');
+    const formData = new FormData(form);
+    
+    console.log('=== FORM DEBUG ===');
+    console.log('Form element:', form);
+    console.log('Form data:');
+    for (let [key, value] of formData.entries()) {
+        console.log(`  ${key}: ${value}`);
+    }
+    
+    // Check for missing fields
+    const requiredFields = ['name', 'max_students', 'start_date', 'end_date', 'instructor', 'content_type'];
+    console.log('Required fields check:');
+    requiredFields.forEach(field => {
+        const hasValue = formData.has(field) && formData.get(field) !== '';
+        console.log(`  ${field}: ${hasValue ? 'OK' : 'MISSING'}`);
+    });
+    
+    alert('Check console for form debug info');
+}
+</script>
+{% endblock %}

@@ -1,0 +1,682 @@
+{% extends 'base.html' %}
+
+{% block title %}Bulk Email - LMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .email-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+        margin-bottom: 20px;
+    }
+
+    .recipient-count {
+        font-weight: bold;
+        color: var(--primary-color);
+    }
+
+    .user-card {
+        transition: all 0.2s;
+        cursor: pointer;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        margin-bottom: 10px;
+    }
+
+    .user-card:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .user-card.selected {
+        border-color: var(--primary-color);
+        background-color: #f8f9ff;
+    }
+
+    .template-variables {
+        background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 15px;
+    }
+
+    .variable-chip {
+        background: #e3f2fd;
+        color: #1976d2;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.8em;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 1px solid #90caf9;
+        margin-right: 8px;
+        margin-bottom: 5px;
+        display: inline-block;
+    }
+
+    .variable-chip:hover {
+        background: #2196f3;
+        color: white;
+        transform: scale(1.05);
+    }
+
+    .recipients-summary {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 8px;
+        padding: 12px;
+        margin-bottom: 20px;
+    }
+
+    .char-counter {
+        font-size: 0.8em;
+        color: #6c757d;
+        float: right;
+    }
+
+    .preview-box {
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 12px;
+        background: #f8f9fa;
+        margin-top: 10px;
+        min-height: 50px;
+        max-height: 200px;
+        overflow-y: auto;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-paper-plane text-primary me-2"></i>Send Bulk Email</h2>
+        <p class="text-muted mb-0">Send emails to multiple users efficiently</p>
+    </div>
+    <div>
+        <a href="{% url 'email_dashboard' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Dashboard
+        </a>
+    </div>
+</div>
+
+<!-- Success/Error Messages -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+            <i class="fas fa-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-circle{% else %}info-circle{% endif %} me-2"></i>
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<form method="POST" id="bulkEmailForm">
+    {% csrf_token %}
+    <div class="row">
+        <!-- Left Column - Email Composition -->
+        <div class="col-lg-8">
+            <!-- Email Template Selection -->
+            <div class="email-card">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="fas fa-template text-info me-2 fs-5"></i>
+                    <h5 class="mb-0">Email Template</h5>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Choose Template (Optional)</label>
+                    <select name="template_id" id="template_id" class="form-select">
+                        <option value="">Create Custom Email</option>
+                        {% for template in templates %}
+                        <option value="{{ template.id }}" data-subject="{{ template.subject }}"
+                            data-body="{{ template.email_body|escape }}">
+                            {{ template.name }} ({{ template.get_template_type_display }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <div class="form-text">Select a pre-made template or create a custom email below</div>
+                </div>
+            </div>
+
+            <!-- Email Composition -->
+            <div class="email-card">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="fas fa-edit text-primary me-2 fs-5"></i>
+                    <h5 class="mb-0">Compose Email</h5>
+                </div>
+
+                <!-- Email Subject -->
+                <div class="mb-3">
+                    <label class="form-label">
+                        Email Subject <span class="text-danger">*</span>
+                        <span class="char-counter" id="subject-counter">0/200</span>
+                    </label>
+                    <input type="text" name="custom_subject" id="custom_subject" class="form-control"
+                        placeholder="Enter email subject" required maxlength="200">
+                </div>
+
+                <!-- Template Variables Helper -->
+                <div class="template-variables">
+                    <label class="form-label"><i class="fas fa-code"></i> Available Variables</label>
+                    <div>
+                        <span class="variable-chip" data-var="{{username}}">{{username}}</span>
+                        <span class="variable-chip" data-var="{{email}}">{{email}}</span>
+                        <span class="variable-chip" data-var="{{first_name}}">{{first_name}}</span>
+                        <span class="variable-chip" data-var="{{last_name}}">{{last_name}}</span>
+                    </div>
+                </div>
+
+                <!-- Email Body -->
+                <div class="mb-3">
+                    <label class="form-label">
+                        Email Content <span class="text-danger">*</span>
+                        <span class="char-counter" id="body-counter">0 chars</span>
+                    </label>
+                    <textarea name="custom_message" id="custom_message" class="form-control" rows="12"
+                        placeholder="Write your email content here..." required></textarea>
+                    <div class="form-text">
+                        <strong>Available variables:</strong> {{username}}, {{first_name}}, {{last_name}}, {{email}}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recipients Selection -->
+            <div class="email-card">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="fas fa-users text-success me-2 fs-5"></i>
+                    <h5 class="mb-0">Select Recipients</h5>
+                </div>
+
+                <!-- Recipient Type Selection -->
+                <div class="mb-4">
+                    <label class="form-label">Recipient Selection Method</label>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="recipient_type"
+                                    value="all" id="all_users" checked>
+                                <label class="form-check-label" for="all_users">
+                                    <i class="fas fa-globe"></i> All Users
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="recipient_type"
+                                    value="role" id="by_role">
+                                <label class="form-check-label" for="by_role">
+                                    <i class="fas fa-user-tag"></i> By Role
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="recipient_type"
+                                    value="selected" id="selected_users">
+                                <label class="form-check-label" for="selected_users">
+                                    <i class="fas fa-user-check"></i> Select Specific
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Role Selection -->
+                <div id="role_selection" class="mb-3" style="display: none;">
+                    <label class="form-label">Select Role</label>
+                    <select name="role" class="form-select">
+                        <option value="">Choose Role</option>
+                        <option value="student">Student</option>
+                        <option value="instructor">Instructor</option>
+                        <option value="superadmin">Admin</option>
+                    </select>
+                </div>
+
+                <!-- All Users Display -->
+                <div id="all_users_display" class="mb-3">
+                    <div class="recipients-summary">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Sending to all users:</strong>
+                        <span class="recipient-count">{{ total_users }}</span> users will receive this email
+                        <div class="small mt-1">
+                            Students: {{ students_count }}, Instructors: {{ instructors_count }},
+                            Admins: {{ admins_count }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Individual User Selection -->
+                <div id="user_selection" style="display: none;">
+                    <label class="form-label">
+                        Select Users
+                        <span class="badge bg-primary" id="selected-count">0 selected</span>
+                    </label>
+
+                    <!-- Search Users -->
+                    <div class="mb-3">
+                        <input type="text" id="user_search" class="form-control"
+                            placeholder="Search users by name or email...">
+                    </div>
+
+                    <!-- Select All/None -->
+                    <div class="mb-3">
+                        <button type="button" class="btn btn-sm btn-outline-primary me-2"
+                            onclick="selectAllUsers()">
+                            <i class="fas fa-check-double"></i> Select All
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                            onclick="selectNoUsers()">
+                            <i class="fas fa-times"></i> Select None
+                        </button>
+                    </div>
+
+                    <!-- Users Grid -->
+                    <div class="row" id="users_grid">
+                        {% for user in users %}
+                        <div class="col-md-6 mb-2 user-item">
+                            <div class="user-card" onclick="toggleUserSelection({{ user.id }})">
+                                <div class="card-body p-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input user-checkbox" type="checkbox"
+                                            name="selected_users" value="{{ user.id }}"
+                                            id="user_{{ user.id }}">
+                                        <label class="form-check-label w-100" for="user_{{ user.id }}">
+                                            <div class="fw-bold">{{ user.get_full_name|default:user.username }}</div>
+                                            <div class="small text-muted">{{ user.email }}</div>
+                                            <span class="badge 
+                                                {% if user.role == 'student' %}bg-success
+                                                {% elif user.role == 'instructor' %}bg-warning
+                                                {% elif user.role == 'superadmin' %}bg-danger
+                                                {% else %}bg-secondary{% endif %}">
+                                                {{ user.get_role_display|default:user.role|capfirst }}
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Recipients Summary -->
+                <div class="recipients-summary" id="recipients_summary">
+                    <i class="fas fa-info-circle"></i>
+                    <span id="summary_text">All {{ total_users }} users selected</span>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="d-grid">
+                    <button type="submit" class="btn btn-primary btn-lg" id="send_btn">
+                        <i class="fas fa-paper-plane"></i> Send Email to <span id="btn-count">{{ total_users }}</span> Recipients
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column - Preview & Info -->
+        <div class="col-lg-4">
+            <!-- Email Preview -->
+            <div class="email-card">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="fas fa-eye text-warning me-2 fs-5"></i>
+                    <h6 class="mb-0">Email Preview</h6>
+                </div>
+                <div class="mb-2">
+                    <strong>Subject:</strong>
+                    <div id="preview_subject" class="preview-box">
+                        Enter subject to preview...
+                    </div>
+                </div>
+                <div>
+                    <strong>Content:</strong>
+                    <div id="preview_content" class="preview-box">
+                        Enter message content to preview...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Email Statistics -->
+            <div class="email-card">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="fas fa-chart-bar text-secondary me-2 fs-5"></i>
+                    <h6 class="mb-0">Quick Stats</h6>
+                </div>
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="border-end">
+                            <div class="h4 text-primary">{{ total_users }}</div>
+                            <small>Total Users</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="border-end">
+                            <div class="h4 text-success">{{ total_users }}</div>
+                            <small>With Email</small>
+                        </div>
+                    </div>
+                    <div class="col-4">
+                        <div class="h4 text-info">{{ templates.count }}</div>
+                        <small>Templates</small>
+                    </div>
+                </div>
+
+                <!-- Role Breakdown -->
+                <div class="mt-3 pt-3 border-top">
+                    <small class="text-muted d-block mb-2">Role Distribution:</small>
+                    <div class="row text-center small">
+                        <div class="col-4">
+                            <div class="text-primary fw-bold">{{ students_count }}</div>
+                            <div class="text-muted">Students</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-success fw-bold">{{ instructors_count }}</div>
+                            <div class="text-muted">Instructors</div>
+                        </div>
+                        <div class="col-4">
+                            <div class="text-warning fw-bold">{{ admins_count }}</div>
+                            <div class="text-muted">Admins</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Available Templates -->
+            {% if templates %}
+            <div class="email-card">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="fas fa-list text-info me-2 fs-5"></i>
+                    <h6 class="mb-0">Available Templates</h6>
+                </div>
+                {% for template in templates|slice:":3" %}
+                <div class="border-bottom pb-2 mb-2">
+                    <div class="fw-bold">{{ template.name }}</div>
+                    <div class="small text-muted">{{ template.get_template_type_display|default:template.template_type|capfirst }}</div>
+                    <div class="small">{{ template.subject|truncatechars:50 }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let selectedUsers = new Set();
+    const totalUsers = {{ total_users }};
+    const studentsCount = {{ students_count }};
+    const instructorsCount = {{ instructors_count }};
+    const adminsCount = {{ admins_count }};
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function () {
+        updateRecipientsSummary();
+        updatePreview();
+
+        // Character counters
+        document.getElementById('custom_subject').addEventListener('input', function () {
+            document.getElementById('subject-counter').textContent = `${this.value.length}/200`;
+            updatePreview();
+        });
+
+        document.getElementById('custom_message').addEventListener('input', function () {
+            document.getElementById('body-counter').textContent = `${this.value.length} chars`;
+            updatePreview();
+        });
+
+        // Variable chip click handlers
+        document.querySelectorAll('.variable-chip').forEach(chip => {
+            chip.addEventListener('click', function() {
+                const variable = this.getAttribute('data-var');
+                const activeField = document.activeElement;
+                
+                if (activeField.id === 'custom_subject' || activeField.id === 'custom_message') {
+                    insertVariable(activeField, variable);
+                } else {
+                    // Default to message field
+                    insertVariable(document.getElementById('custom_message'), variable);
+                }
+            });
+        });
+    });
+
+    // Handle recipient type changes
+    document.querySelectorAll('input[name="recipient_type"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            const value = this.value;
+
+            // Hide all selection divs
+            document.getElementById('role_selection').style.display = 'none';
+            document.getElementById('user_selection').style.display = 'none';
+            document.getElementById('all_users_display').style.display = 'none';
+
+            // Show relevant div
+            if (value === 'all') {
+                document.getElementById('all_users_display').style.display = 'block';
+            } else if (value === 'role') {
+                document.getElementById('role_selection').style.display = 'block';
+            } else if (value === 'selected') {
+                document.getElementById('user_selection').style.display = 'block';
+            }
+
+            updateRecipientsSummary();
+        });
+    });
+
+    // Handle template selection
+    document.getElementById('template_id').addEventListener('change', function () {
+        const selectedOption = this.options[this.selectedIndex];
+        const subject = selectedOption.getAttribute('data-subject');
+        const body = selectedOption.getAttribute('data-body');
+
+        if (subject && body) {
+            document.getElementById('custom_subject').value = subject;
+            document.getElementById('custom_message').value = body;
+            updatePreview();
+
+            // Update character counters
+            document.getElementById('custom_subject').dispatchEvent(new Event('input'));
+            document.getElementById('custom_message').dispatchEvent(new Event('input'));
+        } else if (this.value === '') {
+            document.getElementById('custom_subject').value = '';
+            document.getElementById('custom_message').value = '';
+            updatePreview();
+        }
+    });
+
+    // Insert variable function
+    function insertVariable(field, variable) {
+        const start = field.selectionStart;
+        const end = field.selectionEnd;
+        const text = field.value;
+
+        field.value = text.substring(0, start) + variable + text.substring(end);
+        field.focus();
+        field.setSelectionRange(start + variable.length, start + variable.length);
+
+        updatePreview();
+        field.dispatchEvent(new Event('input'));
+    }
+
+    // User selection functions
+    function toggleUserSelection(userId) {
+        const checkbox = document.getElementById(`user_${userId}`);
+        const card = checkbox.closest('.user-card');
+
+        checkbox.checked = !checkbox.checked;
+
+        if (checkbox.checked) {
+            selectedUsers.add(userId);
+            card.classList.add('selected');
+        } else {
+            selectedUsers.delete(userId);
+            card.classList.remove('selected');
+        }
+
+        updateSelectedCount();
+        updateRecipientsSummary();
+    }
+
+    function selectAllUsers() {
+        document.querySelectorAll('.user-checkbox:not([style*="none"])').forEach(checkbox => {
+            if (checkbox.closest('.user-item').style.display !== 'none') {
+                checkbox.checked = true;
+                checkbox.closest('.user-card').classList.add('selected');
+                selectedUsers.add(parseInt(checkbox.value));
+            }
+        });
+        updateSelectedCount();
+        updateRecipientsSummary();
+    }
+
+    function selectNoUsers() {
+        document.querySelectorAll('.user-checkbox').forEach(checkbox => {
+            checkbox.checked = false;
+            checkbox.closest('.user-card').classList.remove('selected');
+        });
+        selectedUsers.clear();
+        updateSelectedCount();
+        updateRecipientsSummary();
+    }
+
+    // Search users
+    document.getElementById('user_search').addEventListener('input', function () {
+        const searchTerm = this.value.toLowerCase();
+        const userItems = document.querySelectorAll('.user-item');
+
+        userItems.forEach(item => {
+            const name = item.querySelector('.fw-bold').textContent.toLowerCase();
+            const email = item.querySelector('.text-muted').textContent.toLowerCase();
+
+            if (name.includes(searchTerm) || email.includes(searchTerm)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    });
+
+    function updateSelectedCount() {
+        document.getElementById('selected-count').textContent = `${selectedUsers.size} selected`;
+    }
+
+    function updateRecipientsSummary() {
+        const recipientType = document.querySelector('input[name="recipient_type"]:checked').value;
+        let count = 0;
+        let text = '';
+
+        if (recipientType === 'all') {
+            count = totalUsers;
+            text = `All ${count} users selected`;
+        } else if (recipientType === 'role') {
+            const role = document.querySelector('select[name="role"]').value;
+            if (role) {
+                if (role === 'student') count = studentsCount;
+                else if (role === 'instructor') count = instructorsCount;
+                else if (role === 'superadmin') count = adminsCount;
+                text = `${count} ${role}s selected`;
+            } else {
+                text = 'Select a role first';
+                count = 0;
+            }
+        } else if (recipientType === 'selected') {
+            count = selectedUsers.size;
+            text = `${count} users manually selected`;
+        }
+
+        document.getElementById('summary_text').textContent = text;
+        document.getElementById('btn-count').textContent = count;
+
+        // Enable/disable submit button
+        const submitBtn = document.getElementById('send_btn');
+        submitBtn.disabled = count === 0;
+    }
+
+    function updatePreview() {
+        const subject = document.getElementById('custom_subject').value || 'Enter subject to preview...';
+        const content = document.getElementById('custom_message').value || 'Enter message content to preview...';
+
+        // Replace variables with sample data for preview
+        const sampleData = {
+            '{{username}}': 'john_doe',
+            '{{email}}': 'john@example.com',
+            '{{first_name}}': 'John',
+            '{{last_name}}': 'Doe'
+        };
+
+        let previewSubject = subject;
+        let previewContent = content;
+
+        Object.keys(sampleData).forEach(variable => {
+            const regex = new RegExp(variable.replace(/[{}]/g, '\\$&'), 'g');
+            previewSubject = previewSubject.replace(regex, sampleData[variable]);
+            previewContent = previewContent.replace(regex, sampleData[variable]);
+        });
+
+        document.getElementById('preview_subject').textContent = previewSubject;
+        document.getElementById('preview_content').textContent = previewContent;
+    }
+
+    // Form validation and submission
+    document.getElementById('bulkEmailForm').addEventListener('submit', function (e) {
+        const recipientType = document.querySelector('input[name="recipient_type"]:checked').value;
+        const subject = document.getElementById('custom_subject').value.trim();
+        const message = document.getElementById('custom_message').value.trim();
+
+        if (!subject || !message) {
+            e.preventDefault();
+            alert('Please enter both subject and message!');
+            return false;
+        }
+
+        if (recipientType === 'selected' && selectedUsers.size === 0) {
+            e.preventDefault();
+            alert('Please select at least one user!');
+            return false;
+        }
+
+        if (recipientType === 'role') {
+            const role = document.querySelector('select[name="role"]').value;
+            if (!role) {
+                e.preventDefault();
+                alert('Please select a role!');
+                return false;
+            }
+        }
+
+        // Get recipient count for confirmation
+        let count = 0;
+        if (recipientType === 'all') count = totalUsers;
+        else if (recipientType === 'selected') count = selectedUsers.size;
+        else if (recipientType === 'role') {
+            const role = document.querySelector('select[name="role"]').value;
+            if (role === 'student') count = studentsCount;
+            else if (role === 'instructor') count = instructorsCount;
+            else if (role === 'superadmin') count = adminsCount;
+        }
+
+        if (!confirm(`Are you sure you want to send this email to ${count} recipients?`)) {
+            e.preventDefault();
+            return false;
+        }
+
+        // Show loading state
+        const submitBtn = document.getElementById('send_btn');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+        submitBtn.disabled = true;
+
+        // Let the form submit naturally to Django
+        return true;
+    });
+
+    // Role selection change handler
+    document.querySelector('select[name="role"]').addEventListener('change', function () {
+        updateRecipientsSummary();
+    });
+</script>
+{% endblock %}

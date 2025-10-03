@@ -1,0 +1,527 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Course - {{ course.title }}{% endblock %}
+
+{% block content %}
+<!-- Warning Header -->
+<div class="welcome-card bg-danger">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1 class="mb-2">
+                <i class="fas fa-exclamation-triangle me-3"></i>
+                Archive Course
+            </h1>
+            <p class="mb-0 opacity-75">This action will archive the course and make it inactive</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'courses:course_detail' course.id %}" class="btn btn-light btn-lg">
+                <i class="fas fa-arrow-left me-2"></i>
+                Back to Course
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation -->
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Warning Alert -->
+        <div class="alert alert-warning border-warning mb-4">
+            <div class="d-flex align-items-start">
+                <i class="fas fa-exclamation-triangle text-warning me-3 mt-1" style="font-size: 1.2rem;"></i>
+                <div>
+                    <h6 class="alert-heading">Important Notice</h6>
+                    <p class="mb-0">
+                        This will archive the course and make it inactive. The course will no longer be available to students, 
+                        but all data will be preserved and can be restored later if needed.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Course Information Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="fas fa-book me-2"></i>
+                    Course to be Archived
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h4 class="text-primary mb-3">{{ course.title }}</h4>
+                        
+                        <div class="course-details">
+                            <div class="detail-item mb-2">
+                                <strong>Course Code:</strong> 
+                                <span class="text-muted">{{ course.course_code }}</span>
+                            </div>
+                            
+                            {% if course.instructor %}
+                            <div class="detail-item mb-2">
+                                <strong>Instructor:</strong> 
+                                <span class="text-muted">{{ course.instructor.get_full_name|default:course.instructor.username }}</span>
+                            </div>
+                            {% endif %}
+                            
+                            {% if course.category %}
+                            <div class="detail-item mb-2">
+                                <strong>Category:</strong> 
+                                <span class="text-muted">{{ course.category.name }}</span>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="detail-item mb-2">
+                                <strong>Status:</strong> 
+                                {% if course.status == 'published' %}
+                                    <span class="badge bg-success">Published</span>
+                                {% elif course.status == 'draft' %}
+                                    <span class="badge bg-warning">Draft</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ course.status|capfirst }}</span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="detail-item mb-2">
+                                <strong>Created:</strong> 
+                                <span class="text-muted">{{ course.created_at|date:"M d, Y" }}</span>
+                            </div>
+                        </div>
+                        
+                        {% if course.description %}
+                        <div class="mt-3">
+                            <strong>Description:</strong>
+                            <p class="text-muted mt-2">{{ course.description|truncatewords:30 }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-md-4 text-center">
+                        {% if course.image %}
+                            <img src="{{ course.image.url }}" class="img-fluid rounded course-thumbnail mb-3" 
+                                 alt="{{ course.title }}" style="max-height: 200px;">
+                        {% else %}
+                            <div class="course-placeholder mb-3">
+                                <i class="fas fa-book text-muted" style="font-size: 4rem;"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Impact Analysis -->
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Impact Analysis
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-md-4">
+                        <div class="impact-stat">
+                            <div class="impact-number text-primary">
+                                <i class="fas fa-users"></i>
+                                <span class="h4 d-block">{{ enrolled_count }}</span>
+                            </div>
+                            <small class="text-muted">Enrolled Students</small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="impact-stat">
+                            <div class="impact-number text-info">
+                                <i class="fas fa-list"></i>
+                                <span class="h4 d-block">{{ course.modules.count }}</span>
+                            </div>
+                            <small class="text-muted">Course Modules</small>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="impact-stat">
+                            <div class="impact-number text-success">
+                                <i class="fas fa-play-circle"></i>
+                                <span class="h4 d-block">{{ course.get_total_lessons_count|default:0 }}</span>
+                            </div>
+                            <small class="text-muted">Total Lessons</small>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if enrolled_count > 0 %}
+                <div class="alert alert-info mt-4 mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Note:</strong> {{ enrolled_count }} student{{ enrolled_count|pluralize }} 
+                    {{ enrolled_count|pluralize:"is,are" }} currently enrolled in this course. 
+                    Archiving will prevent new enrollments but existing students will retain access to their progress.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Confirmation Form -->
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Confirm Archive Action
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <h6 class="text-danger">What happens when you archive this course?</h6>
+                    <ul class="list-unstyled mt-3">
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Course will be marked as inactive and archived
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            All course data and content will be preserved
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-times text-danger me-2"></i>
+                            Course will no longer be visible to new students
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-times text-danger me-2"></i>
+                            New enrollments will be disabled
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-info-circle text-info me-2"></i>
+                            Existing students will retain access to their progress
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-undo text-warning me-2"></i>
+                            Course can be restored later by a superadmin
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Confirmation Checkbox -->
+                <div class="form-check mb-4">
+                    <input class="form-check-input" type="checkbox" id="confirmArchive" required>
+                    <label class="form-check-label fw-bold" for="confirmArchive">
+                        I understand that this will archive the course "{{ course.title }}" and make it inactive.
+                    </label>
+                </div>
+
+                <!-- Action Buttons -->
+                <form method="post" id="archiveForm">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{% url 'courses:course_detail' course.id %}" class="btn btn-outline-secondary btn-lg">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-danger btn-lg" id="archiveButton" disabled>
+                                <i class="fas fa-archive me-2"></i>
+                                Archive Course
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Additional Info -->
+        <div class="card mt-4 border-info">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    Need Help?
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">
+                    <strong>Alternative Actions:</strong>
+                </p>
+                <ul class="list-unstyled">
+                    <li class="mb-2">
+                        <i class="fas fa-edit text-primary me-2"></i>
+                        <a href="{% url 'courses:edit_course' course.id %}">Edit course details</a> instead of archiving
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-eye-slash text-warning me-2"></i>
+                        Change course status to <strong>Draft</strong> to temporarily hide it
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-copy text-success me-2"></i>
+                        Create a duplicate before archiving to preserve a working copy
+                    </li>
+                </ul>
+                
+                <div class="mt-3 pt-3 border-top">
+                    <small class="text-muted">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        If you need to permanently delete course data, please contact a system administrator.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.welcome-card.bg-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+}
+
+.course-thumbnail {
+    border: 3px solid #dee2e6;
+    transition: transform 0.2s;
+}
+
+.course-thumbnail:hover {
+    transform: scale(1.05);
+}
+
+.course-placeholder {
+    width: 200px;
+    height: 150px;
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    border-radius: 0.375rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.detail-item {
+    padding: 0.25rem 0;
+}
+
+.impact-stat {
+    padding: 1rem;
+    border-radius: 0.375rem;
+    transition: background-color 0.2s;
+}
+
+.impact-stat:hover {
+    background-color: #f8f9fa;
+}
+
+.impact-number {
+    margin-bottom: 0.5rem;
+}
+
+.impact-number i {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.form-check-input:checked {
+    background-color: #dc3545;
+    border-color: #dc3545;
+}
+
+.btn-danger:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.card.border-danger {
+    border-width: 2px;
+}
+
+.card.border-info {
+    border-width: 1px;
+}
+
+.list-unstyled li {
+    transition: background-color 0.2s;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+}
+
+.list-unstyled li:hover {
+    background-color: #f8f9fa;
+}
+
+@media (max-width: 768px) {
+    .welcome-card {
+        text-align: center;
+    }
+    
+    .impact-stat {
+        margin-bottom: 1rem;
+    }
+    
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .d-flex.justify-content-between .text-end {
+        text-align: center !important;
+    }
+    
+    .btn-lg {
+        width: 100%;
+    }
+}
+
+/* Animation for warning elements */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.alert-warning {
+    animation: pulse 2s infinite;
+}
+
+/* Loading state for form submission */
+.btn-danger.loading {
+    position: relative;
+    color: transparent;
+}
+
+.btn-danger.loading::after {
+    content: '';
+    position: absolute;
+    width: 1rem;
+    height: 1rem;
+    top: 50%;
+    left: 50%;
+    margin-left: -0.5rem;
+    margin-top: -0.5rem;
+    border: 2px solid #ffffff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmCheckbox = document.getElementById('confirmArchive');
+    const archiveButton = document.getElementById('archiveButton');
+    const archiveForm = document.getElementById('archiveForm');
+    
+    // Enable/disable archive button based on checkbox
+    confirmCheckbox.addEventListener('change', function() {
+        archiveButton.disabled = !this.checked;
+        
+        if (this.checked) {
+            archiveButton.classList.remove('btn-outline-danger');
+            archiveButton.classList.add('btn-danger');
+        } else {
+            archiveButton.classList.remove('btn-danger');
+            archiveButton.classList.add('btn-outline-danger');
+        }
+    });
+    
+    // Form submission handling
+    archiveForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        if (!confirmCheckbox.checked) {
+            alert('Please confirm that you want to archive this course.');
+            return false;
+        }
+        
+        // Show confirmation dialog
+        const courseName = '{{ course.title|escapejs }}';
+        const enrolledCount = {{ enrolled_count }};
+        
+        let confirmMessage = `Are you absolutely sure you want to archive "${courseName}"?`;
+        
+        if (enrolledCount > 0) {
+            confirmMessage += `\n\nThis course has ${enrolledCount} enrolled student${enrolledCount > 1 ? 's' : ''}. They will retain access to their progress, but no new enrollments will be allowed.`;
+        }
+        
+        confirmMessage += '\n\nThis action can be undone later by a system administrator.';
+        
+        if (confirm(confirmMessage)) {
+            // Add loading state
+            archiveButton.classList.add('loading');
+            archiveButton.disabled = true;
+            
+            // Submit form
+            this.submit();
+        }
+    });
+    
+    // Auto-focus on checkbox for better UX
+    setTimeout(() => {
+        confirmCheckbox.focus();
+    }, 500);
+    
+    // Add warning animation on page load
+    setTimeout(() => {
+        const warningAlert = document.querySelector('.alert-warning');
+        if (warningAlert) {
+            warningAlert.style.animation = 'pulse 2s infinite';
+        }
+    }, 1000);
+    
+    // Keyboard shortcut (Escape to cancel)
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            window.location.href = '{% url "courses:course_detail" course.id %}';
+        }
+    });
+});
+
+// Show warning before leaving page if checkbox is checked
+window.addEventListener('beforeunload', function(e) {
+    const confirmCheckbox = document.getElementById('confirmArchive');
+    if (confirmCheckbox && confirmCheckbox.checked) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+    }
+});
+
+// Toast notification for better feedback
+function showToast(message, type) {
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '1050';
+        document.body.appendChild(toastContainer);
+    }
+    
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    const toastElement = toastContainer.lastElementChild;
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+    
+    toastElement.addEventListener('hidden.bs.toast', function() {
+        this.remove();
+    });
+}
+</script>
+{% endblock %}

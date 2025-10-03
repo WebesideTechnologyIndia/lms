@@ -1,0 +1,365 @@
+{% extends 'base.html' %}
+
+{% block title %}Manual Student Enrollment - Instructor Panel{% endblock %}
+
+{% block page_title %}Manual Student Enrollment{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Enrollment Form Card -->
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-user-plus me-2"></i>
+                    Enroll Student in Course
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="enrollmentForm">
+                    {% csrf_token %}
+                    
+                    <!-- Student Selection -->
+                    <div class="mb-4">
+                        <label for="id_student" class="form-label">
+                            <i class="fas fa-user me-2"></i>Select Student <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="id_student" name="student" required>
+                            <option value="">-- Choose a student --</option>
+                            {% for student in students %}
+                                <option value="{{ student.id }}">
+                                    {{ student.get_full_name|default:student.username }} 
+                                    ({{ student.email }})
+                                    {% if student.profile.student_id %}
+                                        - ID: {{ student.profile.student_id }}
+                                    {% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Search and select the student you want to enroll</div>
+                    </div>
+
+                    <!-- Course Selection -->
+                    <div class="mb-4">
+                        <label for="id_course" class="form-label">
+                            <i class="fas fa-book me-2"></i>Select Course <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="id_course" name="course" required>
+                            <option value="">-- Choose a course --</option>
+                            {% for course in courses %}
+                                <option value="{{ course.id }}" 
+                                        data-seats="{{ course.get_available_seats }}"
+                                        data-price="{{ course.get_effective_price }}">
+                                    {{ course.course_code }} - {{ course.title }}
+                                    ({{ course.get_available_seats }} seats available)
+                                </option>
+                            {% endfor %}
+                        </select>
+                        <div class="form-text">Select the course for enrollment</div>
+                    </div>
+
+                    <!-- Enrollment Status -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label for="id_status" class="form-label">
+                                <i class="fas fa-flag me-2"></i>Enrollment Status
+                            </label>
+                            <select class="form-select" id="id_status" name="status">
+                                <option value="enrolled">Enrolled (Active)</option>
+                                <option value="suspended">Suspended</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="id_payment_status" class="form-label">
+                                <i class="fas fa-credit-card me-2"></i>Payment Status
+                            </label>
+                            <select class="form-select" id="id_payment_status" name="payment_status">
+                                <option value="completed">Paid</option>
+                                <option value="pending">Pending</option>
+                                <option value="waived">Fee Waived</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Payment Details -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <label for="id_amount_paid" class="form-label">
+                                <i class="fas fa-dollar-sign me-2"></i>Amount Paid
+                            </label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" 
+                                       class="form-control" 
+                                       id="id_amount_paid" 
+                                       name="amount_paid" 
+                                       step="0.01" 
+                                       min="0" 
+                                       value="0.00">
+                            </div>
+                            <div class="form-text">Amount paid by student</div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="id_progress" class="form-label">
+                                <i class="fas fa-chart-line me-2"></i>Initial Progress %
+                            </label>
+                            <input type="number" 
+                                   class="form-control" 
+                                   id="id_progress" 
+                                   name="progress_percentage" 
+                                   min="0" 
+                                   max="100" 
+                                   value="0">
+                            <div class="form-text">Starting progress percentage (usually 0)</div>
+                        </div>
+                    </div>
+
+                    <!-- Email Notification Options -->
+                    <div class="mb-4">
+                        <div class="card bg-light">
+                            <div class="card-body">
+                                <h6 class="card-title">
+                                    <i class="fas fa-envelope me-2"></i>Email Notifications
+                                </h6>
+                                
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" 
+                                           type="checkbox" 
+                                           id="send_welcome_email" 
+                                           name="send_welcome_email" 
+                                           checked>
+                                    <label class="form-check-label" for="send_welcome_email">
+                                        Send welcome email to student
+                                    </label>
+                                </div>
+                                
+                                <div class="form-check">
+                                    <input class="form-check-input" 
+                                           type="checkbox" 
+                                           id="send_instructor_notification" 
+                                           name="send_instructor_notification" 
+                                           checked>
+                                    <label class="form-check-label" for="send_instructor_notification">
+                                        Notify course instructor
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="mb-4">
+                        <label for="id_notes" class="form-label">
+                            <i class="fas fa-sticky-note me-2"></i>Enrollment Notes (Optional)
+                        </label>
+                        <textarea class="form-control" 
+                                  id="id_notes" 
+                                  name="notes" 
+                                  rows="3" 
+                                  placeholder="Any special notes about this enrollment..."></textarea>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'courses:admin_manage_enrollments' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Enrollments
+                        </a>
+                        
+                        <div>
+                            <button type="button" class="btn btn-outline-primary me-2" onclick="previewEnrollment()">
+                                <i class="fas fa-eye me-2"></i>Preview
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-user-plus me-2"></i>Enroll Student
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Help Card -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Enrollment Guidelines
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary">Before Enrolling:</h6>
+                        <ul class="small">
+                            <li>Verify student profile is complete</li>
+                            <li>Check course capacity and prerequisites</li>
+                            <li>Confirm payment method if applicable</li>
+                            <li>Ensure student email is valid</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-success">After Enrollment:</h6>
+                        <ul class="small">
+                            <li>Student receives welcome email with course details</li>
+                            <li>Access to course materials is granted immediately</li>
+                            <li>Instructor gets notification of new enrollment</li>
+                            <li>Progress tracking begins automatically</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Enrollment Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="previewContent">
+                <!-- Preview content will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="submitEnrollment()">
+                    Confirm Enrollment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-populate amount based on course selection
+    document.getElementById('id_course').addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const price = selectedOption.dataset.price;
+        const seats = selectedOption.dataset.seats;
+        const status = selectedOption.dataset.status;
+        
+        if (price) {
+            document.getElementById('id_amount_paid').value = price;
+        }
+        
+        // Check course status for enrollment eligibility
+        if (status && status !== 'published') {
+            const statusMessages = {
+                'draft': 'This course is in draft mode. Students cannot be enrolled until it is published.',
+                'archived': 'This course is archived. Students cannot be enrolled.',
+                'suspended': 'This course is suspended. Students cannot be enrolled.'
+            };
+            alert(statusMessages[status] || 'This course is not available for enrollment.');
+        }
+        
+        // Check if course is full
+        if (seats && parseInt(seats) <= 0) {
+            alert('Warning: This course has no available seats!');
+        }
+    });
+
+    // Form validation
+    document.getElementById('enrollmentForm').addEventListener('submit', function(e) {
+        const student = document.getElementById('id_student').value;
+        const course = document.getElementById('id_course').value;
+        
+        if (!student || !course) {
+            e.preventDefault();
+            alert('Please select both student and course!');
+            return false;
+        }
+        
+        // Check for duplicate enrollment
+        checkDuplicateEnrollment(student, course);
+    });
+
+    function previewEnrollment() {
+        const student = document.getElementById('id_student');
+        const course = document.getElementById('id_course');
+        const status = document.getElementById('id_status');
+        const amount = document.getElementById('id_amount_paid');
+        
+        if (!student.value || !course.value) {
+            alert('Please select both student and course first!');
+            return;
+        }
+        
+        const studentText = student.options[student.selectedIndex].text;
+        const courseText = course.options[course.selectedIndex].text;
+        const statusText = status.options[status.selectedIndex].text;
+        
+        const previewHtml = `
+            <div class="card">
+                <div class="card-body">
+                    <h6>Enrollment Summary:</h6>
+                    <table class="table table-sm">
+                        <tr>
+                            <td><strong>Student:</strong></td>
+                            <td>${studentText}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Course:</strong></td>
+                            <td>${courseText}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Status:</strong></td>
+                            <td>${statusText}</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Amount:</strong></td>
+                            <td>$${amount.value}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('previewContent').innerHTML = previewHtml;
+        new bootstrap.Modal(document.getElementById('previewModal')).show();
+    }
+
+    function submitEnrollment() {
+        document.getElementById('enrollmentForm').submit();
+    }
+
+    function checkDuplicateEnrollment(studentId, courseId) {
+        // You can add AJAX call here to check for existing enrollment
+        // For now, we'll just proceed
+    }
+
+    // Search functionality for student dropdown
+    document.getElementById('id_student').addEventListener('input', function() {
+        // Add search functionality if needed
+    });
+</script>
+
+<style>
+    .form-check-input:checked {
+        background-color: var(--bs-primary);
+        border-color: var(--bs-primary);
+    }
+    
+    .card {
+        border: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        border: none;
+    }
+    
+    .form-select:focus,
+    .form-control:focus {
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.25);
+    }
+</style>
+{% endblock %}

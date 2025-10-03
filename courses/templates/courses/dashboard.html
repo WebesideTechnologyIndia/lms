@@ -1,0 +1,233 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Course Dashboard{% endblock %}
+
+{% block content %}
+<!-- Welcome Card -->
+<div class="welcome-card">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1 class="mb-2">
+                <i class="fas fa-book me-3"></i>
+                Course Management Dashboard
+            </h1>
+            <p class="mb-0 opacity-75">Manage courses, categories, and track enrollments efficiently</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'courses:create_course' %}" class="btn btn-light btn-lg">
+                <i class="fas fa-plus me-2"></i>
+                Create New Course
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-number text-primary">{{ total_courses }}</div>
+                    <div class="stats-label">Total Courses</div>
+                </div>
+                <div class="text-primary" style="font-size: 3rem; opacity: 0.3;">
+                    <i class="fas fa-book"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-number text-success">{{ active_courses }}</div>
+                    <div class="stats-label">Published Courses</div>
+                </div>
+                <div class="text-success" style="font-size: 3rem; opacity: 0.3;">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-number text-warning">{{ draft_courses }}</div>
+                    <div class="stats-label">Draft Courses</div>
+                </div>
+                <div class="text-warning" style="font-size: 3rem; opacity: 0.3;">
+                    <i class="fas fa-edit"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-number text-info">{{ total_enrollments }}</div>
+                    <div class="stats-label">Total Enrollments</div>
+                </div>
+                <div class="text-info" style="font-size: 3rem; opacity: 0.3;">
+                    <i class="fas fa-users"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="quick-actions">
+            <h5 class="mb-4">
+                <i class="fas fa-bolt me-2"></i>
+                Quick Actions
+            </h5>
+            <div class="row">
+                <div class="col-md-3">
+                    <a href="{% url 'courses:create_course' %}" class="action-btn">
+                        <i class="fas fa-plus me-2"></i>
+                        Create New Course
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'courses:manage_courses' %}" class="action-btn">
+                        <i class="fas fa-list me-2"></i>
+                        Manage Courses
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'courses:manage_categories' %}" class="action-btn">
+                        <i class="fas fa-tags me-2"></i>
+                        Manage Categories
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'courses:course_analytics' %}" class="action-btn">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        View Analytics
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Courses and Categories -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-clock me-2"></i>
+                    Recent Courses
+                </h5>
+                <a href="{% url 'courses:manage_courses' %}" class="btn btn-sm btn-outline-primary">View All</a>
+            </div>
+            <div class="card-body">
+                {% if recent_courses %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Course Code</th>
+                                    <th>Title</th>
+                                    <th>Status</th>
+                                    <th>Enrollments</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for course in recent_courses %}
+                                <tr>
+                                    <td>
+                                        <strong class="text-primary">{{ course.course_code }}</strong>
+                                    </td>
+                                    <td>{{ course.title|truncatechars:40 }}</td>
+                                    <td>
+                                        {% if course.status == 'published' %}
+                                            <span class="badge bg-success">Published</span>
+                                        {% elif course.status == 'draft' %}
+                                            <span class="badge bg-warning">Draft</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ course.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-info">{{ course.get_enrolled_count }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'courses:course_detail' course.id %}" class="btn btn-sm btn-outline-info" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'courses:edit_course' course.id %}" class="btn btn-sm btn-outline-primary" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-book fa-3x text-muted mb-3"></i>
+                        <h6 class="text-muted">No courses found</h6>
+                        <p class="text-muted small">Get started by creating your first course</p>
+                        <a href="{% url 'courses:create_course' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Create Course
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-tags me-2"></i>
+                    Categories
+                </h5>
+                <a href="{% url 'courses:manage_categories' %}" class="btn btn-sm btn-outline-primary">Manage</a>
+            </div>
+            <div class="card-body">
+                {% if categories %}
+                    {% for category in categories %}
+                    <div class="d-flex justify-content-between align-items-center mb-3 p-2 rounded" style="background-color: #f8f9fa;">
+                        <div>
+                            <strong>{{ category.name }}</strong>
+                            {% if category.description %}
+                                <br><small class="text-muted">{{ category.description|truncatechars:30 }}</small>
+                            {% endif %}
+                        </div>
+                        <span class="badge bg-primary">{{ category.course_count }}</span>
+                    </div>
+                    {% endfor %}
+                    <hr>
+                    <div class="text-center">
+                        <a href="{% url 'courses:create_category' %}" class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-plus me-1"></i>Add Category
+                        </a>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-tags fa-2x text-muted mb-3"></i>
+                        <h6 class="text-muted">No categories found</h6>
+                        <a href="{% url 'courses:create_category' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Create Category
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

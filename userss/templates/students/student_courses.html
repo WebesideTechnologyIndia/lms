@@ -1,0 +1,545 @@
+<!-- students/student_courses.html -->
+{% extends 'students/student_base.html' %}
+{% load static %}
+
+{% block title %}My Courses{% endblock %}
+
+{% block extra_css %}
+<style>
+    .course-card {
+        transition: all 0.3s ease;
+        border: 1px solid #e3e6f0;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .course-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+    }
+    
+    .course-card.locked {
+        opacity: 0.7;
+        background: linear-gradient(135deg, #f8f9fa 0%, #fff2f2 100%);
+        border-left: 5px solid #dc3545;
+    }
+    
+    .lock-overlay {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: #dc3545;
+        color: white;
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        z-index: 10;
+    }
+    
+    .lock-overlay.warning {
+        background: #ffc107;
+        color: #212529;
+    }
+    
+    .payment-status {
+        margin-top: 10px;
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+    }
+    
+    .payment-status.current {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .payment-status.overdue {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+    }
+    
+    .payment-status.warning {
+        background: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+    }
+    
+    .payment-info {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 10px;
+        margin-top: 10px;
+        font-size: 0.9rem;
+    }
+    
+    .progress-bar-custom {
+        height: 8px;
+        border-radius: 4px;
+        background: #e9ecef;
+        overflow: hidden;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #28a745, #20c997);
+        transition: width 0.3s ease;
+    }
+    
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .course-thumbnail {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+        border-radius: 8px 8px 0 0;
+    }
+    
+    .action-btn {
+        margin-top: 10px;
+        width: 100%;
+    }
+    
+    .locked-icon {
+        color: #dc3545;
+        font-size: 1.2em;
+        margin-right: 5px;
+    }
+    
+    .warning-icon {
+        color: #ffc107;
+        font-size: 1.2em;
+        margin-right: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Page Header with Statistics -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0 text-gray-800">My Courses</h1>
+                    <p class="text-muted">Manage your enrolled courses and track progress</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Courses
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_courses }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-book fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Active Courses
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ active_courses }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-unlock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card border-left-danger shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-danger text-uppercase mb-1">
+                                Locked Courses
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ locked_courses }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-lock fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filters -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-body">
+                    <form method="GET" class="row">
+                        <div class="col-md-4">
+                            <select name="status" class="form-control">
+                                <option value="">All Status</option>
+                                <option value="enrolled" {% if status == 'enrolled' %}selected{% endif %}>Enrolled</option>
+                                <option value="completed" {% if status == 'completed' %}selected{% endif %}>Completed</option>
+                                <option value="dropped" {% if status == 'dropped' %}selected{% endif %}>Dropped</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <input type="text" name="search" class="form-control" placeholder="Search courses..." value="{{ search }}">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary btn-block">
+                                <i class="fas fa-search"></i> Filter
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Courses Grid -->
+    <div class="row">
+        {% for item in enrollments %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card course-card {% if item.lock_info.is_locked %}locked{% endif %} shadow">
+                
+                <!-- Lock/Warning Overlay -->
+                {% if item.lock_info.is_locked %}
+                    <div class="lock-overlay">
+                        <i class="fas fa-lock locked-icon"></i> LOCKED
+                    </div>
+                {% elif item.lock_info.warning_message %}
+                    <div class="lock-overlay warning">
+                        <i class="fas fa-exclamation-triangle warning-icon"></i> WARNING
+                    </div>
+                {% endif %}
+                
+                <!-- Course Thumbnail -->
+                {% if item.enrollment.course.thumbnail %}
+                    <img src="{{ item.enrollment.course.thumbnail.url }}" class="course-thumbnail" alt="{{ item.enrollment.course.title }}">
+                {% else %}
+                    <div class="course-thumbnail bg-primary d-flex align-items-center justify-content-center">
+                        <i class="fas fa-book text-white" style="font-size: 3rem;"></i>
+                    </div>
+                {% endif %}
+                
+                <div class="card-body">
+                    <!-- Course Info -->
+                    <h5 class="card-title">{{ item.enrollment.course.title }}</h5>
+                    <p class="text-muted small mb-2">{{ item.enrollment.course.course_code }}</p>
+                    <p class="card-text">{{ item.enrollment.course.short_description|truncatewords:20 }}</p>
+                    
+                    <!-- Enrollment Status -->
+                    <span class="badge badge-{% if item.enrollment.status == 'enrolled' %}success{% elif item.enrollment.status == 'completed' %}primary{% else %}secondary{% endif %} mb-2">
+                        {{ item.enrollment.get_status_display }}
+                    </span>
+                    
+                    <!-- Lock/Payment Status -->
+                    {% if item.lock_info.is_locked %}
+                        <div class="payment-status overdue">
+                            <i class="fas fa-lock locked-icon"></i>
+                            <strong>Course Locked</strong><br>
+                            <small>{{ item.lock_info.lock_reason }}</small>
+                            {% if item.lock_info.overdue_amount > 0 %}
+                                <br><small>Overdue: ${{ item.lock_info.overdue_amount }} ({{ item.lock_info.overdue_days }} days)</small>
+                            {% endif %}
+                        </div>
+                    {% elif item.lock_info.warning_message %}
+                        <div class="payment-status warning">
+                            <i class="fas fa-exclamation-triangle warning-icon"></i>
+                            <strong>Payment Warning</strong><br>
+                            <small>{{ item.lock_info.warning_message }}</small>
+                        </div>
+                    {% elif item.fee_assignment %}
+                        <div class="payment-status current">
+                            <i class="fas fa-check-circle"></i>
+                            <strong>Payment Status: Current</strong>
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Payment Information -->
+                    {% if item.fee_assignment %}
+                        <div class="payment-info">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small><strong>Payment Progress</strong></small>
+                                <small>{{ item.fee_assignment.get_completion_percentage|floatformat:1 }}%</small>
+                            </div>
+                            
+                            <div class="progress-bar-custom mb-2">
+                                <div class="progress-fill" style="width: {{ item.fee_assignment.get_completion_percentage }}%"></div>
+                            </div>
+                            
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <small class="text-muted">Paid</small><br>
+                                    <strong class="text-success">${{ item.fee_assignment.amount_paid }}</strong>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Pending</small><br>
+                                    <strong class="text-danger">${{ item.fee_assignment.amount_pending }}</strong>
+                                </div>
+                            </div>
+                            
+                            <!-- Next Due Payment -->
+                            {% if item.next_due %}
+                                <div class="mt-2 pt-2 border-top">
+                                    <small class="text-muted">Next Due:</small><br>
+                                    <small>
+                                        <strong>${{ item.next_due.amount }}</strong> on {{ item.next_due.due_date }}
+                                        {% if item.next_due.status == 'overdue' %}
+                                            <span class="text-danger">(Overdue)</span>
+                                        {% endif %}
+                                    </small>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Action Buttons -->
+                    <div class="mt-3">
+                        {% if item.lock_info.is_locked %}
+                            {% if item.lock_info.can_unlock %}
+                                <a href="#" class="btn btn-success action-btn">
+                                    <i class="fas fa-unlock"></i> Access Course
+                                </a>
+                            {% else %}
+                                <button class="btn btn-danger action-btn" disabled>
+                                    <i class="fas fa-lock"></i> Course Locked
+                                </button>
+                                {% if item.lock_info.action_required == 'contact_admin' %}
+                                    <a href="{% url 'contact_admin' %}" class="btn btn-outline-primary action-btn mt-1">
+                                        <i class="fas fa-envelope"></i> Contact Admin
+                                    </a>
+                                {% endif %}
+                            {% endif %}
+                        {% else %}
+                            <a href="#" class="btn btn-primary action-btn" onclick="alert('Course content access will be implemented')">
+                                <i class="fas fa-play"></i> Continue Learning
+                            </a>
+                        {% endif %}
+                        
+                        <!-- Payment Button -->
+                        {% if item.fee_assignment and item.fee_assignment.amount_pending > 0 %}
+                            <a href="#" class="btn btn-outline-success action-btn mt-1" onclick="alert('Payment system will be implemented')">
+                                <i class="fas fa-credit-card"></i> Make Payment
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Course Footer -->
+                <div class="card-footer text-muted">
+                    <small>
+                        <i class="fas fa-user"></i> {{ item.enrollment.course.instructor.get_full_name }}
+                        <span class="float-right">
+                            <i class="fas fa-calendar"></i> Enrolled {{ item.enrollment.enrolled_at|date:"M d, Y" }}
+                        </span>
+                    </small>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="card shadow">
+                <div class="card-body text-center py-5">
+                    <i class="fas fa-book text-gray-300" style="font-size: 4rem;"></i>
+                    <h5 class="mt-3 text-gray-600">No Courses Found</h5>
+                    <p class="text-muted">You haven't enrolled in any courses yet.</p>
+                    <a href="{% url 'course_catalog' %}" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Browse Courses
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    
+    <!-- Pagination -->
+    {% if enrollments.has_other_pages %}
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="Course pagination">
+                <ul class="pagination justify-content-center">
+                    {% if enrollments.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ enrollments.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in enrollments.paginator.page_range %}
+                        {% if enrollments.number == num %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                        {% elif num > enrollments.number|add:'-3' and num < enrollments.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if enrollments.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ enrollments.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ enrollments.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">Last</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Lock Status Modal -->
+<div class="modal fade" id="lockStatusModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Course Access Status</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <div class="modal-body" id="lockStatusContent">
+                <!-- Dynamic content will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Auto-refresh lock status every 5 minutes
+    setInterval(function() {
+        location.reload();
+    }, 300000); // 5 minutes
+    
+    // Click handler for lock status details
+    $('.course-card.locked').on('click', '.lock-overlay', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const courseId = $(this).closest('.course-card').data('course-id');
+        if (courseId) {
+            checkLockStatus(courseId);
+        }
+    });
+});
+
+function checkLockStatus(courseId) {
+    $.ajax({
+        url: `/courses/check-lock-status/${courseId}/`,
+        method: 'GET',
+        success: function(response) {
+            if (response.success) {
+                displayLockStatus(response.lock_info);
+            }
+        },
+        error: function() {
+            alert('Unable to fetch lock status. Please refresh the page.');
+        }
+    });
+}
+
+function displayLockStatus(lockInfo) {
+    let content = '<div class="alert alert-info">';
+    
+    if (lockInfo.is_locked) {
+        content += '<h6><i class="fas fa-lock text-danger"></i> Course is Currently Locked</h6>';
+        content += '<p><strong>Reason:</strong> ' + lockInfo.lock_reason + '</p>';
+        
+        if (lockInfo.overdue_amount > 0) {
+            content += '<p><strong>Overdue Amount:</strong> $' + lockInfo.overdue_amount + '</p>';
+            content += '<p><strong>Days Overdue:</strong> ' + lockInfo.overdue_days + '</p>';
+        }
+        
+        if (lockInfo.unlock_date) {
+            content += '<p><strong>Unlock Date:</strong> ' + lockInfo.unlock_date + '</p>';
+        }
+        
+        if (lockInfo.action_required) {
+            if (lockInfo.action_required === 'contact_admin') {
+                content += '<p class="text-warning"><strong>Action Required:</strong> Contact administration to resolve payment issues.</p>';
+            }
+        }
+    } else if (lockInfo.warning_message) {
+        content += '<h6><i class="fas fa-exclamation-triangle text-warning"></i> Payment Warning</h6>';
+        content += '<p>' + lockInfo.warning_message + '</p>';
+        
+        if (lockInfo.action_required === 'pay_now') {
+            content += '<p class="text-info"><strong>Action Required:</strong> Make payment to avoid course lock.</p>';
+        }
+    } else {
+        content += '<h6><i class="fas fa-check-circle text-success"></i> Course Access: Normal</h6>';
+        content += '<p>Your course access is active and all payments are current.</p>';
+    }
+    
+    content += '</div>';
+    
+    $('#lockStatusContent').html(content);
+    $('#lockStatusModal').modal('show');
+}
+
+// Periodic check for overdue payments
+function checkOverduePayments() {
+    $('.course-card').each(function() {
+        const card = $(this);
+        const courseId = card.data('course-id');
+        
+        if (courseId && !card.hasClass('locked')) {
+            // Check if this course might have become overdue
+            $.ajax({
+                url: `/courses/check-lock-status/${courseId}/`,
+                method: 'GET',
+                success: function(response) {
+                    if (response.success && response.lock_info.is_locked && !card.hasClass('locked')) {
+                        // Course just got locked, reload page
+                        location.reload();
+                    }
+                }
+            });
+        }
+    });
+}
+
+// Check for newly locked courses every 10 minutes
+setInterval(checkOverduePayments, 600000); // 10 minutes
+
+
+</script>
+{% endblock %}

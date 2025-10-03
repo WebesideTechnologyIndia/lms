@@ -1,0 +1,307 @@
+<!-- templates/instructor/view_all_courses.html -->
+{% extends 'instructor_base.html' %}
+
+{% block title %}My Courses{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0 text-gray-800">My Courses</h1>
+            <p class="text-muted mb-0">View all your assigned courses</p>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Courses
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_courses }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-book fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Published
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ published_courses }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Total Students
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ total_students }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-users fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Draft Courses
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">{{ draft_courses }}</div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-edit fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Search Section -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3">
+            <h6 class="m-0 font-weight-bold text-primary">Search Courses</h6>
+        </div>
+        <div class="card-body">
+            <form method="GET" class="row g-3">
+                <div class="col-md-8">
+                    <input type="text" class="form-control" name="search"
+                        placeholder="Search by course title or code..." value="{{ search_query }}">
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-2"></i>Search
+                    </button>
+                    {% if search_query %}
+                    <a href="{% url 'instructor_see_all_course' %}" class="btn btn-secondary ms-2">
+                        <i class="fas fa-times"></i>
+                    </a>
+                    {% endif %}
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Courses List -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Course List</h6>
+            <span class="badge bg-secondary">{{ courses.count }} course{{ courses.count|pluralize }}</span>
+        </div>
+        <div class="card-body">
+            {% if courses %}
+            <div class="row">
+                {% for course in courses %}
+                <div class="col-lg-6 col-xl-4 mb-4">
+                    <div class="card h-100 course-card">
+                        <!-- Course Thumbnail -->
+                        <div class="position-relative">
+                            {% if course.thumbnail %}
+                            <img src="{{ course.thumbnail.url }}" class="card-img-top" alt="{{ course.title }}"
+                                style="height: 180px; object-fit: cover;">
+                            {% else %}
+                            <div class="card-img-top bg-gradient-primary d-flex align-items-center justify-content-center"
+                                style="height: 180px;">
+                                <i class="fas fa-book fa-3x text-white opacity-50"></i>
+                            </div>
+                            {% endif %}
+
+                            <!-- Status Badge -->
+                            <div class="position-absolute top-0 end-0 m-2">
+                                {% if course.status == 'published' %}
+                                <span class="badge bg-success">Published</span>
+                                {% elif course.status == 'draft' %}
+                                <span class="badge bg-warning">Draft</span>
+                                {% elif course.status == 'archived' %}
+                                <span class="badge bg-secondary">Archived</span>
+                                {% else %}
+                                <span class="badge bg-info">{{ course.status|title }}</span>
+                                {% endif %}
+                            </div>
+
+                            <!-- Featured Badge -->
+                            {% if course.is_featured %}
+                            <div class="position-absolute top-0 start-0 m-2">
+                                <span class="badge bg-primary">
+                                    <i class="fas fa-star me-1"></i>Featured
+                                </span>
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="card-body d-flex flex-column">
+                            <!-- Course Code & Category -->
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <small class="text-primary fw-bold">{{ course.course_code }}</small>
+                                <small class="text-muted">{{ course.category.name }}</small>
+                            </div>
+
+                            <!-- Course Title -->
+                            <h5 class="card-title mb-2">{{ course.title }}</h5>
+
+                            <!-- Short Description -->
+                            <p class="card-text text-muted small mb-3">
+                                {{ course.short_description|truncatewords:12 }}
+                            </p>
+
+                            <!-- Course Stats -->
+                            <div class="row text-center mb-3 small">
+                                <div class="col-4">
+                                    <div class="text-primary fw-bold">{{ course.enrollment_count }}</div>
+                                    <div class="text-muted">Students</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="text-success fw-bold">{{ course.module_count }}</div>
+                                    <div class="text-muted">Modules</div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="text-info fw-bold">{{ course.duration_weeks }}w</div>
+                                    <div class="text-muted">Duration</div>
+                                </div>
+                            </div>
+
+                            <!-- Course Meta Info -->
+                            <div class="row mb-3 small">
+                                <div class="col-6">
+                                    <i class="fas fa-signal text-muted me-1"></i>
+                                    <span class="text-muted">{{ course.get_difficulty_level_display }}</span>
+                                </div>
+                                <div class="col-6">
+                                    <i class="fas fa-video text-muted me-1"></i>
+                                    <span class="text-muted">{{ course.get_course_type_display }}</span>
+                                </div>
+                            </div>
+
+                            <!-- Price -->
+                            <div class="mb-3">
+                                {% if course.is_free %}
+                                <span class="h6 text-success mb-0">Free Course</span>
+                                {% else %}
+                                {% if course.discounted_price %}
+                                <span class="h6 text-primary mb-0">${{ course.discounted_price }}</span>
+                                <small class="text-muted text-decoration-line-through ms-2">${{ course.price }}</small>
+                                {% else %}
+                                <span class="h6 text-primary mb-0">${{ course.price }}</span>
+                                {% endif %}
+                                {% endif %}
+                            </div>
+
+                            <!-- View Details Button -->
+                            <div class="mt-auto">
+                                <a href="{% url 'instructor_course_detail' course.id %}" class="btn btn-primary w-100">
+                                    <i class="fas fa-eye me-2"></i>View Details
+                                </a>
+                            </div>
+                            <br>
+                            <div class="mt-auto">
+                                <a href="{% url 'instructor_view_students' %}" class="btn btn-primary w-100">
+                                    <i class="fas fa-eye me-2"></i>View Students
+                                </a>
+                            </div>
+
+                            <!-- Last Updated -->
+                            <div class="text-center mt-2">
+                                <small class="text-muted">
+                                    Updated {{ course.updated_at|timesince }} ago
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% else %}
+            <!-- Empty State -->
+            <div class="text-center py-5">
+                <div class="mb-4">
+                    <i class="fas fa-book fa-4x text-gray-300"></i>
+                </div>
+                <h4 class="text-gray-600">No Courses Found</h4>
+                <p class="text-gray-500 mb-4">
+                    {% if search_query %}
+                    No courses match your search for "{{ search_query }}".
+                    {% else %}
+                    You don't have any courses assigned yet.
+                    {% endif %}
+                </p>
+                {% if search_query %}
+                <a href="{% url 'instructor_see_all_course' %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left me-2"></i>View All Courses
+                </a>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Custom CSS -->
+<style>
+    .course-card {
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+        border: none;
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(33, 40, 50, 0.15);
+    }
+
+    .course-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 0.5rem 2rem 0 rgba(33, 40, 50, 0.25);
+    }
+
+    .border-left-primary {
+        border-left: 0.25rem solid #4e73df !important;
+    }
+
+    .border-left-success {
+        border-left: 0.25rem solid #1cc88a !important;
+    }
+
+    .border-left-info {
+        border-left: 0.25rem solid #36b9cc !important;
+    }
+
+    .border-left-warning {
+        border-left: 0.25rem solid #f6c23e !important;
+    }
+
+    .card-img-top {
+        border-radius: 0.35rem 0.35rem 0 0;
+    }
+
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+</style>
+{% endblock %}

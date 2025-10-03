@@ -1,0 +1,646 @@
+{% extends 'instructor_base.html' %}
+
+{% block title %}{{ exam.title }} - Exam Details{% endblock %}
+
+{% block extra_css %}
+<style>
+    .exam-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stats-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        transition: transform 0.3s ease;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .stat-item {
+        text-align: center;
+        padding: 1rem;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #10b981;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        font-size: 0.9rem;
+        color: #6b7280;
+        font-weight: 500;
+    }
+    
+    .exam-type-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    
+    .mcq-badge { background: #e3f2fd; color: #1976d2; }
+    .qa-badge { background: #f3e5f5; color: #7b1fa2; }
+    .assignment-badge { background: #e8f5e8; color: #388e3c; }
+    
+    .status-badge {
+        font-size: 0.8rem;
+        padding: 0.4rem 1rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    
+    .published-badge { background: #e8f5e8; color: #2e7d32; }
+    .draft-badge { background: #fff3e0; color: #f57c00; }
+    .archived-badge { background: #fafafa; color: #616161; }
+    
+    .question-card {
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .question-card:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+    
+    .option-item {
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+        background: #f8f9fa;
+    }
+    
+    .option-item.correct {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+    }
+    
+    .attempt-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem;
+        border-bottom: 1px solid #e9ecef;
+        transition: background 0.3s ease;
+    }
+    
+    .attempt-item:hover {
+        background: #f8f9fa;
+    }
+    
+    .attempt-item:last-child {
+        border-bottom: none;
+    }
+    
+    .progress-bar {
+        height: 8px;
+        border-radius: 4px;
+        background: #e9ecef;
+        overflow: hidden;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+    
+    .assignment-details {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Exam Header -->
+    <div class="exam-header">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <div class="d-flex align-items-center mb-2">
+                    <h1 class="h3 mb-0 me-3">{{ exam.title }}</h1>
+                    {% if is_creator %}
+                        <span class="badge bg-success">Created by Me</span>
+                    {% else %}
+                        <span class="badge bg-info">Assigned to Me</span>
+                    {% endif %}
+                </div>
+                <p class="mb-3 opacity-90">{{ exam.description }}</p>
+                
+                <div class="d-flex gap-3 align-items-center">
+                    <span class="exam-type-badge {{ exam.exam_type }}-badge">
+                        <i class="fas fa-clipboard-list me-1"></i>{{ exam.get_exam_type_display }}
+                    </span>
+                    <span class="status-badge {{ exam.status }}-badge">
+                        <i class="fas fa-toggle-on me-1"></i>{{ exam.get_status_display }}
+                    </span>
+                    <span class="text-white-50">
+                        <i class="fas fa-calendar me-1"></i>Created {{ exam.created_at|date:"M d, Y" }}
+                    </span>
+                    {% if not is_creator %}
+                        <span class="text-white-50">
+                            <i class="fas fa-user me-1"></i>by {{ exam.created_by.get_full_name|default:exam.created_by.username }}
+                        </span>
+                    {% endif %}
+                </div>
+                
+                <!-- Assignment Info -->
+                {% if not is_creator and assignment_info %}
+                    <div class="mt-3 p-2 bg-white bg-opacity-10 rounded">
+                        <small><i class="fas fa-info-circle me-1"></i>{{ assignment_info }}</small>
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="text-end">
+                <a href="{% url 'instructor_my_exams' %}" class="btn btn-light btn-sm me-2">
+                    <i class="fas fa-arrow-left me-1"></i>Back to My Exams
+                </a>
+                {% if is_creator and exam.status == 'published' %}
+                    <a href="{% url 'instructor_assign_exam' %}?exam={{ exam.id }}" class="btn btn-warning btn-sm">
+                        <i class="fas fa-user-plus me-1"></i>Assign to Students
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Exam Configuration -->
+            <div class="stats-card">
+                <h5 class="mb-3"><i class="fas fa-cog me-2"></i>Exam Configuration</h5>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <strong>Total Marks:</strong> {{ exam.total_marks }}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Passing Marks:</strong> {{ exam.passing_marks }}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Total Questions:</strong> {{ exam.get_total_questions }}
+                        </div>
+                        <div class="mb-3">
+                            <strong>Max Attempts:</strong> {{ exam.max_attempts }}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <strong>Timing Type:</strong> {{ exam.get_timing_type_display }}
+                        </div>
+                        {% if exam.timing_type == 'per_question' %}
+                            <div class="mb-3">
+                                <strong>Time per Question:</strong> {{ exam.time_per_question_minutes }} minutes
+                            </div>
+                        {% elif exam.timing_type == 'total_exam' %}
+                            <div class="mb-3">
+                                <strong>Total Exam Time:</strong> {{ exam.total_exam_time_minutes }} minutes
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Schedule Info -->
+                {% if exam.start_datetime or exam.end_datetime %}
+                <div class="mt-3 pt-3 border-top">
+                    <h6>Schedule</h6>
+                    {% if exam.start_datetime %}
+                        <div class="mb-2">
+                            <strong>Start:</strong> {{ exam.start_datetime|date:"M d, Y H:i" }}
+                        </div>
+                    {% endif %}
+                    {% if exam.end_datetime %}
+                        <div class="mb-2">
+                            <strong>End:</strong> {{ exam.end_datetime|date:"M d, Y H:i" }}
+                        </div>
+                    {% endif %}
+                </div>
+                {% endif %}
+                
+                <!-- Settings -->
+                <div class="mt-3 pt-3 border-top">
+                    <h6>Settings</h6>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" {% if exam.allow_retake %}checked{% endif %} disabled>
+                                <label class="form-check-label">Allow Retake</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" {% if exam.show_results_immediately %}checked{% endif %} disabled>
+                                <label class="form-check-label">Show Results Immediately</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" {% if exam.randomize_questions %}checked{% endif %} disabled>
+                                <label class="form-check-label">Randomize Questions</label>
+                            </div>
+                            {% if exam.exam_type == 'mcq' %}
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" {% if exam.randomize_options %}checked{% endif %} disabled>
+                                <label class="form-check-label">Randomize Options</label>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Exam Assignments -->
+            {% if exam_assignments %}
+            <div class="stats-card">
+                <h5 class="mb-3"><i class="fas fa-user-check me-2"></i>Assignments</h5>
+                {% for assignment in exam_assignments %}
+                <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-light rounded">
+                    <div>
+                        <strong>
+                            {% if assignment.assignment_type == 'individual' %}
+                                <i class="fas fa-user me-1"></i>{{ assignment.student.get_full_name|default:assignment.student.username }}
+                            {% elif assignment.assignment_type == 'batch' %}
+                                <i class="fas fa-layer-group me-1"></i>{{ assignment.batch.name }}
+                            {% else %}
+                                <i class="fas fa-book me-1"></i>{{ assignment.course.title }}
+                            {% endif %}
+                        </strong>
+                        <br>
+                        <small class="text-muted">
+                            Assigned {{ assignment.assigned_at|timesince }} ago
+                            {% if assignment.assigned_by != request.user %}
+                                by {{ assignment.assigned_by.get_full_name|default:assignment.assigned_by.username }}
+                            {% endif %}
+                        </small>
+                    </div>
+                    <span class="badge bg-primary">{{ assignment.get_assignment_type_display }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Questions Section -->
+            {% if exam.exam_type == 'mcq' and questions %}
+            <div class="stats-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0"><i class="fas fa-list-ul me-2"></i>Multiple Choice Questions ({{ questions.count }})</h5>
+                    {% if is_creator %}
+                        <a href="{% url 'instructor_add_mcq_questions' exam.id %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i>Add More Questions
+                        </a>
+                    {% endif %}
+                </div>
+                
+                {% for question in questions %}
+                <div class="question-card card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="card-title">Q{{ question.order }}: {{ question.question_text }}</h6>
+                            <span class="badge bg-secondary">{{ question.marks }} marks</span>
+                        </div>
+                        
+                        {% if question.question_image %}
+                            <div class="mb-3">
+                                <img src="{{ question.question_image.url }}" alt="Question Image" class="img-fluid rounded" style="max-height: 200px;">
+                            </div>
+                        {% endif %}
+                        
+                        <div class="options">
+                            {% for option in question.options.all %}
+                            <div class="option-item {% if option.is_correct %}correct{% endif %}">
+                                <div class="d-flex align-items-center">
+                                    <strong>{{ forloop.counter|add:64|floatformat:0|cut:".0" }})</strong>
+                                    <span class="ms-2">{{ option.option_text }}</span>
+                                    {% if option.is_correct %}
+                                        <i class="fas fa-check-circle text-success ms-auto"></i>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if question.explanation %}
+                            <div class="mt-3 p-2 bg-light rounded">
+                                <small class="text-muted"><strong>Explanation:</strong> {{ question.explanation }}</small>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% elif exam.exam_type == 'qa' and questions %}
+            <div class="stats-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0"><i class="fas fa-edit me-2"></i>Question & Answer ({{ questions.count }})</h5>
+                    {% if is_creator %}
+                        <a href="{% url 'instructor_add_qa_questions' exam.id %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-plus me-1"></i>Add More Questions
+                        </a>
+                    {% endif %}
+                </div>
+                
+                {% for question in questions %}
+                <div class="question-card card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="card-title">Q{{ question.order }}: {{ question.question_text }}</h6>
+                            <span class="badge bg-secondary">{{ question.marks }} marks</span>
+                        </div>
+                        
+                        {% if question.question_image %}
+                            <div class="mb-3">
+                                <img src="{{ question.question_image.url }}" alt="Question Image" class="img-fluid rounded" style="max-height: 200px;">
+                            </div>
+                        {% endif %}
+                        
+                        {% if question.model_answer %}
+                            <div class="mt-3 p-3 bg-light rounded">
+                                <h6 class="text-muted mb-2">Model Answer:</h6>
+                                <p class="mb-0">{{ question.model_answer }}</p>
+                            </div>
+                        {% endif %}
+                        
+                        {% if question.keywords %}
+                            <div class="mt-2 p-2 bg-info bg-opacity-10 rounded">
+                                <small class="text-muted"><strong>Key Points:</strong> {{ question.keywords }}</small>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% elif exam.exam_type == 'assignment' and assignment_details %}
+            <div class="stats-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0"><i class="fas fa-file-upload me-2"></i>Assignment Details</h5>
+                    {% if is_creator %}
+                        <a href="{% url 'instructor_setup_assignment' exam.id %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-cog me-1"></i>Edit Assignment
+                        </a>
+                    {% endif %}
+                </div>
+                
+                <div class="assignment-details">
+                    <h6>Assignment Description</h6>
+                    <p>{{ assignment_details.assignment_description|linebreaks }}</p>
+                    
+                    {% if assignment_details.submission_guidelines %}
+                        <h6 class="mt-4">Submission Guidelines</h6>
+                        <p>{{ assignment_details.submission_guidelines|linebreaks }}</p>
+                    {% endif %}
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-4">
+                            <strong>Allowed File Types:</strong><br>
+                            <span class="text-muted">{{ assignment_details.allowed_file_types }}</span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Max File Size:</strong><br>
+                            <span class="text-muted">{{ assignment_details.max_file_size_mb }} MB</span>
+                        </div>
+                        <div class="col-md-4">
+                            <strong>Max Files:</strong><br>
+                            <span class="text-muted">{{ assignment_details.max_files_allowed }}</span>
+                        </div>
+                    </div>
+                    
+                    {% if assignment_details.evaluation_criteria %}
+                        <h6 class="mt-4">Evaluation Criteria</h6>
+                        <p>{{ assignment_details.evaluation_criteria|linebreaks }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Recent Attempts -->
+            {% if recent_attempts %}
+            <div class="stats-card">
+                <h5 class="mb-3"><i class="fas fa-users me-2"></i>Recent Attempts</h5>
+                {% for attempt in recent_attempts %}
+                <div class="attempt-item">
+                    <div class="d-flex align-items-center flex-grow-1">
+                        <div class="me-3">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                <i class="fas fa-user fa-sm"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">{{ attempt.student.get_full_name|default:attempt.student.username }}</h6>
+                            <small class="text-muted">
+                                Started {{ attempt.started_at|timesince }} ago
+                                {% if attempt.submitted_at %} | Submitted {{ attempt.submitted_at|timesince }} ago{% endif %}
+                            </small>
+                            {% if attempt.is_graded %}
+                                <div class="mt-1">
+                                    <div class="progress-bar">
+                                        <div class="progress-fill bg-{% if attempt.is_passed %}success{% else %}danger{% endif %}" style="width: {{ attempt.percentage }}%"></div>
+                                    </div>
+                                    <small class="text-muted">{{ attempt.total_marks_obtained }}/{{ exam.total_marks }} ({{ attempt.percentage }}%)</small>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="text-end">
+                            {% if attempt.status == 'submitted' or attempt.status == 'auto_submitted' %}
+                                {% if attempt.is_graded %}
+                                    <span class="badge bg-{% if attempt.is_passed %}success{% else %}danger{% endif %}">
+                                        {% if attempt.is_passed %}Passed{% else %}Failed{% endif %}
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-warning">Pending Grading</span>
+                                {% endif %}
+                            {% elif attempt.status == 'in_progress' %}
+                                <span class="badge bg-info">In Progress</span>
+                            {% else %}
+                                <span class="badge bg-secondary">{{ attempt.get_status_display }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <div class="text-center mt-3">
+                    <a href="{% url 'instructor_exam_submissions' %}?exam={{ exam.id }}" class="btn btn-outline-primary">
+                        <i class="fas fa-eye me-1"></i>View All Submissions
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Statistics -->
+            <div class="stats-card">
+                <h5 class="mb-3"><i class="fas fa-chart-bar me-2"></i>Statistics</h5>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="stat-item">
+                            <div class="stat-number">{{ total_attempts }}</div>
+                            <div class="stat-label">Total Attempts</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-item">
+                            <div class="stat-number">{{ submitted_attempts }}</div>
+                            <div class="stat-label">Submitted</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-item">
+                            <div class="stat-number">{{ passed_attempts }}</div>
+                            <div class="stat-label">Passed</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="stat-item">
+                            <div class="stat-number">{{ failed_attempts }}</div>
+                            <div class="stat-label">Failed</div>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if avg_score > 0 %}
+                <div class="text-center mt-3 pt-3 border-top">
+                    <div class="stat-number text-info">{{ avg_score }}%</div>
+                    <div class="stat-label">Average Score</div>
+                </div>
+                {% endif %}
+                
+                {% if pending_grading > 0 %}
+                <div class="alert alert-warning mt-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>{{ pending_grading }}</strong> submissions pending grading
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="stats-card">
+                <h5 class="mb-3"><i class="fas fa-bolt me-2"></i>Quick Actions</h5>
+                <div class="d-grid gap-2">
+                    {% if is_creator %}
+                        {% if exam.status == 'draft' %}
+                            {% if exam.exam_type == 'mcq' %}
+                                <a href="{% url 'instructor_add_mcq_questions' exam.id %}" class="btn btn-outline-success">
+                                    <i class="fas fa-plus me-2"></i>Add Questions
+                                </a>
+                            {% elif exam.exam_type == 'qa' %}
+                                <a href="{% url 'instructor_add_qa_questions' exam.id %}" class="btn btn-outline-success">
+                                    <i class="fas fa-plus me-2"></i>Add Questions
+                                </a>
+                            {% elif exam.exam_type == 'assignment' %}
+                                <a href="{% url 'instructor_setup_assignment' exam.id %}" class="btn btn-outline-success">
+                                    <i class="fas fa-cog me-2"></i>Setup Assignment
+                                </a>
+                            {% endif %}
+                        {% elif exam.status == 'published' %}
+                            <a href="{% url 'instructor_assign_exam' %}?exam={{ exam.id }}" class="btn btn-outline-info">
+                                <i class="fas fa-user-plus me-2"></i>Assign to Students
+                            </a>
+                        {% endif %}
+                        <a href="#" class="btn btn-outline-secondary">
+                            <i class="fas fa-edit me-2"></i>Edit Exam
+                        </a>
+                        <a href="{% url 'instructor_delete_exam' exam.id %}" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to delete this exam? This action cannot be undone.');">
+                            <i class="fas fa-trash me-2"></i>Delete Exam
+                        </a>
+                    {% endif %}
+                    
+                    {% if total_attempts > 0 %}
+                        <a href="{% url 'instructor_exam_submissions' %}?exam={{ exam.id }}" class="btn btn-outline-primary">
+                            <i class="fas fa-clipboard-check me-2"></i>View Submissions
+                        </a>
+                        {% if pending_grading > 0 %}
+                            <a href="{% url 'instructor_exam_submissions' %}?exam={{ exam.id }}&grading=ungraded" class="btn btn-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>Grade Now
+                            </a>
+                        {% endif %}
+                    {% endif %}
+                    
+                    
+                    
+                   
+                </div>
+            </div>
+
+            <!-- Exam Info -->
+            <div class="stats-card">
+                <h5 class="mb-3"><i class="fas fa-info-circle me-2"></i>Exam Information</h5>
+                <div class="small">
+                    <div class="mb-2">
+                        <strong>Created:</strong> {{ exam.created_at|date:"M d, Y H:i" }}
+                    </div>
+                    {% if exam.updated_at != exam.created_at %}
+                    <div class="mb-2">
+                        <strong>Last Updated:</strong> {{ exam.updated_at|date:"M d, Y H:i" }}
+                    </div>
+                    {% endif %}
+                    <div class="mb-2">
+                        <strong>Creator:</strong> {{ exam.created_by.get_full_name|default:exam.created_by.username }}
+                    </div>
+                    {% if exam.category %}
+                    <div class="mb-2">
+                        <strong>Category:</strong> {{ exam.category.name }}
+                    </div>
+                    {% endif %}
+                    {% if exam.tags.exists %}
+                    <div class="mb-2">
+                        <strong>Tags:</strong>
+                        {% for tag in exam.tags.all %}
+                            <span class="badge bg-light text-dark me-1">{{ tag.name }}</span>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh statistics every 2 minutes
+    setInterval(function() {
+        // You can add AJAX call here to refresh statistics
+        console.log('Auto-refresh statistics...');
+    }, 120000);
+    
+    // Confirm delete action
+    function confirmDelete(examTitle) {
+        return confirm(`Are you sure you want to delete "${examTitle}"? This action cannot be undone and will remove all associated questions and submissions.`);
+    }
+    
+    // Show loading state for buttons
+    document.addEventListener('DOMContentLoaded', function() {
+        const buttons = document.querySelectorAll('.btn');
+        buttons.forEach(button => {
+            button.addEventListener('click', function(e) {
+                if (this.getAttribute('href') && this.getAttribute('href') !== '#') {
+                    this.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>' + this.textContent.trim();
+                    this.disabled = true;
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

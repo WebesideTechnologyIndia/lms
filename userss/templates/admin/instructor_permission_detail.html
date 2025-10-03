@@ -1,0 +1,322 @@
+<!-- templates/admin/instructor_permission_detail.html -->
+{% extends 'base.html' %}
+
+{% block title %}{{ instructor.get_full_name }} - Permission Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item">
+                                <a href="{% url 'manage_instructor_permissions' %}">Instructor Permissions</a>
+                            </li>
+                            <li class="breadcrumb-item active">{{ instructor.get_full_name }}</li>
+                        </ol>
+                    </nav>
+                    <h2><i class="fas fa-user-cog me-2"></i>Permission Management</h2>
+                    <p class="text-muted mb-0">Manage permissions for {{ instructor.get_full_name }}</p>
+                </div>
+                <div>
+                    <a href="{% url 'manage_instructor_permissions' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to List
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Instructor Info Card -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-center">
+                                <div class="avatar-large me-3">
+                                    {% if instructor.profile_picture %}
+                                    <img src="{{ instructor.profile_picture.url }}" alt="Profile" class="rounded-circle">
+                                    {% else %}
+                                    <div class="avatar-circle-large">
+                                        {{ instructor.first_name|first }}{{ instructor.last_name|first }}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                                <div>
+                                    <h4 class="mb-1">{{ instructor.get_full_name|default:instructor.username }}</h4>
+                                    <p class="text-muted mb-1">@{{ instructor.username }} • {{ instructor.get_role_display }}</p>
+                                    <p class="text-muted mb-0">
+                                        <i class="fas fa-envelope me-1"></i>{{ instructor.email }}
+                                        {% if instructor.phone_number %}
+                                        <span class="ms-3"><i class="fas fa-phone me-1"></i>{{ instructor.phone_number }}</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <div class="mb-2">
+                                {% if instructor.is_active %}
+                                <span class="badge bg-success fs-6">Active</span>
+                                {% else %}
+                                <span class="badge bg-danger fs-6">Inactive</span>
+                                {% endif %}
+                            </div>
+                            <small class="text-muted">
+                                Member since {{ instructor.date_joined|date:"M d, Y" }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Permission Assignment Form -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Assign Permissions</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{% url 'update_instructor_permissions' instructor.id %}">
+                        {% csrf_token %}
+                        
+                        <!-- Permission Categories -->
+                        {% regroup all_permissions by category as permission_groups %}
+                        {% for group in permission_groups %}
+                        <div class="permission-category mb-4">
+                            <div class="category-header mb-3">
+                                <h6 class="text-primary mb-0">
+                                    <i class="fas fa-folder me-2"></i>{{ group.grouper }}
+                                </h6>
+                                <hr class="mt-2 mb-0">
+                            </div>
+                            
+                            <div class="row">
+                                {% for permission in group.list %}
+                                <div class="col-md-6 mb-3">
+                                    <div class="permission-card {% if permission.code in current_permission_codes %}active{% endif %}">
+                                        <div class="form-check">
+                                            <input class="form-check-input" 
+                                                   type="checkbox" 
+                                                   name="permissions" 
+                                                   value="{{ permission.code }}" 
+                                                   id="perm_{{ permission.code }}"
+                                                   {% if permission.code in current_permission_codes %}checked{% endif %}>
+                                            <label class="form-check-label w-100" for="perm_{{ permission.code }}">
+                                                <div class="permission-info">
+                                                    <h6 class="mb-1">{{ permission.name }}</h6>
+                                                    <p class="text-muted mb-0 small">{{ permission.description }}</p>
+                                                    <!-- Line 117-125 ko yeh se replace karo: -->
+{% if permission.code in current_permission_codes %}
+<div class="permission-status mt-2">
+    <small class="text-success">
+        <i class="fas fa-check-circle me-1"></i>
+        Permission Already Assigned
+    </small>
+</div>
+{% endif %}
+                                                </div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% endfor %}
+
+                        <!-- Action Buttons -->
+                        <div class="text-end mt-4">
+                            <button type="button" class="btn btn-outline-secondary me-2" onclick="selectAllPermissions()">
+                                Select All
+                            </button>
+                            <button type="button" class="btn btn-outline-warning me-2" onclick="clearAllPermissions()">
+                                Clear All
+                            </button>
+                            <button type="submit" class="btn btn-primary" onclick="return confirmUpdate()">
+                                <i class="fas fa-save me-1"></i>Update Permissions
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Current Permissions Summary -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-list-check me-2"></i>Current Permissions Summary</h6>
+                </div>
+                <div class="card-body">
+                    {% if current_permission_codes %}
+                    <div class="row">
+                        {% for code, assignment in current_permission_codes.items %}
+                        <div class="col-md-4 mb-3">
+                            <div class="current-permission-item">
+                                <h6 class="text-success">{{ assignment.permission.name }}</h6>
+                                <p class="small text-muted mb-1">{{ assignment.permission.description }}</p>
+                                <div class="assignment-meta">
+                                    <small class="text-muted">
+                                        <i class="fas fa-user me-1"></i>
+                                        Assigned by {{ assignment.assigned_by.get_full_name|default:assignment.assigned_by.username }}
+                                    </small>
+                                    <br>
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        {{ assignment.assigned_at|date:"M d, Y H:i" }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-shield-alt text-muted" style="font-size: 3rem;"></i>
+                        <h5 class="mt-3 text-muted">No Permissions Assigned</h5>
+                        <p class="text-muted">This instructor doesn't have any permissions assigned yet.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.avatar-large {
+    width: 80px;
+    height: 80px;
+}
+
+.avatar-large img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-circle-large {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #3b82f6, #1e40af);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1.5rem;
+}
+
+.permission-card {
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 15px;
+    transition: all 0.3s ease;
+    background: #f9fafb;
+    cursor: pointer;
+}
+
+.permission-card:hover {
+    border-color: #3b82f6;
+    background: #eff6ff;
+}
+
+.permission-card.active {
+    border-color: #10b981;
+    background: #f0fdf4;
+}
+
+.permission-card .form-check-input {
+    margin-top: 0;
+}
+
+.permission-info h6 {
+    color: #374151;
+}
+
+.category-header h6 {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.current-permission-item {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.current-permission-item h6 {
+    margin-bottom: 8px;
+}
+
+.assignment-meta {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px solid #d1fae5;
+}
+</style>
+
+<script>
+function selectAllPermissions() {
+    const checkboxes = document.querySelectorAll('input[name="permissions"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = true;
+        checkbox.closest('.permission-card').classList.add('active');
+    });
+}
+
+function clearAllPermissions() {
+    const checkboxes = document.querySelectorAll('input[name="permissions"]');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = false;
+        checkbox.closest('.permission-card').classList.remove('active');
+    });
+}
+
+function confirmUpdate() {
+    const checkedBoxes = document.querySelectorAll('input[name="permissions"]:checked');
+    const instructorName = "{{ instructor.get_full_name|default:instructor.username }}";
+    
+    return confirm(`Are you sure you want to update permissions for ${instructorName}? This will assign ${checkedBoxes.length} permission(s).`);
+}
+
+// Handle permission card clicks
+document.addEventListener('DOMContentLoaded', function() {
+    const permissionCards = document.querySelectorAll('.permission-card');
+    
+    permissionCards.forEach(card => {
+        card.addEventListener('click', function(e) {
+            if (e.target.type !== 'checkbox') {
+                const checkbox = this.querySelector('input[type="checkbox"]');
+                checkbox.checked = !checkbox.checked;
+                
+                if (checkbox.checked) {
+                    this.classList.add('active');
+                } else {
+                    this.classList.remove('active');
+                }
+            } else {
+                if (e.target.checked) {
+                    this.classList.add('active');
+                } else {
+                    this.classList.remove('active');
+                }
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

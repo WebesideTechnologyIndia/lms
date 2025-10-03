@@ -1,0 +1,526 @@
+{% extends 'base.html' %}
+
+{% block title %}Setup Assignment - {{ exam.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-1">
+                        <i class="fas fa-file-upload text-primary"></i>
+                        Setup Assignment Exam
+                    </h4>
+                    <p class="text-muted mb-0">
+                        <strong>{{ exam.title }}</strong> | Total Marks: {{ exam.total_marks }} | 
+                        Assignment submission with file uploads
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
+                    <span class="badge bg-info">Assignment Exam</span>
+                    <span class="badge bg-secondary">{{ exam.get_timing_type_display }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assignment Configuration Form -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-cog text-success"></i>
+                        Assignment Configuration
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="post" id="assignmentForm">
+                        {% csrf_token %}
+                        
+                        <!-- Assignment Description -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <label class="form-label">Assignment Description *</label>
+                                {{ form.assignment_description }}
+                                <div class="form-text">Detailed description of what students need to submit</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Submission Guidelines -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <label class="form-label">Submission Guidelines</label>
+                                {{ form.submission_guidelines }}
+                                <div class="form-text">Instructions on format, naming conventions, submission process</div>
+                            </div>
+                        </div>
+                        
+                        <!-- File Upload Settings -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-2">
+                                    <i class="fas fa-upload"></i> File Upload Settings
+                                </h6>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Allowed File Types *</label>
+                                {{ form.allowed_file_types }}
+                                <div class="form-text">Comma-separated extensions (e.g., pdf,doc,docx,txt)</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Maximum File Size (MB) *</label>
+                                {{ form.max_file_size_mb }}
+                                <div class="form-text">Maximum size per file in megabytes</div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Maximum Files Allowed *</label>
+                                {{ form.max_files_allowed }}
+                                <div class="form-text">Number of files each student can upload</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Evaluation Criteria -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <label class="form-label">Evaluation Criteria</label>
+                                {{ form.evaluation_criteria }}
+                                <div class="form-text">How this assignment will be graded - helps students understand expectations</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-rocket"></i> Publish Assignment Exam
+                            </button>
+                            <a href="{% url 'exam_dashboard' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left"></i> Back to Dashboard
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assignment Preview -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-eye text-info"></i>
+                        Assignment Preview (Student View)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="border rounded p-4 bg-light">
+                        <!-- Assignment Title -->
+                        <div class="mb-3">
+                            <h5 class="text-primary">{{ exam.title }}</h5>
+                            <p class="text-muted mb-1">
+                                <i class="fas fa-clock"></i> 
+                                {% if exam.timing_type == 'no_timing' %}
+                                    No time limit
+                                {% elif exam.timing_type == 'total_exam' %}
+                                    Time limit: {{ exam.total_exam_time_minutes }} minutes
+                                {% else %}
+                                    Flexible timing
+                                {% endif %}
+                            </p>
+                            <p class="text-muted">
+                                <i class="fas fa-medal"></i> 
+                                Total Marks: {{ exam.total_marks }} | Passing: {{ exam.passing_marks }}
+                            </p>
+                        </div>
+                        
+                        <!-- Assignment Description Preview -->
+                        <div class="mb-3">
+                            <h6>Assignment Description:</h6>
+                            <div id="description-preview" class="bg-white p-3 border rounded">
+                                <em>Type assignment description to see preview...</em>
+                            </div>
+                        </div>
+                        
+                        <!-- Submission Guidelines Preview -->
+                        <div class="mb-3" id="guidelines-section" style="display: none;">
+                            <h6>Submission Guidelines:</h6>
+                            <div id="guidelines-preview" class="bg-white p-3 border rounded"></div>
+                        </div>
+                        
+                        <!-- File Upload Rules Preview -->
+                        <div class="mb-3">
+                            <h6>File Upload Requirements:</h6>
+                            <ul id="upload-rules" class="list-unstyled">
+                                <li><i class="fas fa-file text-muted"></i> Allowed types: <span id="file-types-preview">pdf, doc, docx, txt</span></li>
+                                <li><i class="fas fa-weight text-muted"></i> Max file size: <span id="file-size-preview">10</span> MB</li>
+                                <li><i class="fas fa-layer-group text-muted"></i> Max files: <span id="max-files-preview">1</span></li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Evaluation Criteria Preview -->
+                        <div class="mb-3" id="criteria-section" style="display: none;">
+                            <h6>Evaluation Criteria:</h6>
+                            <div id="criteria-preview" class="bg-white p-3 border rounded"></div>
+                        </div>
+                        
+                        <!-- Mock Upload Area -->
+                        <div class="border-2 border-dashed border-primary rounded p-4 text-center">
+                            <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                            <h6>Upload Your Files</h6>
+                            <p class="text-muted mb-0">Drag and drop files here or click to browse</p>
+                            <button class="btn btn-primary btn-sm mt-2" disabled>
+                                <i class="fas fa-plus"></i> Choose Files
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- File Type Helper Modal -->
+<div class="modal fade" id="fileTypesModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Common File Types</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Documents:</h6>
+                        <ul class="list-unstyled">
+                            <li><code>pdf</code> - PDF documents</li>
+                            <li><code>doc,docx</code> - MS Word</li>
+                            <li><code>txt</code> - Text files</li>
+                            <li><code>rtf</code> - Rich Text</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Presentations:</h6>
+                        <ul class="list-unstyled">
+                            <li><code>ppt,pptx</code> - PowerPoint</li>
+                            <li><code>odp</code> - OpenOffice</li>
+                        </ul>
+                        <h6>Spreadsheets:</h6>
+                        <ul class="list-unstyled">
+                            <li><code>xls,xlsx</code> - Excel</li>
+                            <li><code>csv</code> - CSV files</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Images:</h6>
+                        <ul class="list-unstyled">
+                            <li><code>jpg,jpeg,png,gif</code> - Images</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Archives:</h6>
+                        <ul class="list-unstyled">
+                            <li><code>zip,rar,7z</code> - Archives</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Auto-focus on assignment description
+    $('#id_assignment_description').focus();
+    
+    // Form validation
+    $('#assignmentForm').submit(function(e) {
+        var description = $('#id_assignment_description').val().trim();
+        var fileTypes = $('#id_allowed_file_types').val().trim();
+        var maxSize = $('#id_max_file_size_mb').val();
+        var maxFiles = $('#id_max_files_allowed').val();
+        
+        if (!description) {
+            e.preventDefault();
+            alert('Please provide assignment description!');
+            $('#id_assignment_description').focus();
+            return false;
+        }
+        
+        if (!fileTypes) {
+            e.preventDefault();
+            alert('Please specify allowed file types!');
+            $('#id_allowed_file_types').focus();
+            return false;
+        }
+        
+        if (!maxSize || maxSize <= 0 || maxSize > 1000) {
+            e.preventDefault();
+            alert('Please enter valid file size (1-1000 MB)!');
+            $('#id_max_file_size_mb').focus();
+            return false;
+        }
+        
+        if (!maxFiles || maxFiles <= 0 || maxFiles > 20) {
+            e.preventDefault();
+            alert('Please enter valid number of files (1-20)!');
+            $('#id_max_files_allowed').focus();
+            return false;
+        }
+        
+        return true;
+    });
+    
+    // Real-time preview updates
+    $('#id_assignment_description').on('input', function() {
+        var text = $(this).val().trim();
+        if (text) {
+            $('#description-preview').html(text.replace(/\n/g, '<br>'));
+        } else {
+            $('#description-preview').html('<em>Type assignment description to see preview...</em>');
+        }
+    });
+    
+    $('#id_submission_guidelines').on('input', function() {
+        var text = $(this).val().trim();
+        if (text) {
+            $('#guidelines-preview').html(text.replace(/\n/g, '<br>'));
+            $('#guidelines-section').show();
+        } else {
+            $('#guidelines-section').hide();
+        }
+    });
+    
+    $('#id_evaluation_criteria').on('input', function() {
+        var text = $(this).val().trim();
+        if (text) {
+            $('#criteria-preview').html(text.replace(/\n/g, '<br>'));
+            $('#criteria-section').show();
+        } else {
+            $('#criteria-section').hide();
+        }
+    });
+    
+    $('#id_allowed_file_types').on('input', function() {
+        var types = $(this).val().trim();
+        if (types) {
+            $('#file-types-preview').text(types);
+        } else {
+            $('#file-types-preview').text('pdf, doc, docx, txt');
+        }
+    });
+    
+    $('#id_max_file_size_mb').on('input', function() {
+        var size = $(this).val() || 10;
+        $('#file-size-preview').text(size);
+    });
+    
+    $('#id_max_files_allowed').on('input', function() {
+        var files = $(this).val() || 1;
+        $('#max-files-preview').text(files);
+    });
+    
+    // File type helper
+    $('#id_allowed_file_types').after(
+        '<button type="button" class="btn btn-link btn-sm" data-bs-toggle="modal" data-bs-target="#fileTypesModal">' +
+        '<i class="fas fa-question-circle"></i> Common file types' +
+        '</button>'
+    );
+    
+    // Character counters
+    function addCharCounter(fieldId, maxChars) {
+        var field = $('#' + fieldId);
+        var counter = $('<small class="form-text text-muted char-counter"></small>');
+        field.after(counter);
+        
+        field.on('input', function() {
+            var length = $(this).val().length;
+            var remaining = maxChars - length;
+            counter.text(remaining + ' characters remaining');
+            
+            if (remaining < 100) {
+                counter.addClass('text-warning');
+                field.addClass('border-warning');
+            } else {
+                counter.removeClass('text-warning');
+                field.removeClass('border-warning');
+            }
+            
+            if (remaining < 0) {
+                counter.addClass('text-danger').removeClass('text-warning');
+                field.addClass('border-danger').removeClass('border-warning');
+            } else {
+                counter.removeClass('text-danger');
+                field.removeClass('border-danger');
+            }
+        });
+        
+        field.trigger('input');
+    }
+    
+    addCharCounter('id_assignment_description', 5000);
+    addCharCounter('id_submission_guidelines', 2000);
+    addCharCounter('id_evaluation_criteria', 2000);
+    
+    // Auto-suggestions for file types
+    var commonPatterns = [
+        'pdf,doc,docx',
+        'pdf,txt',
+        'jpg,jpeg,png,gif',
+        'zip,rar',
+        'pdf,doc,docx,txt,rtf',
+        'all_documents',
+        'all_images',
+        'programming_files'
+    ];
+    
+    // Add quick buttons for common file type patterns
+    $('#id_allowed_file_types').after(`
+        <div class="mt-2">
+            <small class="text-muted">Quick select:</small>
+            <button type="button" class="btn btn-outline-primary btn-sm ms-2" onclick="setFileTypes('pdf,doc,docx')">Documents</button>
+            <button type="button" class="btn btn-outline-primary btn-sm ms-1" onclick="setFileTypes('jpg,jpeg,png,gif')">Images</button>
+            <button type="button" class="btn btn-outline-primary btn-sm ms-1" onclick="setFileTypes('pdf,doc,docx,txt,rtf')">All Text</button>
+            <button type="button" class="btn btn-outline-primary btn-sm ms-1" onclick="setFileTypes('zip,rar')">Archives</button>
+        </div>
+    `);
+});
+
+// Set file types function
+function setFileTypes(types) {
+    $('#id_allowed_file_types').val(types).trigger('input');
+}
+
+// File size validator
+function validateFileSize() {
+    var size = parseInt($('#id_max_file_size_mb').val());
+    if (size > 500) {
+        alert('Warning: Large file sizes may cause upload issues. Consider using smaller limits.');
+    }
+}
+
+// Keyboard shortcuts
+$(document).keydown(function(e) {
+    // Ctrl + Enter to submit form
+    if (e.ctrlKey && e.keyCode === 13) {
+        $('#assignmentForm').submit();
+    }
+});
+
+// Form auto-save (optional)
+var autoSaveTimer;
+function autoSave() {
+    clearTimeout(autoSaveTimer);
+    autoSaveTimer = setTimeout(function() {
+        // Save form data to localStorage
+        var formData = {
+            description: $('#id_assignment_description').val(),
+            guidelines: $('#id_submission_guidelines').val(),
+            fileTypes: $('#id_allowed_file_types').val(),
+            maxSize: $('#id_max_file_size_mb').val(),
+            maxFiles: $('#id_max_files_allowed').val(),
+            criteria: $('#id_evaluation_criteria').val()
+        };
+        localStorage.setItem('assignment_draft', JSON.stringify(formData));
+    }, 2000);
+}
+
+// Load auto-saved data
+function loadAutoSaved() {
+    var saved = localStorage.getItem('assignment_draft');
+    if (saved) {
+        var data = JSON.parse(saved);
+        $('#id_assignment_description').val(data.description).trigger('input');
+        $('#id_submission_guidelines').val(data.guidelines).trigger('input');
+        $('#id_allowed_file_types').val(data.fileTypes).trigger('input');
+        $('#id_max_file_size_mb').val(data.maxSize).trigger('input');
+        $('#id_max_files_allowed').val(data.maxFiles).trigger('input');
+        $('#id_evaluation_criteria').val(data.criteria).trigger('input');
+    }
+}
+
+// Auto-save on input
+$('textarea, input').on('input', autoSave);
+
+// Load auto-saved data on page load
+$(document).ready(function() {
+    loadAutoSaved();
+});
+
+// Clear auto-saved data on successful submit
+$('#assignmentForm').on('submit', function() {
+    localStorage.removeItem('assignment_draft');
+});
+</script>
+
+<style>
+.question-item {
+    transition: all 0.2s ease;
+}
+
+.question-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.border-dashed {
+    border-style: dashed !important;
+}
+
+.char-counter {
+    font-size: 0.875em;
+}
+
+.form-control:focus {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+#id_assignment_description {
+    min-height: 150px;
+}
+
+.upload-preview {
+    background: linear-gradient(45deg, #f8f9fa 25%, transparent 25%), 
+                linear-gradient(-45deg, #f8f9fa 25%, transparent 25%), 
+                linear-gradient(45deg, transparent 75%, #f8f9fa 75%), 
+                linear-gradient(-45deg, transparent 75%, #f8f9fa 75%);
+    background-size: 20px 20px;
+    background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+}
+
+.file-type-btn {
+    transition: all 0.2s ease;
+}
+
+.file-type-btn:hover {
+    transform: translateY(-1px);
+}
+</style>
+{% endblock %}

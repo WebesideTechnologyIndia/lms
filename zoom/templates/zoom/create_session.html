@@ -1,0 +1,683 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create New Session{% endblock %}
+
+{% block extra_css %}
+<style>
+    .create-session-container {
+        max-width: 1000px;
+        margin: 0 auto;
+        padding: 2rem 0;
+    }
+    
+    .session-form-card {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        padding: 2.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .form-header {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #f8f9fa;
+    }
+    
+    .form-header h2 {
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control, .form-select {
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+    }
+    
+    .btn-create {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 0.75rem 2rem;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-create:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        color: white;
+    }
+    
+    .zoom-status {
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid;
+    }
+    
+    .zoom-configured {
+        background-color: #d1ecf1;
+        border-color: #17a2b8;
+        color: #0c5460;
+    }
+    
+    .zoom-not-configured {
+        background-color: #f8d7da;
+        border-color: #dc3545;
+        color: #721c24;
+    }
+    
+    .batch-info {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+        display: none;
+    }
+    
+    .batch-info.show {
+        display: block;
+        animation: slideDown 0.3s ease;
+    }
+    
+    .recurring-panel {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-top: 1rem;
+        display: none;
+    }
+    
+    .recurring-panel.show {
+        display: block;
+        animation: slideDown 0.3s ease;
+    }
+    
+    @keyframes slideDown {
+        from { opacity: 0; transform: translateY(-10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    
+    .stats-card {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 1rem;
+        text-align: center;
+    }
+    
+    .stats-number {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #3b82f6;
+        margin-bottom: 0.25rem;
+    }
+    
+    .stats-label {
+        font-size: 0.8rem;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .required {
+        color: #dc3545;
+    }
+    
+    .time-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+    
+    .weekly-days {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+    }
+    
+    .day-checkbox {
+        position: relative;
+    }
+    
+    .day-checkbox input[type="checkbox"] {
+        display: none;
+    }
+    
+    .day-checkbox label {
+        display: block;
+        padding: 0.5rem 1rem;
+        background: #f8f9fa;
+        border: 2px solid #e9ecef;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 500;
+        min-width: 70px;
+        text-align: center;
+    }
+    
+    .day-checkbox input[type="checkbox"]:checked + label {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+    
+    .preview-alert {
+        background: #e7f3ff;
+        border: 1px solid #bee5eb;
+        color: #0c5460;
+        padding: 1rem;
+        border-radius: 6px;
+        margin-top: 1rem;
+    }
+    
+    @media (max-width: 768px) {
+        .create-session-container {
+            padding: 1rem;
+        }
+        
+        .session-form-card {
+            padding: 1.5rem;
+        }
+        
+        .time-row {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="create-session-container">
+    <div class="session-form-card">
+        <div class="form-header">
+            <h2>
+                <i class="fas fa-plus-circle text-primary me-2"></i>
+                Create New Session
+            </h2>
+            <p>Schedule a new learning session for your batch</p>
+        </div>
+
+        <!-- Debug info -->
+        <div style="display: none;">
+            <p>Debug: Batches count = {{ batches|length }}</p>
+            <p>Debug: User role = {{ user.role }}</p>
+        </div>
+
+        <!-- Zoom Status -->
+        {% if zoom_configured %}
+        <div class="zoom-status zoom-configured">
+            <i class="fas fa-check-circle me-2"></i>
+            <strong>Zoom Integration Active</strong>
+        </div>
+        {% else %}
+        <div class="zoom-status zoom-not-configured">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Zoom Not Configured</strong>
+        </div>
+        {% endif %}
+
+        <form method="post" id="sessionForm">
+            {% csrf_token %}
+            
+            <div class="row">
+                <!-- Batch Selection -->
+                <div class="col-12">
+                    <div class="form-group">
+                        <label for="batch" class="form-label">
+                            Select Batch <span class="required">*</span>
+                        </label>
+                        <select class="form-select" id="batch" name="batch" required>
+                            <option value="">Choose a batch...</option>
+                            {% for batch in batches %}
+                            <option value="{{ batch.id }}" 
+                                    data-course="{{ batch.course.title }}"
+                                    data-course-code="{{ batch.course.course_code }}"
+                                    data-instructor="{{ batch.instructor.get_full_name|default:batch.instructor.username }}"
+                                    data-max-students="{{ batch.max_students }}">
+                                {{ batch.name }} - {{ batch.course.title }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Batch Info -->
+                <div class="col-12">
+                    <div id="batchInfo" class="batch-info">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="stats-card">
+                                    <div class="stats-number" id="studentCount">0</div>
+                                    <div class="stats-label">Enrolled Students</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stats-card">
+                                    <div class="stats-number" id="maxStudents">0</div>
+                                    <div class="stats-label">Max Capacity</div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="stats-card">
+                                    <div class="stats-number" id="availableSeats">0</div>
+                                    <div class="stats-label">Available Seats</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Session Title -->
+                <div class="col-12">
+                    <div class="form-group">
+                        <label for="title" class="form-label">
+                            Session Title <span class="required">*</span>
+                        </label>
+                        <input type="text" class="form-control" id="title" name="title" 
+                               placeholder="Enter session title" required maxlength="200">
+                    </div>
+                </div>
+
+                <!-- Session Type -->
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="session_type" class="form-label">Session Type</label>
+                        <select class="form-select" id="session_type" name="session_type">
+                            <option value="live_class">Live Class</option>
+                            <option value="doubt_session">Doubt Session</option>
+                            <option value="workshop">Workshop</option>
+                            <option value="exam">Online Exam</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Max Participants -->
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="max_participants" class="form-label">Max Participants</label>
+                        <input type="number" class="form-control" id="max_participants" name="max_participants" 
+                               value="100" min="1" max="500">
+                    </div>
+                </div>
+
+                <!-- Session Date -->
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label for="scheduled_date" class="form-label">
+                            Session Date <span class="required">*</span>
+                        </label>
+                        <input type="date" class="form-control" id="scheduled_date" name="scheduled_date" 
+                               min="{{ today|date:'Y-m-d' }}" required>
+                    </div>
+                </div>
+
+                <!-- Recording -->
+                <div class="col-md-6">
+                    <div class="form-group">
+                        <label class="form-label">Recording Options</label>
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="checkbox" id="is_recorded" name="is_recorded" checked>
+                            <label class="form-check-label" for="is_recorded">
+                                Enable Session Recording
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Session Schedule -->
+                <div class="col-12">
+                    <div class="form-group">
+                        <label for="recurring_type" class="form-label">Session Schedule</label>
+                        <select class="form-select" id="recurring_type" name="recurring_type">
+                            <option value="none">Single Session Only</option>
+                            <option value="daily">Daily Sessions</option>
+                            <option value="weekly">Weekly Sessions</option>
+                            <option value="custom">Custom Schedule</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Recurring Options -->
+                <div class="col-12">
+                    <div id="recurringOptions" class="recurring-panel">
+                        <h6><i class="fas fa-repeat me-2 text-primary"></i>Recurring Settings</h6>
+                        
+                        <!-- End Date -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="recurring_end_date" class="form-label">
+                                    End Date <span class="required">*</span>
+                                </label>
+                                <input type="date" class="form-control" id="recurring_end_date" name="recurring_end_date">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Total Sessions</label>
+                                <div class="form-control-plaintext fw-bold text-primary" id="totalSessionsPreview">
+                                    Select dates
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Weekly Days -->
+                        <div id="weeklyDaysSection" style="display: none;">
+                            <label class="form-label">Select Days</label>
+                            <div class="weekly-days">
+                                <div class="day-checkbox">
+                                    <input type="checkbox" id="day_1" name="weekly_days" value="1">
+                                    <label for="day_1">Mon</label>
+                                </div>
+                                <div class="day-checkbox">
+                                    <input type="checkbox" id="day_2" name="weekly_days" value="2">
+                                    <label for="day_2">Tue</label>
+                                </div>
+                                <div class="day-checkbox">
+                                    <input type="checkbox" id="day_3" name="weekly_days" value="3">
+                                    <label for="day_3">Wed</label>
+                                </div>
+                                <div class="day-checkbox">
+                                    <input type="checkbox" id="day_4" name="weekly_days" value="4">
+                                    <label for="day_4">Thu</label>
+                                </div>
+                                <div class="day-checkbox">
+                                    <input type="checkbox" id="day_5" name="weekly_days" value="5">
+                                    <label for="day_5">Fri</label>
+                                </div>
+                                <div class="day-checkbox">
+                                    <input type="checkbox" id="day_6" name="weekly_days" value="6">
+                                    <label for="day_6">Sat</label>
+                                </div>
+                                <div class="day-checkbox">
+                                    <input type="checkbox" id="day_7" name="weekly_days" value="7">
+                                    <label for="day_7">Sun</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Preview -->
+                        <div class="preview-alert" id="recurringPreview" style="display: none;">
+                            <strong>Preview:</strong> <span id="previewText"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Time Selection -->
+                <div class="col-12">
+                    <div class="form-group">
+                        <label class="form-label">
+                            Session Time <span class="required">*</span>
+                        </label>
+                        <div class="time-row">
+                            <div>
+                                <label for="start_time" class="form-label text-muted">Start Time</label>
+                                <input type="time" class="form-control" id="start_time" name="start_time" required>
+                            </div>
+                            <div>
+                                <label for="end_time" class="form-label text-muted">End Time</label>
+                                <input type="time" class="form-control" id="end_time" name="end_time" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div class="col-12">
+                    <div class="form-group">
+                        <label for="description" class="form-label">Description</label>
+                        <textarea class="form-control" id="description" name="description" 
+                                  rows="3" placeholder="Enter session description (optional)"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="text-center pt-3">
+                <button type="submit" class="btn btn-create me-3">
+                    <i class="fas fa-plus me-2"></i>Create Session
+                </button>
+                <a href="{% url 'zoom:session_list' %}" class="btn btn-secondary">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+console.log("JavaScript loaded");
+
+// Show batch info
+function showBatchInfo(selectElement) {
+    const batchInfo = document.getElementById('batchInfo');
+    const selected = selectElement.selectedOptions[0];
+    
+    if (selected && selected.value) {
+        document.getElementById('maxStudents').textContent = selected.dataset.maxStudents || '0';
+        batchInfo.classList.add('show');
+        
+        // Load batch details via API
+        fetch(`/zoom/api/batch/${selected.value}/details/`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('studentCount').textContent = data.enrolled_count || '0';
+                document.getElementById('availableSeats').textContent = data.available_seats || '0';
+            })
+            .catch(error => {
+                console.log('API error:', error);
+                document.getElementById('studentCount').textContent = '0';
+                document.getElementById('availableSeats').textContent = selected.dataset.maxStudents || '0';
+            });
+        
+        // Auto-fill title
+        const titleInput = document.getElementById('title');
+        if (!titleInput.value) {
+            const courseCode = selected.dataset.courseCode || selected.dataset.course;
+            const sessionType = document.getElementById('session_type').selectedOptions[0].text;
+            titleInput.value = `${courseCode} - ${sessionType}`;
+        }
+    } else {
+        batchInfo.classList.remove('show');
+    }
+}
+
+// Toggle recurring options
+function toggleRecurringOptions() {
+    const recurringType = document.getElementById('recurring_type').value;
+    const recurringOptions = document.getElementById('recurringOptions');
+    const weeklyDaysSection = document.getElementById('weeklyDaysSection');
+    const endDateField = document.getElementById('recurring_end_date');
+    
+    if (recurringType === 'none') {
+        recurringOptions.classList.remove('show');
+        endDateField.required = false;
+    } else {
+        recurringOptions.classList.add('show');
+        endDateField.required = true;
+        
+        if (recurringType === 'weekly') {
+            weeklyDaysSection.style.display = 'block';
+        } else {
+            weeklyDaysSection.style.display = 'none';
+        }
+        
+        updateRecurringPreview();
+    }
+}
+
+// Update recurring preview
+function updateRecurringPreview() {
+    const recurringType = document.getElementById('recurring_type').value;
+    const startDate = document.getElementById('scheduled_date').value;
+    const endDate = document.getElementById('recurring_end_date').value;
+    const previewText = document.getElementById('previewText');
+    const totalSessionsPreview = document.getElementById('totalSessionsPreview');
+    const recurringPreview = document.getElementById('recurringPreview');
+    
+    if (!startDate || !endDate || recurringType === 'none') {
+        recurringPreview.style.display = 'none';
+        totalSessionsPreview.textContent = 'Select dates';
+        return;
+    }
+    
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    if (start >= end) {
+        previewText.textContent = 'End date must be after start date';
+        recurringPreview.style.display = 'block';
+        return;
+    }
+    
+    let sessionsCount = 0;
+    let previewMessage = '';
+    
+    if (recurringType === 'daily') {
+        const diffTime = Math.abs(end - start);
+        sessionsCount = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        previewMessage = `${sessionsCount} daily sessions`;
+    } else if (recurringType === 'weekly') {
+        const selectedDays = Array.from(document.querySelectorAll('input[name="weekly_days"]:checked'));
+        if (selectedDays.length > 0) {
+            // Simple calculation - can be refined
+            const weeks = Math.ceil((end - start) / (1000 * 60 * 60 * 24 * 7));
+            sessionsCount = weeks * selectedDays.length;
+            previewMessage = `~${sessionsCount} weekly sessions`;
+        } else {
+            previewMessage = 'Select days first';
+        }
+    }
+    
+    previewText.textContent = previewMessage;
+    totalSessionsPreview.textContent = sessionsCount > 0 ? `${sessionsCount} sessions` : 'Calculate...';
+    recurringPreview.style.display = 'block';
+}
+
+// Event listeners
+document.addEventListener('DOMContentLoaded', function() {
+    console.log("DOM loaded, setting up events");
+    
+    // Batch selection
+    const batchSelect = document.getElementById('batch');
+    if (batchSelect) {
+        batchSelect.addEventListener('change', function() {
+            showBatchInfo(this);
+        });
+    }
+    
+    // Recurring type
+    const recurringSelect = document.getElementById('recurring_type');
+    if (recurringSelect) {
+        recurringSelect.addEventListener('change', toggleRecurringOptions);
+    }
+    
+    // Date changes
+    const scheduledDate = document.getElementById('scheduled_date');
+    const endDate = document.getElementById('recurring_end_date');
+    
+    if (scheduledDate) {
+        scheduledDate.addEventListener('change', function() {
+            if (endDate && this.value) {
+                const nextDay = new Date(this.value);
+                nextDay.setDate(nextDay.getDate() + 1);
+                endDate.min = nextDay.toISOString().split('T')[0];
+            }
+            updateRecurringPreview();
+        });
+    }
+    
+    if (endDate) {
+        endDate.addEventListener('change', updateRecurringPreview);
+    }
+    
+    // Weekly days
+    const weeklyDays = document.querySelectorAll('input[name="weekly_days"]');
+    weeklyDays.forEach(checkbox => {
+        checkbox.addEventListener('change', updateRecurringPreview);
+    });
+    
+    // Auto-set end time
+    const startTime = document.getElementById('start_time');
+    const endTimeInput = document.getElementById('end_time');
+    
+    if (startTime && endTimeInput) {
+        startTime.addEventListener('change', function() {
+            if (this.value && !endTimeInput.value) {
+                const start = new Date(`2000-01-01T${this.value}`);
+                start.setHours(start.getHours() + 1);
+                endTimeInput.value = start.toTimeString().slice(0, 5);
+            }
+        });
+    }
+    
+    // Form validation
+    const form = document.getElementById('sessionForm');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const startTime = document.getElementById('start_time').value;
+            const endTime = document.getElementById('end_time').value;
+            const recurringType = document.getElementById('recurring_type').value;
+            
+            // Time validation
+            if (startTime && endTime && startTime >= endTime) {
+                e.preventDefault();
+                alert('End time must be after start time.');
+                return false;
+            }
+            
+            // Recurring validation
+            if (recurringType !== 'none') {
+                const endDate = document.getElementById('recurring_end_date').value;
+                if (!endDate) {
+                    e.preventDefault();
+                    alert('Please select end date for recurring sessions.');
+                    return false;
+                }
+                
+                if (recurringType === 'weekly') {
+                    const selectedDays = document.querySelectorAll('input[name="weekly_days"]:checked');
+                    if (selectedDays.length === 0) {
+                        e.preventDefault();
+                        alert('Please select at least one day for weekly sessions.');
+                        return false;
+                    }
+                }
+            }
+            
+            // Show loading
+            const submitBtn = this.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating...';
+                submitBtn.disabled = true;
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

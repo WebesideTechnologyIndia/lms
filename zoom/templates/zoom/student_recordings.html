@@ -1,0 +1,181 @@
+{% extends 'students/student_base.html' %}
+{% load static %}
+
+{% block title %}My Recordings - Student Panel{% endblock %}
+{% block page_title %}Session Recordings{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="bg-gradient-success text-white p-4 rounded-3">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h2 class="mb-2">
+                        <i class="fas fa-play-circle me-2"></i>
+                        My Session Recordings
+                    </h2>
+                    <p class="mb-0 opacity-75">
+                        Access and watch recordings of your completed sessions
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <h3 class="mb-1">{{ recordings.count }}</h3>
+                    <small>Total Recordings</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Filter by Batch</label>
+                <select class="form-select" name="batch" onchange="this.form.submit()">
+                    <option value="">All Batches</option>
+                    {% for batch in student_batches %}
+                        <option value="{{ batch.id }}" {% if batch_filter == batch.id|stringformat:"s" %}selected{% endif %}>
+                            {{ batch.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <a href="{% url 'zoom:student_recordings' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-redo me-2"></i>Clear Filters
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Recordings Grid -->
+{% if recordings %}
+    <div class="row">
+        {% for recording in recordings %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card h-100 recording-card">
+                <!-- Thumbnail/Preview -->
+                <div class="card-img-top bg-dark d-flex align-items-center justify-content-center text-white position-relative" 
+                     style="height: 180px;">
+                    <i class="fas fa-play-circle fa-4x opacity-75"></i>
+                    <div class="position-absolute top-0 start-0 m-2">
+                        <span class="badge bg-success">
+                            <i class="fas fa-video me-1"></i>Recording
+                        </span>
+                    </div>
+                    <div class="position-absolute top-0 end-0 m-2">
+                        <span class="badge bg-dark">{{ recording.file_size|filesizeformat }}</span>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <!-- Session Info -->
+                    <div class="mb-2">
+                        <span class="badge bg-primary">{{ recording.session.batch.name }}</span>
+                    </div>
+                    
+                    <h5 class="card-title mb-2">{{ recording.session.title }}</h5>
+                    
+                    <p class="card-text small text-muted mb-3">
+                        {{ recording.session.description|truncatewords:15 }}
+                    </p>
+
+                    <!-- Recording Details -->
+                    <div class="mb-3">
+                        <p class="mb-1 small">
+                            <i class="fas fa-calendar text-muted me-2"></i>
+                            <strong>Recorded:</strong> {{ recording.recording_start|date:"M d, Y" }}
+                        </p>
+                        <p class="mb-1 small">
+                            <i class="fas fa-clock text-muted me-2"></i>
+                            <strong>Time:</strong> {{ recording.recording_start|time:"g:i A" }}
+                        </p>
+                        <p class="mb-0 small">
+                            <i class="fas fa-film text-muted me-2"></i>
+                            <strong>Type:</strong> {{ recording.recording_type|title }}
+                        </p>
+                    </div>
+
+                    <!-- View Count -->
+                    {% if recording.view_count > 0 %}
+                    <div class="mb-3">
+                        <small class="text-muted">
+                            <i class="fas fa-eye me-1"></i>
+                            Viewed {{ recording.view_count }} time{{ recording.view_count|pluralize }}
+                        </small>
+                    </div>
+                    {% endif %}
+
+                    <!-- Actions -->
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'zoom:play_recording' recording.id %}" 
+                           class="btn btn-success" target="_blank">
+                            <i class="fas fa-play me-2"></i>Watch Recording
+                        </a>
+                        <a href="{% url 'zoom:student_session_detail' recording.session.id %}" 
+                           class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-info-circle me-1"></i>Session Details
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Card Footer -->
+                <div class="card-footer bg-transparent">
+                    <small class="text-muted">
+                        <i class="fas fa-user-tie me-1"></i>
+                        {{ recording.session.batch.instructor.get_full_name }}
+                    </small>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <!-- Empty State -->
+    <div class="text-center py-5">
+        <i class="fas fa-video-slash fa-4x text-muted mb-4"></i>
+        <h4 class="text-muted mb-3">No Recordings Available</h4>
+        <p class="text-muted mb-4">
+            {% if batch_filter %}
+                No recordings found for the selected batch.
+            {% else %}
+                Recordings will appear here once your sessions are completed and recorded.
+            {% endif %}
+        </p>
+        {% if batch_filter %}
+            <a href="{% url 'zoom:student_recordings' %}" class="btn btn-primary">
+                <i class="fas fa-list me-2"></i>View All Recordings
+            </a>
+        {% else %}
+            <a href="{% url 'zoom:student_sessions_browse' %}" class="btn btn-primary">
+                <i class="fas fa-video me-2"></i>View My Sessions
+            </a>
+        {% endif %}
+    </div>
+{% endif %}
+
+<style>
+.bg-gradient-success {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+}
+
+.recording-card {
+    transition: all 0.3s ease;
+    border: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.recording-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
+
+.card-img-top {
+    border-radius: 8px 8px 0 0;
+}
+</style>
+{% endblock %}

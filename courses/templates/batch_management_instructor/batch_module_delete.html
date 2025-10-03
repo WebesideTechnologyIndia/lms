@@ -1,0 +1,375 @@
+<!-- templates/batch_management_instructor/batch_module_delete.html -->
+{% extends 'instructor_base.html' %}
+{% load static %}
+
+{% block title %}Delete Module - Instructor Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+.danger-header {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+}
+
+.warning-card {
+    border-left: 5px solid #ffc107;
+    background: linear-gradient(135deg, #fff8e1 0%, #fffbf0 100%);
+}
+
+.danger-card {
+    border-left: 5px solid #dc3545;
+    background: linear-gradient(135deg, #ffebee 0%, #fef5f5 100%);
+}
+
+.module-info-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: none;
+    border-radius: 10px;
+}
+
+.btn-delete {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-delete:hover {
+    background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(220,53,69,0.3);
+}
+
+.lesson-item {
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 12px 15px;
+    margin-bottom: 8px;
+    transition: all 0.3s ease;
+}
+
+.lesson-item:hover {
+    border-color: #adb5bd;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.impact-badge {
+    font-size: 0.75rem;
+    padding: 0.375rem 0.75rem;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-7">
+            
+            <!-- Page Header -->
+            <div class="danger-header text-center">
+                <h2 class="mb-2">
+                    <i class="bi bi-exclamation-triangle me-2"></i>Delete Module
+                </h2>
+                <p class="mb-0 opacity-75">Permanently remove module from batch</p>
+            </div>
+
+            <!-- Module Information -->
+            <div class="card module-info-card shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h6 class="text-muted mb-1">Module to be deleted:</h6>
+                            <h4 class="mb-2 text-dark">{{ module.title }}</h4>
+                            <div class="d-flex gap-3 flex-wrap">
+                                <span class="badge bg-primary">{{ batch.name }}</span>
+                                <span class="badge bg-secondary">{{ course.course_code }}</span>
+                                <span class="badge bg-info">
+                                    <i class="bi bi-hash me-1"></i>Order: {{ module.order }}
+                                </span>
+                                <span class="badge bg-warning text-dark">
+                                    <i class="bi bi-play-circle me-1"></i>{{ module.lessons.count }} lessons
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <span class="text-muted small">Created:</span>
+                            <br>
+                            <span class="fs-6">{{ module.created_at|date:"M d, Y" }}</span>
+                        </div>
+                    </div>
+                    
+                    {% if module.description %}
+                    <hr class="my-3">
+                    <div class="text-muted">
+                        <strong>Description:</strong><br>
+                        {{ module.description|truncatewords:30 }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Warning Messages -->
+            <div class="card warning-card shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-exclamation-triangle text-warning fs-3 me-3 flex-shrink-0"></i>
+                        <div>
+                            <h5 class="text-warning mb-2">Warning: This Action Cannot Be Undone</h5>
+                            <p class="mb-0">
+                                Deleting this module will permanently remove it from the batch. 
+                                All lessons within this module will also be deleted. This action cannot be reversed.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Impact Assessment -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-graph-up me-2"></i>Impact Assessment
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-primary mb-3">What will be deleted:</h6>
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <i class="bi bi-collection text-danger me-2"></i>
+                                    <strong>1 Module:</strong> {{ module.title }}
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-play-circle text-danger me-2"></i>
+                                    <strong>{{ module.lessons.count }} Lesson{{ module.lessons.count|pluralize }}:</strong> 
+                                    All content within this module
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-person-check text-warning me-2"></i>
+                                    <strong>Student Progress:</strong> Any progress tracking for these lessons
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-success mb-3">What will remain:</h6>
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <i class="bi bi-people text-success me-2"></i>
+                                    <strong>Student Enrollments:</strong> Unchanged
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-collection text-success me-2"></i>
+                                    <strong>Other Modules:</strong> Not affected
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-book text-success me-2"></i>
+                                    <strong>Main Course:</strong> Remains unchanged
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lessons to be Deleted -->
+            {% if module.lessons.exists %}
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-list me-2"></i>Lessons That Will Be Deleted
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        The following {{ module.lessons.count }} lesson{{ module.lessons.count|pluralize }} will be permanently deleted:
+                    </p>
+                    
+                    <div class="lesson-list" style="max-height: 300px; overflow-y: auto;">
+                        {% for lesson in module.lessons.all %}
+                        <div class="lesson-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">{{ lesson.title }}</h6>
+                                    <p class="text-muted small mb-2">{{ lesson.description|truncatewords:15 }}</p>
+                                    <div class="d-flex gap-2">
+                                        <span class="badge bg-light text-dark">Order: {{ lesson.order }}</span>
+                                        <span class="badge bg-primary">{{ lesson.get_lesson_type_display }}</span>
+                                    </div>
+                                </div>
+                                <span class="impact-badge badge bg-danger">
+                                    <i class="bi bi-trash me-1"></i>Will Delete
+                                </span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Student Impact -->
+            <div class="card danger-card shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-people text-danger fs-3 me-3 flex-shrink-0"></i>
+                        <div>
+                            <h5 class="text-danger mb-2">Student Impact</h5>
+                            <p class="mb-2">
+                                <strong>{{ batch.get_enrolled_count }} enrolled student{{ batch.get_enrolled_count|pluralize }}</strong> 
+                                will lose access to this module and all its lessons.
+                            </p>
+                            {% if batch.get_enrolled_count > 0 %}
+                            <div class="alert alert-light border border-danger mb-0">
+                                <small>
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    Consider notifying students about this change or providing alternative materials.
+                                </small>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Confirmation Form -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-check-square me-2"></i>Confirm Deletion
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        To confirm deletion, please type the module title exactly as shown: 
+                        <strong>"{{ module.title }}"</strong>
+                    </p>
+                    
+                    <form method="post" id="deleteForm">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <div class="form-floating">
+                                <input type="text" class="form-control" id="confirmText" 
+                                       placeholder="Type module title to confirm" 
+                                       data-expected="{{ module.title }}" autocomplete="off">
+                                <label for="confirmText">Type module title to confirm</label>
+                            </div>
+                            <div class="form-text text-danger">
+                                <i class="bi bi-exclamation-circle me-1"></i>
+                                This confirmation helps prevent accidental deletions.
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{% url 'instructor:batch_detail' course.id batch.id %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-2"></i>Cancel & Go Back
+                            </a>
+                            
+                            <button type="submit" class="btn btn-delete text-white" id="deleteButton" disabled>
+                                <i class="bi bi-trash me-2"></i>Delete Module Forever
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Alternative Actions -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0 text-muted">
+                        <i class="bi bi-lightbulb me-2"></i>Alternative Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-primary">Instead of deleting, you could:</h6>
+                            <ul class="list-unstyled">
+                                <li class="mb-2">
+                                    <i class="bi bi-eye-slash text-muted me-2"></i>
+                                    Mark module as inactive (coming soon)
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-pencil text-muted me-2"></i>
+                                    Edit module content and title
+                                </li>
+                                <li class="mb-2">
+                                    <i class="bi bi-arrow-up-down text-muted me-2"></i>
+                                    Reorder module position
+                                </li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="alert alert-info mb-0">
+                                <small>
+                                    <i class="bi bi-info-circle me-1"></i>
+                                    <strong>Pro Tip:</strong> Consider editing the module instead of deleting it. 
+                                    You can always update the content to better serve your students.
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmInput = document.getElementById('confirmText');
+    const deleteButton = document.getElementById('deleteButton');
+    const deleteForm = document.getElementById('deleteForm');
+    const expectedText = confirmInput.dataset.expected;
+    
+    // Enable delete button only when correct text is entered
+    confirmInput.addEventListener('input', function() {
+        const isMatch = this.value.trim() === expectedText;
+        deleteButton.disabled = !isMatch;
+        
+        if (isMatch) {
+            confirmInput.classList.remove('is-invalid');
+            confirmInput.classList.add('is-valid');
+            deleteButton.classList.remove('btn-outline-danger');
+            deleteButton.classList.add('btn-delete');
+        } else {
+            confirmInput.classList.remove('is-valid');
+            if (this.value.trim().length > 0) {
+                confirmInput.classList.add('is-invalid');
+            } else {
+                confirmInput.classList.remove('is-invalid');
+            }
+            deleteButton.classList.remove('btn-delete');
+            deleteButton.classList.add('btn-outline-danger');
+        }
+    });
+    
+    // Final confirmation before submission
+    deleteForm.addEventListener('submit', function(e) {
+        if (confirmInput.value.trim() !== expectedText) {
+            e.preventDefault();
+            alert('Please type the module title exactly as shown to confirm deletion.');
+            return false;
+        }
+        
+        if (!confirm('Are you absolutely sure you want to delete this module? This action cannot be undone.')) {
+            e.preventDefault();
+            return false;
+        }
+        
+        // Show loading state
+        deleteButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Deleting...';
+        deleteButton.disabled = true;
+    });
+});
+</script>
+{% endblock %}

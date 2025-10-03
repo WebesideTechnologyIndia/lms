@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ course.title }} - Modules{% endblock %}
+
+{% block content %}
+<!-- Course Header -->
+<div class="welcome-card">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb" class="mb-2">
+                <ol class="breadcrumb text-white-50">
+                    <li class="breadcrumb-item"><a href="{% url 'courses:course_dashboard' %}" class="text-white-50">Courses</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'courses:course_detail' course.id %}" class="text-white-50">{{ course.course_code }}</a></li>
+                    <li class="breadcrumb-item active text-white">Modules</li>
+                </ol>
+            </nav>
+            <h1 class="mb-2">
+                <i class="fas fa-list me-3"></i>
+                Course Modules
+            </h1>
+            <p class="mb-0 opacity-75">{{ course.title }} - Organize your course content</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'courses:create_module' course.id %}" class="btn btn-light btn-lg">
+                <i class="fas fa-plus me-2"></i>
+                Add Module
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Course Info Summary -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-number text-primary">{{ modules.count }}</div>
+                    <div class="stats-label">Total Modules</div>
+                </div>
+                <div class="text-primary" style="font-size: 2.5rem; opacity: 0.3;">
+                    <i class="fas fa-list"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-number text-success">{{ course.get_enrolled_count }}</div>
+                    <div class="stats-label">Enrolled Students</div>
+                </div>
+                <div class="text-success" style="font-size: 2.5rem; opacity: 0.3;">
+                    <i class="fas fa-users"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-number text-info">{{ course.duration_weeks }}</div>
+                    <div class="stats-label">Duration (Weeks)</div>
+                </div>
+                <div class="text-info" style="font-size: 2.5rem; opacity: 0.3;">
+                    <i class="fas fa-calendar"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-number text-warning">{{ course.status|capfirst }}</div>
+                    <div class="stats-label">Course Status</div>
+                </div>
+                <div class="text-warning" style="font-size: 2.5rem; opacity: 0.3;">
+                    <i class="fas fa-info-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modules List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-book-open me-2"></i>
+                    Course Modules
+                </h5>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'courses:course_detail' course.id %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Course
+                    </a>
+                    <a href="{% url 'courses:create_module' course.id %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus me-1"></i>Add Module
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if modules %}
+                    <div class="row">
+                        {% for module in modules %}
+                        <div class="col-12 mb-4">
+                            <div class="card border-start border-primary border-4">
+                                <div class="card-body">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-8">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                                                    <strong>{{ module.order }}</strong>
+                                                </div>
+                                                <div>
+                                                    <h5 class="mb-1">{{ module.title }}</h5>
+                                                    {% if module.description %}
+                                                        <p class="text-muted mb-0">{{ module.description|truncatechars:100 }}</p>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="d-flex justify-content-end align-items-center">
+                                                <div class="me-3 text-end">
+                                                    <div class="small text-muted">Lessons</div>
+                                                    <div class="fw-bold">{{ module.get_lessons_count }}</div>
+                                                </div>
+                                                <div class="me-3 text-end">
+                                                    <div class="small text-muted">Status</div>
+                                                    {% if module.is_active %}
+                                                        <span class="badge bg-success">Active</span>
+                                                    {% else %}
+                                                        <span class="badge bg-secondary">Inactive</span>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="btn-group">
+                                                    <a href="{% url 'courses:module_lessons' course.id module.id %}" class="btn btn-sm btn-outline-primary" title="Manage Lessons">
+                                                        <i class="fas fa-file-alt"></i>
+                                                    </a>
+                                                    <a href="{% url 'courses:edit_module' course.id module.id %}" class="btn btn-sm btn-outline-secondary" title="Edit Module">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <a href="{% url 'courses:delete_module' course.id module.id %}" class="btn btn-sm btn-outline-danger" title="Delete Module">
+                                                        <i class="fas fa-trash"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Module Progress Bar -->
+                                    <div class="mt-3">
+                                        <div class="d-flex justify-content-between align-items-center mb-1">
+                                            <small class="text-muted">Module Progress</small>
+                                            <small class="text-muted">{{ module.get_lessons_count }} lessons</small>
+                                        </div>
+                                        <div class="progress" style="height: 6px;">
+                                            <div class="progress-bar bg-primary" role="progressbar" style="width: {% if module.get_lessons_count %}100{% else %}0{% endif %}%" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"></div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Quick Actions -->
+                                    <div class="mt-3">
+                                        <a href="{% url 'courses:module_lessons' course.id module.id %}" class="btn btn-sm btn-outline-primary me-2">
+                                            <i class="fas fa-eye me-1"></i>
+                                            View Lessons ({{ module.get_lessons_count }})
+                                        </a>
+                                        {% if module.get_lessons_count == 0 %}
+                                            <a href="{% url 'courses:create_lesson' course.id module.id %}" class="btn btn-sm btn-success">
+                                                <i class="fas fa-plus me-1"></i>
+                                                Add First Lesson
+                                            </a>
+                                        {% else %}
+                                            <a href="{% url 'courses:create_lesson' course.id module.id %}" class="btn btn-sm btn-outline-success">
+                                                <i class="fas fa-plus me-1"></i>
+                                                Add Lesson
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Reorder Modules Help -->
+                    <div class="alert alert-info mt-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Pro Tip:</strong> Modules are displayed in order. You can edit each module to change its order number for better organization.
+                    </div>
+
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-list fa-4x text-muted mb-4"></i>
+                        <h4 class="text-muted mb-3">No modules found</h4>
+                        <p class="text-muted mb-4">Get started by creating your first module to organize your course content.</p>
+                        <a href="{% url 'courses:create_module' course.id %}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-plus me-2"></i>
+                            Create First Module
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Start Guide (if no modules) -->
+{% if not modules %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-info">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    Quick Start Guide
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 text-center mb-3">
+                        <i class="fas fa-plus-circle fa-3x text-primary mb-2"></i>
+                        <h6>1. Create Module</h6>
+                        <p class="small text-muted">Start by creating your first course module</p>
+                    </div>
+                    <div class="col-md-4 text-center mb-3">
+                        <i class="fas fa-file-alt fa-3x text-success mb-2"></i>
+                        <h6>2. Add Lessons</h6>
+                        <p class="small text-muted">Add lessons with videos, text, and quizzes</p>
+                    </div>
+                    <div class="col-md-4 text-center mb-3">
+                        <i class="fas fa-rocket fa-3x text-warning mb-2"></i>
+                        <h6>3. Publish Course</h6>
+                        <p class="small text-muted">Make your course available to students</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

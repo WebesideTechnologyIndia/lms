@@ -1,0 +1,571 @@
+{% extends 'webinars/base.html' %}
+
+{% block title %}{{ webinar.title }} - Webinar Details{% endblock %}
+
+{% block breadcrumb %}
+<div class="container">
+    <div class="webinar-breadcrumb">
+        <nav aria-label="breadcrumb">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'webinars:webinar_landing' %}">Home</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'webinars:webinar_list' %}">All Webinars</a></li>
+                <li class="breadcrumb-item active">{{ webinar.title|truncatechars:30 }}</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Webinar Header -->
+            <div class="webinar-header-card mb-4">
+                {% if webinar.thumbnail %}
+                    <img src="{{ webinar.thumbnail.url }}" class="webinar-detail-image" alt="{{ webinar.title }}">
+                {% else %}
+                    <div class="webinar-detail-placeholder">
+                        <i class="fas fa-video"></i>
+                        <h3>{{ webinar.title }}</h3>
+                    </div>
+                {% endif %}
+                
+                <div class="webinar-header-content">
+                    <div class="webinar-badges mb-3">
+                        {% if webinar.webinar_type == 'free' %}
+                            <span class="badge bg-success fs-6">
+                                <i class="fas fa-gift me-1"></i>FREE
+                            </span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark fs-6">
+                                <i class="fas fa-rupee-sign me-1"></i>₹{{ webinar.price }}
+                            </span>
+                        {% endif %}
+                        
+                        {% if webinar.status == 'upcoming' %}
+                            <span class="badge bg-primary fs-6 ms-2">
+                                <i class="fas fa-calendar-alt me-1"></i>Upcoming
+                            </span>
+                        {% elif webinar.status == 'live' %}
+                            <span class="badge bg-danger fs-6 ms-2">
+                                <i class="fas fa-circle me-1"></i>Live Now
+                            </span>
+                        {% elif webinar.status == 'completed' %}
+                            <span class="badge bg-secondary fs-6 ms-2">
+                                <i class="fas fa-check-circle me-1"></i>Completed
+                            </span>
+                        {% endif %}
+                        
+                        {% if user_registration %}
+                            <span class="badge bg-success fs-6 ms-2">
+                                <i class="fas fa-user-check me-1"></i>You're Registered
+                            </span>
+                        {% endif %}
+                    </div>
+                    
+                    <h1 class="webinar-title">{{ webinar.title }}</h1>
+                    <p class="webinar-short-desc">{{ webinar.short_description }}</p>
+                </div>
+            </div>
+
+            <!-- Webinar Details -->
+            <div class="webinar-details-card mb-4">
+                <h3><i class="fas fa-info-circle me-2"></i>About This Webinar</h3>
+                <div class="webinar-description">
+                    {{ webinar.description|linebreaks }}
+                </div>
+            </div>
+
+            <!-- Learning Outcomes -->
+            {% if webinar.learning_outcomes %}
+            <div class="webinar-section-card mb-4">
+                <h3><i class="fas fa-graduation-cap me-2"></i>What You'll Learn</h3>
+                <div class="learning-outcomes">
+                    {{ webinar.learning_outcomes|linebreaks }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Prerequisites -->
+            {% if webinar.prerequisites %}
+            <div class="webinar-section-card mb-4">
+                <h3><i class="fas fa-list-check me-2"></i>Prerequisites</h3>
+                <div class="prerequisites">
+                    {{ webinar.prerequisites|linebreaks }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Instructor Info -->
+            <div class="instructor-card mb-4">
+                <h3><i class="fas fa-chalkboard-teacher me-2"></i>Meet Your Instructor</h3>
+                <div class="instructor-info">
+                    <div class="instructor-avatar">
+                        <i class="fas fa-user"></i>
+                    </div>
+                    <div class="instructor-details">
+                        <h4>{{ webinar.instructor.get_full_name }}</h4>
+                        <p class="instructor-role">{{ webinar.instructor.get_role_display }}</p>
+                        <p class="instructor-email">
+                            <i class="fas fa-envelope me-2"></i>{{ webinar.instructor.email }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Registration Card -->
+            <div class="registration-card mb-4">
+                <div class="registration-header">
+                    <h4>
+                        {% if webinar.webinar_type == 'free' %}
+                            Join for Free
+                        {% else %}
+                            ₹{{ webinar.price }}
+                        {% endif %}
+                    </h4>
+                </div>
+                
+                <div class="registration-body">
+                    <!-- Webinar Schedule -->
+                    <div class="schedule-info mb-3">
+                        <div class="schedule-item">
+                            <i class="fas fa-calendar text-primary"></i>
+                            <div>
+                                <strong>{{ webinar.scheduled_date|date:"l, F d, Y" }}</strong>
+                                <br><small>{{ webinar.scheduled_date|date:"M d, Y" }}</small>
+                            </div>
+                        </div>
+                        
+                        <div class="schedule-item">
+                            <i class="fas fa-clock text-success"></i>
+                            <div>
+                                <strong>{{ webinar.scheduled_date|time:"h:i A" }}</strong>
+                                <br><small>{{ webinar.duration_minutes }} minutes</small>
+                            </div>
+                        </div>
+                        
+                        <div class="schedule-item">
+                            <i class="fas fa-users text-warning"></i>
+                            <div>
+                                <strong>{{ webinar.get_available_spots }} spots left</strong>
+                                <br><small>{{ webinar.total_registrations }} registered</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Registration Actions -->
+                    <div class="registration-actions">
+                        {% if user.is_authenticated %}
+                            {% if user_registration %}
+                                <!-- Already Registered -->
+                                <div class="alert alert-success">
+                                    <i class="fas fa-check-circle me-2"></i>
+                                    <strong>You're registered!</strong><br>
+                                    <small>Registered on {{ user_registration.registered_at|date:"M d, Y" }}</small>
+                                </div>
+                                
+                                {% if webinar.webinar_link %}
+                                <a href="{{ webinar.webinar_link }}" target="_blank" class="btn btn-primary w-100 mb-2">
+                                    <i class="fas fa-external-link-alt me-2"></i>Join Webinar
+                                </a>
+                                {% endif %}
+                                
+                                <a href="{% url 'webinars:my_webinars' %}" class="btn btn-outline-primary w-100">
+                                    <i class="fas fa-video me-2"></i>View My Webinars
+                                </a>
+                            {% else %}
+                                <!-- Registration Available -->
+                                {% if can_register %}
+                                    <a href="{% url 'webinars:webinar_register' webinar.slug %}" class="btn btn-primary w-100 btn-lg">
+                                        <i class="fas fa-user-plus me-2"></i>Register Now
+                                    </a>
+                                    <small class="text-muted mt-2 d-block text-center">
+                                        {% if webinar.webinar_type == 'free' %}
+                                            Free registration • No credit card required
+                                        {% else %}
+                                            Secure payment • Instant access
+                                        {% endif %}
+                                    </small>
+                                {% else %}
+                                    <div class="alert alert-warning">
+                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                        <strong>Registration Closed</strong><br>
+                                        <small>
+                                            {% if webinar.status == 'completed' %}
+                                                This webinar has been completed.
+                                            {% elif webinar.get_available_spots <= 0 %}
+                                                No spots available.
+                                            {% else %}
+                                                Registration deadline has passed.
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                {% endif %}
+                            {% endif %}
+                        {% else %}
+                            <!-- Login Required -->
+                            <a href="/login/?next={{ request.path }}" class="btn btn-primary w-100 btn-lg">
+                                <i class="fas fa-sign-in-alt me-2"></i>Login to Register
+                            </a>
+                            <small class="text-muted mt-2 d-block text-center">
+                                Don't have an account? <a href="/register/">Sign up</a>
+                            </small>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Webinar Info Card -->
+            <div class="info-card mb-4">
+                <h5><i class="fas fa-info-circle me-2"></i>Webinar Information</h5>
+                <div class="info-list">
+                    <div class="info-item">
+                        <i class="fas fa-tag"></i>
+                        <span>Category: {{ webinar.category.name }}</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-globe"></i>
+                        <span>Language: English</span>
+                    </div>
+                    <div class="info-item">
+                        <i class="fas fa-desktop"></i>
+                        <span>Platform: Online</span>
+                    </div>
+                    {% if webinar.max_attendees %}
+                    <div class="info-item">
+                        <i class="fas fa-users"></i>
+                        <span>Max Participants: {{ webinar.max_attendees }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Share Card -->
+            <div class="share-card">
+                <h5><i class="fas fa-share-alt me-2"></i>Share This Webinar</h5>
+                <div class="share-buttons">
+                    <a href="https://twitter.com/intent/tweet?text={{ webinar.title|urlencode }}&url={{ request.build_absolute_uri }}" 
+                       target="_blank" class="btn btn-outline-info btn-sm">
+                        <i class="fab fa-twitter"></i>
+                    </a>
+                    <a href="https://www.facebook.com/sharer/sharer.php?u={{ request.build_absolute_uri }}" 
+                       target="_blank" class="btn btn-outline-primary btn-sm">
+                        <i class="fab fa-facebook"></i>
+                    </a>
+                    <a href="https://www.linkedin.com/sharing/share-offsite/?url={{ request.build_absolute_uri }}" 
+                       target="_blank" class="btn btn-outline-success btn-sm">
+                        <i class="fab fa-linkedin"></i>
+                    </a>
+                    <button class="btn btn-outline-secondary btn-sm" onclick="copyToClipboard()">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Related Webinars -->
+    {% if related_webinars %}
+    <div class="row mt-5">
+        <div class="col-12">
+            <h3><i class="fas fa-lightbulb me-2"></i>You Might Also Like</h3>
+            <div class="row mt-4">
+                {% for related in related_webinars %}
+                <div class="col-md-4 mb-4">
+                    <div class="related-webinar-card">
+                        {% if related.thumbnail %}
+                            <img src="{{ related.thumbnail.url }}" class="related-image" alt="{{ related.title }}">
+                        {% else %}
+                            <div class="related-image-placeholder">
+                                <i class="fas fa-video"></i>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="related-content">
+                            <h6>{{ related.title|truncatechars:50 }}</h6>
+                            <p class="text-muted small">{{ related.short_description|truncatechars:80 }}</p>
+                            <div class="related-meta">
+                                <small class="text-primary">
+                                    <i class="fas fa-calendar me-1"></i>{{ related.scheduled_date|date:"M d" }}
+                                </small>
+                                <small class="text-success ms-2">
+                                    {% if related.webinar_type == 'free' %}FREE{% else %}₹{{ related.price }}{% endif %}
+                                </small>
+                            </div>
+                            <a href="{% url 'webinars:webinar_detail' related.slug %}" class="btn btn-outline-primary btn-sm mt-2">
+                                View Details
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function copyToClipboard() {
+        navigator.clipboard.writeText(window.location.href).then(function() {
+            alert('Link copied to clipboard!');
+        });
+    }
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .webinar-header-card {
+        background: white;
+        border-radius: 15px;
+        overflow: hidden;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .webinar-detail-image {
+        width: 100%;
+        height: 300px;
+        object-fit: cover;
+    }
+    
+    .webinar-detail-placeholder {
+        width: 100%;
+        height: 300px;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        text-align: center;
+    }
+    
+    .webinar-detail-placeholder i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+    }
+    
+    .webinar-header-content {
+        padding: 2rem;
+    }
+    
+    .webinar-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #333;
+        margin-bottom: 1rem;
+    }
+    
+    .webinar-short-desc {
+        font-size: 1.2rem;
+        color: #6c757d;
+        margin-bottom: 0;
+    }
+    
+    .webinar-details-card,
+    .webinar-section-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .webinar-details-card h3,
+    .webinar-section-card h3 {
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+    }
+    
+    .instructor-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .instructor-card h3 {
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+    }
+    
+    .instructor-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .instructor-avatar {
+        width: 60px;
+        height: 60px;
+        background: var(--primary-color);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+    }
+    
+    .instructor-details h4 {
+        margin-bottom: 0.5rem;
+        color: #333;
+    }
+    
+    .instructor-role {
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .instructor-email {
+        color: #6c757d;
+        margin-bottom: 0;
+    }
+    
+    .registration-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        overflow: hidden;
+        position: sticky;
+        top: 20px;
+    }
+    
+    .registration-header {
+        background: var(--primary-color);
+        color: white;
+        padding: 1.5rem;
+        text-align: center;
+    }
+    
+    .registration-header h4 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+    
+    .registration-body {
+        padding: 1.5rem;
+    }
+    
+    .schedule-info {
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1rem;
+        background: #f8f9fa;
+    }
+    
+    .schedule-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .schedule-item:last-child {
+        margin-bottom: 0;
+    }
+    
+    .schedule-item i {
+        font-size: 1.2rem;
+        width: 20px;
+    }
+    
+    .info-card,
+    .share-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .info-card h5,
+    .share-card h5 {
+        color: var(--primary-color);
+        font-weight: 600;
+        margin-bottom: 1rem;
+    }
+    
+    .info-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.75rem;
+        color: #6c757d;
+    }
+    
+    .info-item i {
+        width: 16px;
+        color: var(--primary-color);
+    }
+    
+    .share-buttons {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .related-webinar-card {
+        background: white;
+        border-radius: 10px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.3s ease;
+        height: 100%;
+    }
+    
+    .related-webinar-card:hover {
+        transform: translateY(-3px);
+    }
+    
+    .related-image {
+        width: 100%;
+        height: 150px;
+        object-fit: cover;
+    }
+    
+    .related-image-placeholder {
+        width: 100%;
+        height: 150px;
+        background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 2rem;
+    }
+    
+    .related-content {
+        padding: 1rem;
+    }
+    
+    .related-meta {
+        margin-top: 0.5rem;
+    }
+    
+    @media (max-width: 768px) {
+        .webinar-title {
+            font-size: 2rem;
+        }
+        
+        .instructor-info {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .registration-card {
+            position: static;
+        }
+    }
+</style>
+{% endblock %}

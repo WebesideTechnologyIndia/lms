@@ -1,0 +1,346 @@
+<!-- templates/batch_management_instructor/batch_module_form.html -->
+{% extends 'instructor_base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - Instructor Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+.step-header {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+}
+
+.form-floating .form-control:focus {
+    border-color: #28a745;
+    box-shadow: 0 0 0 0.2rem rgba(40,167,69,0.25);
+}
+
+.btn-create {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-create:hover {
+    background: linear-gradient(135deg, #218838 0%, #1aa085 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.batch-info-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: none;
+    border-radius: 10px;
+}
+
+.add-to-course-option {
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #fff;
+}
+
+.add-to-course-option:hover {
+    border-color: #007bff;
+    background-color: #f8f9ff;
+}
+
+.add-to-course-option.selected {
+    border-color: #007bff;
+    background-color: #e7f3ff;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-7">
+            
+            <!-- Page Header -->
+            <div class="step-header text-center">
+                <h2 class="mb-2">
+                    <i class="bi bi-collection me-2"></i>{{ page_title }}
+                </h2>
+                <p class="mb-0 opacity-75">Add a new module to {{ batch.name }}</p>
+            </div>
+
+            <!-- Batch Information -->
+            <div class="card batch-info-card shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h6 class="text-muted mb-1">Creating module for:</h6>
+                            <h5 class="mb-2 text-dark">{{ batch.name }}</h5>
+                            <div class="d-flex gap-3">
+                                <span class="badge bg-primary">{{ course.course_code }}</span>
+                                <span class="badge bg-info">
+                                    <i class="bi bi-collection me-1"></i>
+                                    {{ batch.batch_modules.count }} modules
+                                </span>
+                                <span class="badge bg-success">
+                                    <i class="bi bi-people me-1"></i>
+                                    {{ batch.get_enrolled_count }} students
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <span class="text-muted small">Batch Status:</span>
+                            <br>
+                            <span class="badge bg-{{ batch.status|yesno:'success,warning,danger' }} fs-6">
+                                {{ batch.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <form method="post" action="{{ submit_url }}">
+                {% csrf_token %}
+                
+                <!-- Module Details -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-info-circle me-2"></i>Module Information
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <div class="form-floating">
+                                    {{ form.title }}
+                                    <label for="{{ form.title.id_for_label }}">Module Title *</label>
+                                </div>
+                                {% if form.title.errors %}
+                                    <div class="text-danger small mt-1">{{ form.title.errors.0 }}</div>
+                                {% endif %}
+                                <div class="form-text">Example: "Introduction to Programming", "Advanced Concepts"</div>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <div class="form-floating">
+                                    {{ form.order }}
+                                    <label for="{{ form.order.id_for_label }}">Order/Position</label>
+                                </div>
+                                {% if form.order.errors %}
+                                    <div class="text-danger small mt-1">{{ form.order.errors.0 }}</div>
+                                {% endif %}
+                                <div class="form-text">Module sequence number</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-floating">
+                                {{ form.description }}
+                                <label for="{{ form.description.id_for_label }}">Module Description</label>
+                            </div>
+                            {% if form.description.errors %}
+                                <div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">Describe what this module covers and learning objectives</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add to Course Option -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-plus-circle me-2"></i>Additional Options
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">Would you like to add this module to the main course curriculum as well?</p>
+                        
+                        <div class="add-to-course-option mb-3" onclick="toggleAddToCourse(false)">
+                            <div class="d-flex align-items-start">
+                                <input type="radio" name="add_to_course_choice" value="no" 
+                                       class="form-check-input me-3 mt-1" checked>
+                                <div>
+                                    <h6 class="text-primary mb-2">
+                                        <i class="bi bi-collection me-2"></i>Batch Only
+                                    </h6>
+                                    <p class="text-muted mb-0">
+                                        Add this module only to the current batch. 
+                                        It won't appear in the main course curriculum.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="add-to-course-option" onclick="toggleAddToCourse(true)">
+                            <div class="d-flex align-items-start">
+                                <input type="radio" name="add_to_course_choice" value="yes" 
+                                       class="form-check-input me-3 mt-1">
+                                <div>
+                                    <h6 class="text-success mb-2">
+                                        <i class="bi bi-plus-square me-2"></i>Add to Main Course
+                                    </h6>
+                                    <p class="text-muted mb-2">
+                                        Add this module to both the batch and the main course curriculum. 
+                                        Future batches will automatically include this module.
+                                    </p>
+                                    <span class="badge bg-warning">
+                                        <i class="bi bi-exclamation-triangle me-1"></i>Affects all future batches
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Hidden field for the actual form -->
+                        <input type="hidden" name="add_to_course" id="add_to_course_hidden" value="">
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{% url 'courses:instructor_batch_detail' course.id batch.id %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-2"></i>Back to Batch
+                            </a>
+                            
+                            <div>
+                                <button type="button" class="btn btn-outline-primary me-2" onclick="previewModule()">
+                                    <i class="bi bi-eye me-2"></i>Preview
+                                </button>
+                                <button type="submit" class="btn btn-create text-white">
+                                    <i class="bi bi-check-circle me-2"></i>Create Module
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Module Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="previewContent">
+                <!-- Dynamic content will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" onclick="submitForm()">Create Module</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set default selection
+    toggleAddToCourse(false);
+    
+    // Form validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        if (!validateForm()) {
+            e.preventDefault();
+        }
+    });
+});
+
+function toggleAddToCourse(addToCourse) {
+    const options = document.querySelectorAll('.add-to-course-option');
+    const radios = document.querySelectorAll('input[name="add_to_course_choice"]');
+    const hiddenField = document.getElementById('add_to_course_hidden');
+    
+    // Clear all selections
+    options.forEach(opt => opt.classList.remove('selected'));
+    
+    // Set selection
+    if (addToCourse) {
+        radios[1].checked = true;
+        options[1].classList.add('selected');
+        hiddenField.value = 'on';
+    } else {
+        radios[0].checked = true;
+        options[0].classList.add('selected');
+        hiddenField.value = '';
+    }
+}
+
+function validateForm() {
+    const title = document.getElementById('id_title').value.trim();
+    const description = document.getElementById('id_description').value.trim();
+    
+    if (!title) {
+        alert('Please enter a module title');
+        return false;
+    }
+    
+    if (!description) {
+        alert('Please enter a module description');
+        return false;
+    }
+    
+    return true;
+}
+
+function previewModule() {
+    if (!validateForm()) {
+        return;
+    }
+    
+    const title = document.getElementById('id_title').value;
+    const description = document.getElementById('id_description').value;
+    const order = document.getElementById('id_order').value || 'Auto';
+    const addToCourse = document.querySelector('input[name="add_to_course_choice"]:checked').value === 'yes';
+    
+    const previewContent = `
+        <div class="row">
+            <div class="col-md-8">
+                <h6 class="text-success">Module Information</h6>
+                <table class="table table-sm">
+                    <tr><td><strong>Title:</strong></td><td>${title}</td></tr>
+                    <tr><td><strong>Order:</strong></td><td>${order}</td></tr>
+                    <tr><td><strong>Batch:</strong></td><td>{{ batch.name }}</td></tr>
+                </table>
+                
+                <h6 class="text-primary mt-3">Description</h6>
+                <div class="alert alert-light">${description}</div>
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-info">Options</h6>
+                <div class="alert alert-${addToCourse ? 'warning' : 'info'} mb-0">
+                    ${addToCourse ? 
+                        '<i class="bi bi-plus-square me-2"></i>Will be added to main course' : 
+                        '<i class="bi bi-collection me-2"></i>Batch only module'
+                    }
+                </div>
+            </div>
+        </div>
+        <hr>
+        <div class="text-center">
+            <p class="text-muted mb-0">Ready to create this module?</p>
+        </div>
+    `;
+    
+    document.getElementById('previewContent').innerHTML = previewContent;
+    new bootstrap.Modal(document.getElementById('previewModal')).show();
+}
+
+function submitForm() {
+    document.querySelector('form').submit();
+}
+</script>
+{% endblock %}

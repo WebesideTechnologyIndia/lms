@@ -1,0 +1,330 @@
+{% extends 'students/student_base.html' %}
+
+{% block title %}My Exams - LMS{% endblock %}
+{% block page_title %}My Exams{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <!-- Stats Cards -->
+        <!-- Stats Cards - Updated -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Total Assigned</h6>
+                        <h3 class="mb-0">{{ total_assigned }}</h3>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-clipboard-list fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Total Attempts</h6>
+                        <h3 class="mb-0">{{ student_attempts.count }}</h3>
+                        <small class="opacity-75">Across all exams</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-edit fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Available</h6>
+                        <h3 class="mb-0">{{ available_exams|length }}</h3>
+                        <small class="opacity-75">Ready to take</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-clock fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h6 class="card-title">Completed</h6>
+                        <h3 class="mb-0">{{ total_completed }}</h3>
+                        <small class="opacity-75">Finished exams</small>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+        <!-- Available Exams -->
+       <!-- Available Exams Section - Updated to show attempt count -->
+{% if available_exams %}
+<div class="card mb-4">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0">
+            <i class="fas fa-play-circle me-2"></i>
+            Available Exams - Ready to Take
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            {% for item in available_exams %}
+            <div class="col-md-6 col-lg-4 mb-3">
+                <div class="card border-success">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h6 class="card-title text-success">{{ item.exam.title }}</h6>
+                            <span class="badge bg-success">{{ item.exam.get_exam_type_display }}</span>
+                        </div>
+                        
+                        <!-- Show attempt info for retakes -->
+                        {% if item.is_retake %}
+                        <div class="alert alert-info alert-sm mb-2">
+                            <i class="fas fa-redo"></i> 
+                            <strong>Retake:</strong> Attempt {{ item.attempt_count|add:1 }} of {{ item.max_attempts }}
+                            <br>
+                            <small>Previous attempts: {{ item.attempt_count }}</small>
+                        </div>
+                        {% endif %}
+                        
+                        <p class="card-text text-muted small">
+                            {{ item.exam.description|truncatechars:80 }}
+                        </p>
+                        
+                        <div class="exam-details mb-3">
+                            <small class="text-muted d-block">
+                                <i class="fas fa-star"></i> Total Marks: {{ item.exam.total_marks }}
+                            </small>
+                            <small class="text-muted d-block">
+                                <i class="fas fa-clock"></i> 
+                                {% if item.exam.timing_type == 'no_timing' %}
+                                    No Time Limit
+                                {% elif item.exam.timing_type == 'per_question' %}
+                                    {{ item.exam.time_per_question_minutes }} min/question
+                                {% else %}
+                                    {{ item.exam.total_exam_time_minutes }} minutes total
+                                {% endif %}
+                            </small>
+                            {% if item.exam.end_datetime %}
+                            <small class="text-danger d-block">
+                                <i class="fas fa-calendar-times"></i> Due: {{ item.exam.end_datetime|date:"M d, Y H:i" }}
+                            </small>
+                            {% endif %}
+                            
+                            <!-- Show attempts remaining -->
+                            {% if item.exam.allow_retake %}
+                            <small class="text-info d-block">
+                                <i class="fas fa-repeat"></i> 
+                                Attempts: {{ item.attempt_count }}/{{ item.max_attempts }}
+                                ({{ item.max_attempts|add:"-"|add:item.attempt_count }} remaining)
+                            </small>
+                            {% endif %}
+                        </div>
+                        
+                        <a href="{% url 'take_exam' item.exam.id %}" class="btn btn-success btn-sm w-100">
+                            {% if item.is_retake %}
+                                <i class="fas fa-redo"></i> Retake Exam
+                            {% else %}
+                                <i class="fas fa-play"></i> Start Exam
+                            {% endif %}
+                        </a>
+                        
+                        <!-- Show previous attempts if any -->
+                        {% if item.latest_attempt %}
+                        <div class="mt-2">
+                            <small class="text-muted">
+                                Last attempt: {{ item.latest_attempt.submitted_at|date:"M d, H:i" }}
+                                {% if item.latest_attempt.is_graded %}
+                                    - Score: {{ item.latest_attempt.total_marks_obtained }}/{{ item.exam.total_marks }}
+                                {% endif %}
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+        <!-- Upcoming Exams -->
+        {% if upcoming_exams %}
+        <div class="card mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    Upcoming Exams
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    {% for item in upcoming_exams %}
+                    <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="card border-warning">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="card-title text-warning">{{ item.exam.title }}</h6>
+                                    <span class="badge bg-warning text-dark">{{ item.exam.get_exam_type_display }}</span>
+                                </div>
+                                
+                                <p class="card-text text-muted small">
+                                    {{ item.exam.description|truncatechars:80 }}
+                                </p>
+                                
+                                <div class="exam-details mb-3">
+                                    <small class="text-muted d-block">
+                                        <i class="fas fa-star"></i> Total Marks: {{ item.exam.total_marks }}
+                                    </small>
+                                    {% if item.exam.start_datetime %}
+                                    <small class="text-info d-block">
+                                        <i class="fas fa-calendar-plus"></i> Starts: {{ item.exam.start_datetime|date:"M d, Y H:i" }}
+                                    </small>
+                                    {% endif %}
+                                    {% if item.exam.end_datetime %}
+                                    <small class="text-danger d-block">
+                                        <i class="fas fa-calendar-times"></i> Ends: {{ item.exam.end_datetime|date:"M d, Y H:i" }}
+                                    </small>
+                                    {% endif %}
+                                </div>
+                                
+                                <button class="btn btn-outline-warning btn-sm w-100" disabled>
+                                    <i class="fas fa-clock"></i> Not Available Yet
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Completed Exams Section - Updated to show all individual attempts -->
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+            <i class="fas fa-history me-2"></i>
+            Completed Attempts
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if completed_attempts %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Exam Title</th>
+                        <th>Type</th>
+                        <th>Attempt</th>
+                        <th>Score</th>
+                        <th>Status</th>
+                        <th>Submitted</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in completed_attempts %}
+                    <tr>
+                        <td>
+                            <strong>{{ item.exam.title }}</strong>
+                            <br>
+                            <small class="text-muted">{{ item.exam.description|truncatechars:50 }}</small>
+                        </td>
+                        <td>
+                            <span class="badge bg-secondary">{{ item.exam.get_exam_type_display }}</span>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">
+                                Attempt #{{ item.attempt_number }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if item.is_graded %}
+                                <strong class="{% if item.is_passed %}text-success{% else %}text-danger{% endif %}">
+                                    {{ item.total_marks_obtained }}/{{ item.exam.total_marks }}
+                                </strong>
+                                <br>
+                                <small class="{% if item.is_passed %}text-success{% else %}text-danger{% endif %}">
+                                    {{ item.percentage|floatformat:1 }}%
+                                </small>
+                            {% else %}
+                                <span class="text-warning">
+                                    <i class="fas fa-hourglass-half"></i> Pending
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if item.is_graded %}
+                                {% if item.is_passed %}
+                                    <span class="badge bg-success">Passed</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Failed</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="badge bg-warning">Under Review</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small class="text-muted">
+                                {{ item.submitted_at|date:"M d, Y" }}
+                                <br>
+                                {{ item.submitted_at|time:"H:i" }}
+                            </small>
+                        </td>
+                        <td>
+                            {% if item.is_graded and item.exam.show_results_immediately %}
+                                <a href="{% url 'exam_result' item.attempt.id %}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i> View Result
+                                </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center text-muted py-4">
+            <i class="fas fa-clipboard-list fa-3x mb-3 opacity-50"></i>
+            <h6>No completed attempts yet</h6>
+            <p>Complete your available exams to see results here.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+    </div>
+</div>
+
+<!-- No Exams Message -->
+{% if not available_exams and not upcoming_exams and not completed_exams %}
+<div class="text-center py-5">
+    <i class="fas fa-clipboard-list fa-4x text-muted mb-4"></i>
+    <h4 class="text-muted">No Exams Assigned</h4>
+    <p class="text-muted">You don't have any exams assigned yet. Check back later or contact your instructor.</p>
+</div>
+{% endif %}
+{% endblock %}

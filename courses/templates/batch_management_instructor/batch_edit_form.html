@@ -1,0 +1,541 @@
+<!-- templates/instructor/batch_edit_form.html -->
+{% extends 'instructor_base.html' %}
+{% load static %}
+
+{% block title %}Edit Batch - {{ batch.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.edit-header {
+    background: linear-gradient(135deg, #ffc107 0%, #ff8f00 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+}
+
+.form-floating .form-control:focus {
+    border-color: #ffc107;
+    box-shadow: 0 0 0 0.2rem rgba(255,193,7,0.25);
+}
+
+.btn-update {
+    background: linear-gradient(135deg, #ffc107 0%, #ff8f00 100%);
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-weight: 600;
+    color: #000;
+}
+
+.btn-update:hover {
+    background: linear-gradient(135deg, #ffb300 0%, #f57c00 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    color: #000;
+}
+
+.status-option {
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #fff;
+}
+
+.status-option:hover {
+    border-color: #28a745;
+    background-color: #f8fff9;
+}
+
+.status-option.selected {
+    border-color: #28a745;
+    background-color: #e8f5e8;
+}
+
+.status-option input[type="radio"] {
+    display: none;
+}
+
+.content-type-option {
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 15px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #fff;
+}
+
+.content-type-option:hover {
+    border-color: #28a745;
+    background-color: #f8fff9;
+}
+
+.content-type-option.selected {
+    border-color: #28a745;
+    background-color: #e8f5e8;
+}
+
+.info-card {
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+    color: white;
+    border-radius: 12px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-7">
+            
+            <!-- Edit Header -->
+            <div class="edit-header">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <h2 class="mb-1">
+                            <i class="bi bi-pencil-square me-2"></i>Edit Batch
+                        </h2>
+                        <p class="mb-0 opacity-75">Update settings for {{ batch.name }}</p>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-light text-dark fs-6">
+                            {{ course.title }}
+                        </span>
+                        <div class="small opacity-75 mt-1">{{ batch.code }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Breadcrumb -->
+            <nav aria-label="breadcrumb" class="mb-4">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'courses:course_dashboard' %}">
+                            <i class="bi bi-house me-1"></i>Dashboard
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'courses:instructor_batch_list' course.id %}">{{ course.title }} Batches</a>
+                    </li>
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'courses:instructor_batch_detail' course.id batch.id %}">{{ batch.name }}</a>
+                    </li>
+                    <li class="breadcrumb-item active">Edit</li>
+                </ol>
+            </nav>
+
+            <form method="post" id="editBatchForm">
+                {% csrf_token %}
+                
+                <!-- Current Batch Info -->
+                <div class="card info-card mb-4">
+                    <div class="card-body">
+                        <h6 class="mb-3">
+                            <i class="bi bi-info-circle me-2"></i>Current Batch Information
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small class="opacity-75">Created</small>
+                                <div>{{ batch.created_at|date:"M d, Y" }}</div>
+                            </div>
+                            <div class="col-md-6">
+                                <small class="opacity-75">Students Enrolled</small>
+                                <div>{{ batch.get_enrolled_count }}/{{ batch.max_students }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Basic Information -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-pencil me-2"></i>Update Batch Details
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <div class="form-floating">
+                                    {{ form.name }}
+                                    <label for="{{ form.name.id_for_label }}">Batch Name *</label>
+                                </div>
+                                {% if form.name.errors %}
+                                    <div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>
+                                {% endif %}
+                                <div class="form-text">Update the display name for this batch</div>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <div class="form-floating">
+                                    {{ form.max_students }}
+                                    <label for="{{ form.max_students.id_for_label }}">Max Students *</label>
+                                </div>
+                                {% if form.max_students.errors %}
+                                    <div class="text-danger small mt-1">{{ form.max_students.errors.0 }}</div>
+                                {% endif %}
+                                <div class="form-text">Current: {{ batch.get_enrolled_count }} enrolled</div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-floating">
+                                    {{ form.start_date }}
+                                    <label for="{{ form.start_date.id_for_label }}">Start Date *</label>
+                                </div>
+                                {% if form.start_date.errors %}
+                                    <div class="text-danger small mt-1">{{ form.start_date.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <div class="form-floating">
+                                    {{ form.end_date }}
+                                    <label for="{{ form.end_date.id_for_label }}">End Date *</label>
+                                </div>
+                                {% if form.end_date.errors %}
+                                    <div class="text-danger small mt-1">{{ form.end_date.errors.0 }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status Update - NEW SECTION -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-gear me-2"></i>Change Batch Status
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Select New Status</label>
+                            <div class="form-text mb-3">Current Status: 
+                                <span class="badge bg-{% if batch.status == 'active' %}success{% elif batch.status == 'draft' %}warning{% else %}secondary{% endif %}">
+                                    {{ batch.get_status_display }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Status Options -->
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="status-option" data-status="draft">
+                                    <input type="radio" name="status" value="draft" id="status_draft" 
+                                           {% if form.status.value == 'draft' %}checked{% endif %}>
+                                    <div class="text-center">
+                                        <i class="bi bi-file-earmark-text fs-1 text-warning mb-2 d-block"></i>
+                                        <h6 class="mb-1">Draft</h6>
+                                        <small class="text-muted">Students cannot see content</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="status-option" data-status="active">
+                                    <input type="radio" name="status" value="active" id="status_active"
+                                           {% if form.status.value == 'active' %}checked{% endif %}>
+                                    <div class="text-center">
+                                        <i class="bi bi-play-circle fs-1 text-success mb-2 d-block"></i>
+                                        <h6 class="mb-1">Active</h6>
+                                        <small class="text-muted">Students can access content</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="status-option" data-status="completed">
+                                    <input type="radio" name="status" value="completed" id="status_completed"
+                                           {% if form.status.value == 'completed' %}checked{% endif %}>
+                                    <div class="text-center">
+                                        <i class="bi bi-check-circle fs-1 text-secondary mb-2 d-block"></i>
+                                        <h6 class="mb-1">Completed</h6>
+                                        <small class="text-muted">Batch has finished</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if form.status.errors %}
+                            <div class="alert alert-danger mt-3">
+                                {{ form.status.errors.0 }}
+                            </div>
+                        {% endif %}
+
+                        <!-- Status Change Warning -->
+                        <div class="alert alert-warning mt-3" id="statusWarning" style="display: none;">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <span id="warningText"></span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Instructor Assignment - READ ONLY -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-person me-2"></i>Instructor Assignment
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-info-circle me-2 fs-5"></i>
+                                <div>
+                                    <strong>Current Instructor:</strong> {{ batch.instructor.get_full_name|default:batch.instructor.username }}
+                                    <br><small class="text-muted">Instructor cannot be changed after batch creation</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Content Type - READ ONLY -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-gear me-2"></i>Content Type
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-light">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-{% if batch.content_type == 'fresh' %}plus-circle{% else %}files{% endif %} me-2 fs-5"></i>
+                                <div>
+                                    <strong>Content Type:</strong> {{ batch.get_content_type_display }}
+                                    <br><small class="text-muted">Content type cannot be changed after batch creation</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <a href="{% url 'courses:instructor_batch_detail' course.id batch.id %}" class="btn btn-outline-secondary me-2">
+                                    <i class="bi bi-arrow-left me-2"></i>Cancel
+                                </a>
+                                <a href="{% url 'courses:instructor_batch_list' course.id %}" class="btn btn-outline-info">
+                                    <i class="bi bi-list me-2"></i>All Batches
+                                </a>
+                            </div>
+                            
+                            <div>
+                                <button type="button" class="btn btn-outline-primary me-2" onclick="previewChanges()">
+                                    <i class="bi bi-eye me-2"></i>Preview Changes
+                                </button>
+                                <button type="submit" class="btn btn-update">
+                                    <i class="bi bi-check-circle me-2"></i>Update Batch
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Preview Changes</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="previewContent">
+                <!-- Dynamic content will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-warning" onclick="submitForm()">
+                    <i class="bi bi-check-circle me-2"></i>Confirm Update
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Status option selection
+    const statusOptions = document.querySelectorAll('.status-option');
+    const statusRadios = document.querySelectorAll('input[name="status"]');
+    const statusWarning = document.getElementById('statusWarning');
+    const warningText = document.getElementById('warningText');
+    const currentStatus = '{{ batch.status }}';
+    
+    // Status change warnings
+    const warnings = {
+        'draft': 'Changing to Draft will hide all content from students. They won\'t be able to access lessons.',
+        'active': 'Changing to Active will make all content visible to enrolled students.',
+        'completed': 'Changing to Completed will mark this batch as finished. Students will have read-only access.'
+    };
+    
+    // Set initial selected state for status
+    statusRadios.forEach(radio => {
+        if (radio.checked) {
+            radio.closest('.status-option').classList.add('selected');
+        }
+    });
+    
+    statusOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            const radio = this.querySelector('input[type="radio"]');
+            const newStatus = radio.value;
+            
+            // Clear all selections
+            statusOptions.forEach(opt => opt.classList.remove('selected'));
+            
+            // Select current option
+            radio.checked = true;
+            this.classList.add('selected');
+            
+            // Show warning if status is changing
+            if (newStatus !== currentStatus) {
+                statusWarning.style.display = 'block';
+                warningText.textContent = warnings[newStatus] || 'Status will be changed.';
+            } else {
+                statusWarning.style.display = 'none';
+            }
+        });
+    });
+
+    // Auto-set today's date as minimum for start date
+    const today = new Date().toISOString().split('T')[0];
+    const startDateInput = document.getElementById('id_start_date');
+    const endDateInput = document.getElementById('id_end_date');
+    
+    if (startDateInput) {
+        startDateInput.addEventListener('change', function() {
+            if (endDateInput) {
+                endDateInput.min = this.value;
+            }
+        });
+    }
+    
+    // Form validation
+    document.getElementById('editBatchForm').addEventListener('submit', function(e) {
+        if (!validateForm()) {
+            e.preventDefault();
+        }
+    });
+});
+
+function validateForm() {
+    const batchName = document.getElementById('id_name').value.trim();
+    const startDate = document.getElementById('id_start_date').value;
+    const endDate = document.getElementById('id_end_date').value;
+    const maxStudents = document.getElementById('id_max_students').value;
+    const currentEnrolled = {{ batch.get_enrolled_count }};
+    const selectedStatus = document.querySelector('input[name="status"]:checked');
+    
+    if (!batchName) {
+        alert('Please enter a batch name');
+        return false;
+    }
+    
+    if (!startDate || !endDate) {
+        alert('Please select both start and end dates');
+        return false;
+    }
+    
+    if (new Date(startDate) >= new Date(endDate)) {
+        alert('End date must be after start date');
+        return false;
+    }
+    
+    if (!maxStudents || maxStudents < 1) {
+        alert('Please enter a valid number of maximum students');
+        return false;
+    }
+    
+    if (maxStudents < currentEnrolled) {
+        alert(`Cannot set max students below current enrolled students (${currentEnrolled})`);
+        return false;
+    }
+    
+    if (!selectedStatus) {
+        alert('Please select a status for the batch');
+        return false;
+    }
+    
+    return true;
+}
+
+function previewChanges() {
+    if (!validateForm()) {
+        return;
+    }
+    
+    const batchName = document.getElementById('id_name').value;
+    const startDate = document.getElementById('id_start_date').value;
+    const endDate = document.getElementById('id_end_date').value;
+    const maxStudents = document.getElementById('id_max_students').value;
+    const selectedStatus = document.querySelector('input[name="status"]:checked');
+    const statusDisplay = selectedStatus.closest('.status-option').querySelector('h6').textContent;
+    const currentStatus = '{{ batch.status }}';
+    
+    let statusChangeNote = '';
+    if (selectedStatus.value !== currentStatus) {
+        statusChangeNote = `<div class="alert alert-warning">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Status Change:</strong> From "${currentStatus}" to "${selectedStatus.value}"
+        </div>`;
+    }
+    
+    const previewContent = `
+        ${statusChangeNote}
+        <div class="row">
+            <div class="col-md-6">
+                <h6 class="text-primary">Updated Information</h6>
+                <table class="table table-sm">
+                    <tr><td><strong>Batch Name:</strong></td><td>${batchName}</td></tr>
+                    <tr><td><strong>Max Students:</strong></td><td>${maxStudents}</td></tr>
+                    <tr><td><strong>Duration:</strong></td><td>${formatDate(startDate)} - ${formatDate(endDate)}</td></tr>
+                    <tr><td><strong>New Status:</strong></td><td><span class="badge bg-primary">${statusDisplay}</span></td></tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <h6 class="text-info">Current Status</h6>
+                <table class="table table-sm">
+                    <tr><td><strong>Enrolled:</strong></td><td>{{ batch.get_enrolled_count }} students</td></tr>
+                    <tr><td><strong>Current Status:</strong></td><td>{{ batch.get_status_display }}</td></tr>
+                    <tr><td><strong>Content:</strong></td><td>{{ batch.get_content_type_display }}</td></tr>
+                </table>
+            </div>
+        </div>
+        <hr>
+        <div class="text-center">
+            <p class="text-muted mb-0">Are you sure you want to update this batch?</p>
+        </div>
+    `;
+    
+    document.getElementById('previewContent').innerHTML = previewContent;
+    new bootstrap.Modal(document.getElementById('previewModal')).show();
+}
+
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+    });
+}
+
+function submitForm() {
+    document.getElementById('editBatchForm').submit();
+}
+</script>
+{% endblock %}

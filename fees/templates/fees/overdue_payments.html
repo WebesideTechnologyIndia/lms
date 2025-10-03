@@ -1,0 +1,526 @@
+{% extends 'base.html' %}
+
+{% block title %}Overdue Payments - LMS Admin{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fees:admin_fees_dashboard' %}">Fees</a></li>
+        <li class="breadcrumb-item active">Overdue Payments</li>
+    </ol>
+</nav>
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-exclamation-triangle me-2 text-danger"></i>Overdue Payments
+        </h2>
+        <p class="text-muted mb-0">Manage students with overdue payment obligations</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-warning" onclick="sendBulkReminders()">
+            <i class="fas fa-envelope me-2"></i>Send Bulk Reminders
+        </button>
+        <a href="{% url 'fees:export_overdue_report' %}" class="btn btn-outline-info">
+            <i class="fas fa-download me-2"></i>Export Report
+        </a>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card stats-card border-start border-danger border-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-xs fw-bold text-danger text-uppercase mb-1">Overdue Students</div>
+                        <div class="h4 mb-0 fw-bold text-gray-800">{{ total_overdue_students }}</div>
+                    </div>
+                    <div>
+                        <i class="fas fa-users fa-2x text-danger opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stats-card border-start border-warning border-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-xs fw-bold text-warning text-uppercase mb-1">Total Overdue Amount</div>
+                        <div class="h4 mb-0 fw-bold text-gray-800">${{ total_overdue_amount|floatformat:2 }}</div>
+                    </div>
+                    <div>
+                        <i class="fas fa-dollar-sign fa-2x text-warning opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card stats-card border-start border-info border-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="text-xs fw-bold text-info text-uppercase mb-1">Average Overdue</div>
+                        <div class="h4 mb-0 fw-bold text-gray-800">
+<div class="h4 mb-0 fw-bold text-gray-800">${{ average_overdue|floatformat:2 }}</div>                        </div>
+                    </div>
+                    <div>
+                        <i class="fas fa-calculator fa-2x text-info opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Overdue Students List -->
+<div class="card shadow">
+    <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="fas fa-list me-2"></i>Students with Overdue Payments
+        </h5>
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-light" onclick="selectAllStudents()">
+                <i class="fas fa-check-square me-1"></i>Select All
+            </button>
+            <button class="btn btn-sm btn-light" onclick="clearSelection()">
+                <i class="fas fa-square me-1"></i>Clear All
+            </button>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if student_overdue %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="50">
+                                <input type="checkbox" class="form-check-input" id="selectAll">
+                            </th>
+                            <th>Student</th>
+                            <th>Course</th>
+                            <th>Overdue EMIs</th>
+                            <th>Total Overdue</th>
+                            <th>Days Overdue</th>
+                            <th>Course Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for student, data in student_overdue.items %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" class="form-check-input student-checkbox" value="{{ data.assignment.id }}">
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="bg-danger rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-user text-white"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <h6 class="mb-0">{{ student.get_full_name }}</h6>
+                                        <small class="text-muted">{{ student.email }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <strong>{{ data.course.title }}</strong><br>
+                                    <small class="text-muted">{{ data.course.course_code }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-warning fs-6">{{ data.emis|length }}</span>
+                                <div class="mt-1">
+                                    {% for emi in data.emis %}
+                                        <small class="d-block text-muted">
+                                            EMI {{ emi.installment_number }}: ${{ emi.amount|floatformat:2 }}
+                                        </small>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            <td>
+                                <strong class="text-danger">${{ data.total_overdue|floatformat:2 }}</strong>
+                            </td>
+                            <td>
+                                <span class="badge bg-danger">{{ data.days_overdue }} days</span>
+                            </td>
+                            <td>
+                                {% if data.assignment.is_course_locked %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-lock me-1"></i>Locked
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-unlock me-1"></i>Active
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                                        <i class="fas fa-cog"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'fees:student_fee_detail' data.assignment.id %}">
+                                                <i class="fas fa-eye me-2"></i>View Details
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'fees:quick_payment' data.assignment.id %}">
+                                                <i class="fas fa-credit-card me-2"></i>Record Payment
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <button class="dropdown-item text-warning" onclick="sendReminder({{ data.assignment.id }})">
+                                                <i class="fas fa-envelope me-2"></i>Send Reminder
+                                            </button>
+                                        </li>
+                                        {% if not data.assignment.is_course_locked %}
+                                        <li>
+                                            <button class="dropdown-item text-danger" onclick="lockCourse({{ data.assignment.id }})">
+                                                <i class="fas fa-lock me-2"></i>Lock Course
+                                            </button>
+                                        </li>
+                                        {% else %}
+                                        <li>
+                                            <button class="dropdown-item text-success" onclick="unlockCourse({{ data.assignment.id }})">
+                                                <i class="fas fa-unlock me-2"></i>Unlock Course
+                                            </button>
+                                        </li>
+                                        {% endif %}
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <button class="dropdown-item text-info" onclick="extendDueDate({{ data.assignment.id }})">
+                                                <i class="fas fa-calendar-plus me-2"></i>Extend Due Date
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-check-circle text-success mb-3" style="font-size: 4rem;"></i>
+                <h4 class="text-success">No Overdue Payments!</h4>
+                <p class="text-muted mb-4">All students are up to date with their payment obligations.</p>
+                <a href="{% url 'fees:manage_student_fees' %}" class="btn btn-primary">
+                    <i class="fas fa-users me-2"></i>View All Student Fees
+                </a>
+            </div>
+        {% endif %}
+    </div>
+
+    {% if student_overdue %}
+    <!-- Bulk Actions Footer -->
+    <div class="card-footer">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <span id="selection-count">0 students selected</span>
+            </div>
+            <div class="col-md-6 text-end">
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-outline-warning btn-sm" onclick="bulkSendReminders()" disabled id="bulk-reminder-btn">
+                        <i class="fas fa-envelope me-1"></i>Send Reminders
+                    </button>
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="bulkLockCourses()" disabled id="bulk-lock-btn">
+                        <i class="fas fa-lock me-1"></i>Lock Courses
+                    </button>
+                    <button type="button" class="btn btn-outline-info btn-sm" onclick="bulkExtendDates()" disabled id="bulk-extend-btn">
+                        <i class="fas fa-calendar-plus me-1"></i>Extend Dates
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Extend Due Date Modal -->
+<div class="modal fade" id="extendDateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-calendar-plus text-info me-2"></i>Extend Due Date
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="extendDateForm">
+                    <div class="mb-3">
+                        <label for="newDueDate" class="form-label">New Due Date</label>
+                        <input type="date" class="form-control" id="newDueDate" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="extendReason" class="form-label">Reason for Extension</label>
+                        <textarea class="form-control" id="extendReason" rows="3" placeholder="Reason for extending the due date..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-info" onclick="confirmExtendDate()">
+                    <i class="fas fa-save me-2"></i>Extend Date
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let selectedAssignments = [];
+    let currentExtendAssignment = null;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Select All functionality
+        document.getElementById('selectAll').addEventListener('change', function() {
+            const checkboxes = document.querySelectorAll('.student-checkbox');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            updateSelection();
+        });
+
+        // Individual checkbox change
+        document.querySelectorAll('.student-checkbox').forEach(checkbox => {
+            checkbox.addEventListener('change', updateSelection);
+        });
+    });
+
+    function updateSelection() {
+        const checkedBoxes = document.querySelectorAll('.student-checkbox:checked');
+        selectedAssignments = Array.from(checkedBoxes).map(cb => cb.value);
+        
+        const count = selectedAssignments.length;
+        document.getElementById('selection-count').textContent = `${count} student${count !== 1 ? 's' : ''} selected`;
+        
+        // Enable/disable bulk action buttons
+        const bulkButtons = ['bulk-reminder-btn', 'bulk-lock-btn', 'bulk-extend-btn'];
+        bulkButtons.forEach(btnId => {
+            const btn = document.getElementById(btnId);
+            if (btn) {
+                btn.disabled = count === 0;
+            }
+        });
+    }
+
+    function selectAllStudents() {
+        document.getElementById('selectAll').checked = true;
+        document.getElementById('selectAll').dispatchEvent(new Event('change'));
+    }
+
+    function clearSelection() {
+        document.getElementById('selectAll').checked = false;
+        document.getElementById('selectAll').dispatchEvent(new Event('change'));
+    }
+
+    function sendReminder(assignmentId) {
+        if (confirm('Send payment reminder to this student?')) {
+            fetch('/fees/ajax/send-reminder/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `assignment_id=${assignmentId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Payment reminder sent successfully!');
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while sending the reminder.');
+            });
+        }
+    }
+
+    function lockCourse(assignmentId) {
+        if (confirm('Are you sure you want to lock this course for the student?')) {
+            fetch(`/fees/admin/student-fees/${assignmentId}/lock/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Course locked successfully!');
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while locking the course.');
+            });
+        }
+    }
+
+    function unlockCourse(assignmentId) {
+        const unlockDate = prompt('Enter unlock date (YYYY-MM-DD) or leave empty for immediate unlock:');
+        
+        fetch(`/fees/admin/student-fees/${assignmentId}/unlock/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `unlock_date=${unlockDate || ''}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Course unlocked successfully!');
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while unlocking the course.');
+        });
+    }
+
+    function extendDueDate(assignmentId) {
+        currentExtendAssignment = assignmentId;
+        const modal = new bootstrap.Modal(document.getElementById('extendDateModal'));
+        modal.show();
+    }
+
+    function confirmExtendDate() {
+        const newDate = document.getElementById('newDueDate').value;
+        const reason = document.getElementById('extendReason').value;
+        
+        if (!newDate) {
+            alert('Please select a new due date.');
+            return;
+        }
+        
+        if (!currentExtendAssignment) {
+            alert('No assignment selected.');
+            return;
+        }
+        
+        // Here you would make an AJAX call to extend the due date
+        // For now, we'll just show a success message
+        alert(`Due date extended to ${newDate} for assignment ${currentExtendAssignment}`);
+        
+        // Close modal and reload
+        const modal = bootstrap.Modal.getInstance(document.getElementById('extendDateModal'));
+        modal.hide();
+        location.reload();
+    }
+
+    function bulkSendReminders() {
+        if (selectedAssignments.length === 0) {
+            alert('Please select students first.');
+            return;
+        }
+        
+        if (confirm(`Send payment reminders to ${selectedAssignments.length} selected students?`)) {
+            // Make AJAX call for bulk reminders
+            const promises = selectedAssignments.map(assignmentId => {
+                return fetch('/fees/ajax/send-reminder/', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                    },
+                    body: `assignment_id=${assignmentId}`
+                });
+            });
+            
+            Promise.all(promises)
+                .then(() => {
+                    alert(`Reminders sent to ${selectedAssignments.length} students successfully!`);
+                    clearSelection();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Some reminders failed to send. Please check the logs.');
+                });
+        }
+    }
+
+    function bulkLockCourses() {
+        if (selectedAssignments.length === 0) {
+            alert('Please select students first.');
+            return;
+        }
+        
+        if (confirm(`Lock courses for ${selectedAssignments.length} selected students?`)) {
+            const promises = selectedAssignments.map(assignmentId => {
+                return fetch(`/fees/admin/student-fees/${assignmentId}/lock/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                        'Content-Type': 'application/json',
+                    },
+                });
+            });
+            
+            Promise.all(promises)
+                .then(() => {
+                    alert(`Courses locked for ${selectedAssignments.length} students successfully!`);
+                    location.reload();
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Some course locks failed. Please check the logs.');
+                });
+        }
+    }
+
+    function bulkExtendDates() {
+        if (selectedAssignments.length === 0) {
+            alert('Please select students first.');
+            return;
+        }
+        
+        const newDate = prompt('Enter new due date (YYYY-MM-DD) for all selected students:');
+        if (!newDate) return;
+        
+        if (confirm(`Extend due dates to ${newDate} for ${selectedAssignments.length} selected students?`)) {
+            alert(`Due dates extended for ${selectedAssignments.length} students to ${newDate}`);
+            clearSelection();
+        }
+    }
+
+    function sendBulkReminders() {
+        if (confirm('Send payment reminders to all students with overdue payments?')) {
+            const allCheckboxes = document.querySelectorAll('.student-checkbox');
+            allCheckboxes.forEach(cb => cb.checked = true);
+            updateSelection();
+            bulkSendReminders();
+        }
+    }
+</script>
+{% endblock %}

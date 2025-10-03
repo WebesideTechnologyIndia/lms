@@ -1,0 +1,472 @@
+{% extends 'webinars/base.html' %}
+
+{% block title %}All Webinars - Learning Platform{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1><i class="fas fa-video me-2"></i>All Webinars</h1>
+                <p class="lead">Discover and join webinars that match your interests</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'webinars:my_webinars' %}" class="btn btn-primary">
+                        <i class="fas fa-user-check me-2"></i>My Webinars
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters Section -->
+<div class="filters-section py-4 bg-light">
+    <div class="container">
+        <form method="GET" class="row g-3">
+            <!-- Search -->
+            <div class="col-md-3">
+                <label for="search" class="form-label">Search</label>
+                <input type="text" 
+                       class="form-control" 
+                       id="search" 
+                       name="search" 
+                       placeholder="Search webinars..."
+                       value="{{ current_filters.search }}">
+            </div>
+
+            <!-- Category Filter -->
+            <div class="col-md-2">
+                <label for="category" class="form-label">Category</label>
+                <select class="form-select" id="category" name="category">
+                    <option value="">All Categories</option>
+                    {% for category in categories %}
+                        <option value="{{ category.id }}" 
+                                {% if current_filters.category == category.id|stringformat:"s" %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Type Filter -->
+            <div class="col-md-2">
+                <label for="type" class="form-label">Type</label>
+                <select class="form-select" id="type" name="type">
+                    <option value="">All Types</option>
+                    <option value="free" {% if current_filters.type == 'free' %}selected{% endif %}>Free</option>
+                    <option value="paid" {% if current_filters.type == 'paid' %}selected{% endif %}>Paid</option>
+                </select>
+            </div>
+
+            <!-- Status Filter -->
+            <div class="col-md-2">
+                <label for="status" class="form-label">Status</label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">All Status</option>
+                    <option value="upcoming" {% if current_filters.status == 'upcoming' %}selected{% endif %}>Upcoming</option>
+                    <option value="completed" {% if current_filters.status == 'completed' %}selected{% endif %}>Completed</option>
+                </select>
+            </div>
+
+            <!-- Filter Actions -->
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search me-1"></i>Filter
+                    </button>
+                    <a href="{% url 'webinars:webinar_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i>Clear
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Results Section -->
+<div class="container py-5">
+    <!-- Results Header -->
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h4>
+                {% if webinars.paginator.count > 0 %}
+                    Found {{ webinars.paginator.count }} webinar{{ webinars.paginator.count|pluralize }}
+                    {% if current_filters.search or current_filters.category or current_filters.type or current_filters.status %}
+                        matching your criteria
+                    {% endif %}
+                {% else %}
+                    No webinars found
+                {% endif %}
+            </h4>
+            
+            <!-- Active Filters Display -->
+            {% if current_filters.search or current_filters.category or current_filters.type or current_filters.status %}
+            <div class="active-filters mt-2">
+                <span class="text-muted">Active filters:</span>
+                {% if current_filters.search %}
+                    <span class="badge bg-primary ms-1">Search: "{{ current_filters.search }}"</span>
+                {% endif %}
+                {% if current_filters.category %}
+                    {% for category in categories %}
+                        {% if category.id|stringformat:"s" == current_filters.category %}
+                            <span class="badge bg-success ms-1">Category: {{ category.name }}</span>
+                        {% endif %}
+                    {% endfor %}
+                {% endif %}
+                {% if current_filters.type %}
+                    <span class="badge bg-warning text-dark ms-1">Type: {{ current_filters.type|title }}</span>
+                {% endif %}
+                {% if current_filters.status %}
+                    <span class="badge bg-info ms-1">Status: {{ current_filters.status|title }}</span>
+                {% endif %}
+                <a href="{% url 'webinars:webinar_list' %}" class="btn btn-sm btn-outline-secondary ms-2">
+                    <i class="fas fa-times me-1"></i>Clear All
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Webinars Grid -->
+    {% if webinars %}
+    <div class="row">
+        {% for webinar in webinars %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="webinar-card">
+                <!-- Webinar Image -->
+                {% if webinar.thumbnail %}
+                    <img src="{{ webinar.thumbnail.url }}" class="webinar-image" alt="{{ webinar.title }}">
+                {% else %}
+                    <div class="webinar-image-placeholder">
+                        <i class="fas fa-video"></i>
+                    </div>
+                {% endif %}
+                
+                <!-- Webinar Content -->
+                <div class="webinar-content">
+                    <!-- Type Badge -->
+                    <div class="webinar-badges">
+                        {% if webinar.webinar_type == 'free' %}
+                            <span class="badge bg-success">FREE</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">₹{{ webinar.price }}</span>
+                        {% endif %}
+                        
+                        {% if webinar.status == 'upcoming' %}
+                            <span class="badge bg-primary ms-1">Upcoming</span>
+                        {% elif webinar.status == 'live' %}
+                            <span class="badge bg-danger ms-1">
+                                <i class="fas fa-circle me-1"></i>Live
+                            </span>
+                        {% elif webinar.status == 'completed' %}
+                            <span class="badge bg-secondary ms-1">Completed</span>
+                        {% endif %}
+                    </div>
+                    
+                    <h5 class="webinar-title">{{ webinar.title }}</h5>
+                    <p class="webinar-description">{{ webinar.short_description|truncatechars:100 }}</p>
+                    
+                    <!-- Webinar Meta -->
+                    <div class="webinar-meta">
+                        <div class="meta-item">
+                            <i class="fas fa-calendar text-primary"></i>
+                            {{ webinar.scheduled_date|date:"M d, Y" }}
+                        </div>
+                        <div class="meta-item">
+                            <i class="fas fa-clock text-success"></i>
+                            {{ webinar.scheduled_date|time:"h:i A" }} ({{ webinar.duration_minutes }}m)
+                        </div>
+                        <div class="meta-item">
+                            <i class="fas fa-user text-info"></i>
+                            {{ webinar.instructor.get_full_name }}
+                        </div>
+                        <div class="meta-item">
+                            <i class="fas fa-tag text-warning"></i>
+                            {{ webinar.category.name }}
+                        </div>
+                        <div class="meta-item">
+                            <i class="fas fa-users text-danger"></i>
+                            {{ webinar.get_available_spots }} spots available
+                        </div>
+                    </div>
+                    
+                    <!-- Actions -->
+                    <div class="webinar-actions">
+                        <a href="{% url 'webinars:webinar_detail' webinar.slug %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-eye me-1"></i>View Details
+                        </a>
+                        
+                        {% if user.is_authenticated %}
+                            {% if webinar.is_registration_open %}
+                                <a href="{% url 'webinars:webinar_register' webinar.slug %}" class="btn btn-success btn-sm ms-1">
+                                    <i class="fas fa-plus me-1"></i>Register
+                                </a>
+                            {% else %}
+                                <span class="badge bg-secondary ms-2">
+                                    {% if webinar.status == 'completed' %}
+                                        Completed
+                                    {% else %}
+                                        Registration Closed
+                                    {% endif %}
+                                </span>
+                            {% endif %}
+                        {% else %}
+                            <a href="/login/" class="btn btn-outline-primary btn-sm ms-1">
+                                <i class="fas fa-sign-in-alt me-1"></i>Login to Register
+                            </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if webinars.has_other_pages %}
+    <div class="row">
+        <div class="col-12">
+            <nav aria-label="Webinar pagination">
+                <ul class="pagination justify-content-center">
+                    {% if webinars.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}">
+                                <i class="fas fa-angle-double-left"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ webinars.previous_page_number }}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}">
+                                <i class="fas fa-angle-left"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    <li class="page-item active">
+                        <span class="page-link">
+                            Page {{ webinars.number }} of {{ webinars.paginator.num_pages }}
+                        </span>
+                    </li>
+
+                    {% if webinars.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ webinars.next_page_number }}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}">
+                                <i class="fas fa-angle-right"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ webinars.paginator.num_pages }}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}{% if current_filters.status %}&status={{ current_filters.status }}{% endif %}">
+                                <i class="fas fa-angle-double-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- No Results -->
+    <div class="text-center py-5">
+        <i class="fas fa-search text-muted mb-3" style="font-size: 4rem;"></i>
+        <h4 class="text-muted">No webinars found</h4>
+        <p class="text-muted mb-4">
+            {% if current_filters.search or current_filters.category or current_filters.type or current_filters.status %}
+                Try adjusting your search criteria or clear filters to see more results.
+            {% else %}
+                There are no webinars available at the moment. Check back later!
+            {% endif %}
+        </p>
+        {% if current_filters.search or current_filters.category or current_filters.type or current_filters.status %}
+            <a href="{% url 'webinars:webinar_list' %}" class="btn btn-primary">
+                <i class="fas fa-times me-2"></i>Clear All Filters
+            </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-submit form when filter changes
+        const filterSelects = document.querySelectorAll('#category, #type, #status');
+        filterSelects.forEach(select => {
+            select.addEventListener('change', function() {
+                this.form.submit();
+            });
+        });
+
+        // Search on Enter key
+        const searchInput = document.getElementById('search');
+        if (searchInput) {
+            searchInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    this.form.submit();
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 60px 0;
+        margin-top: -20px;
+    }
+    
+    .page-header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .filters-section {
+        background: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+    }
+    
+    .webinar-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        overflow: hidden;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .webinar-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .webinar-image {
+        width: 100%;
+        height: 200px;
+        object-fit: cover;
+    }
+    
+    .webinar-image-placeholder {
+        width: 100%;
+        height: 200px;
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 3rem;
+    }
+    
+    .webinar-content {
+        padding: 1.5rem;
+        flex-grow: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .webinar-badges {
+        margin-bottom: 1rem;
+    }
+    
+    .webinar-title {
+        font-weight: 600;
+        color: #333;
+        margin-bottom: 1rem;
+        font-size: 1.1rem;
+    }
+    
+    .webinar-description {
+        color: #6c757d;
+        margin-bottom: 1rem;
+        flex-grow: 1;
+    }
+    
+    .webinar-meta {
+        margin-bottom: 1.5rem;
+    }
+    
+    .meta-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+        color: #6c757d;
+    }
+    
+    .meta-item i {
+        margin-right: 0.5rem;
+        width: 16px;
+    }
+    
+    .webinar-actions {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: auto;
+    }
+    
+    .active-filters .badge {
+        font-size: 0.75rem;
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border: none;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #5a6fd8, #6a4190);
+        transform: translateY(-1px);
+    }
+    
+    .pagination .page-link {
+        border: none;
+        color: #667eea;
+        margin: 0 2px;
+        border-radius: 6px;
+    }
+    
+    .pagination .page-item.active .page-link {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border: none;
+    }
+    
+    .pagination .page-link:hover {
+        background-color: #f8f9fa;
+        color: #5a6fd8;
+    }
+    
+    @media (max-width: 768px) {
+        .page-header h1 {
+            font-size: 2rem;
+        }
+        
+        .webinar-actions {
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        
+        .webinar-actions .btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,284 @@
+<!-- templates/instructor/email_history.html -->
+{% extends 'instructor_base.html' %}
+{% load static %}
+
+{% block title %}Email History - Instructor Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+}
+
+.stats-card {
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+    text-center;
+}
+
+.email-log-item {
+    background: white;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    border-left: 4px solid transparent;
+}
+
+.email-log-item.success {
+    border-left-color: #28a745;
+}
+
+.email-log-item.failed {
+    border-left-color: #dc3545;
+}
+
+.filter-card {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.email-subject {
+    font-weight: 600;
+    color: #333;
+}
+
+.email-meta {
+    color: #666;
+    font-size: 0.9em;
+}
+
+.email-body-preview {
+    color: #777;
+    font-size: 0.85em;
+    max-height: 60px;
+    overflow: hidden;
+    line-height: 1.4;
+}
+
+.status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 500;
+}
+
+.status-success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.status-failed {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="mb-1">Email History</h2>
+                <p class="mb-0 opacity-75">Track your email communications with students</p>
+            </div>
+            <div>
+                <a href="{% url 'instructor_email_management' %}" class="btn btn-light">
+                    <i class="bi bi-arrow-left me-2"></i>Back to Email Management
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="h3 text-primary mb-1">{{ total_sent }}</div>
+                <div class="text-muted">Total Emails</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="h3 text-success mb-1">{{ successful_sent }}</div>
+                <div class="text-muted">Successful</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="h3 text-danger mb-1">{{ failed_sent }}</div>
+                <div class="text-muted">Failed</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stats-card">
+                <div class="h3 text-info mb-1">{{ success_rate }}%</div>
+                <div class="text-muted">Success Rate</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-card">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label for="dateFilter" class="form-label">Filter by Date</label>
+                <input type="date" id="dateFilter" name="date" class="form-control" value="{{ date_filter }}">
+            </div>
+            <div class="col-md-4">
+                <label for="statusFilter" class="form-label">Filter by Status</label>
+                <select id="statusFilter" name="status" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="success" {% if status_filter == 'success' %}selected{% endif %}>Successful</option>
+                    <option value="failed" {% if status_filter == 'failed' %}selected{% endif %}>Failed</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <button type="submit" class="btn btn-primary me-2">
+                    <i class="bi bi-funnel me-2"></i>Apply Filters
+                </button>
+                <a href="{% url 'instructor_email_history' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-x-circle me-2"></i>Clear
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Email Logs -->
+    {% if email_logs %}
+        <div class="email-logs">
+            {% for log in email_logs %}
+            <div class="email-log-item {% if log.is_sent_successfully %}success{% else %}failed{% endif %}">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="email-subject">{{ log.subject }}</div>
+                        <div class="email-meta mb-2">
+                            <i class="bi bi-envelope me-1"></i>To: {{ log.recipient_email }}
+                            {% if log.recipient_user %}
+                                ({{ log.recipient_user.get_full_name|default:log.recipient_user.username }})
+                            {% endif %}
+                            {% if log.template_used %}
+                                <span class="ms-3">
+                                    <i class="bi bi-file-text me-1"></i>Template: {{ log.template_used.name }}
+                                </span>
+                            {% endif %}
+                        </div>
+                        <div class="email-body-preview">
+                            {{ log.email_body|truncatewords:20 }}
+                        </div>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="mb-2">
+                            {% if log.is_sent_successfully %}
+                                <span class="status-badge status-success">
+                                    <i class="bi bi-check-circle me-1"></i>Sent Successfully
+                                </span>
+                            {% else %}
+                                <span class="status-badge status-failed">
+                                    <i class="bi bi-x-circle me-1"></i>Failed
+                                </span>
+                            {% endif %}
+                        </div>
+                        <div class="email-meta">
+                            <i class="bi bi-calendar me-1"></i>{{ log.sent_time|date:"M d, Y" }}<br>
+                            <i class="bi bi-clock me-1"></i>{{ log.sent_time|time:"g:i A" }}
+                        </div>
+                        {% if not log.is_sent_successfully and log.error_message %}
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-outline-danger" data-bs-toggle="collapse" 
+                                        data-bs-target="#error{{ log.id }}">
+                                    <i class="bi bi-exclamation-triangle me-1"></i>View Error
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if not log.is_sent_successfully and log.error_message %}
+                <div class="collapse mt-3" id="error{{ log.id }}">
+                    <div class="alert alert-danger mb-0">
+                        <strong>Error Details:</strong><br>
+                        {{ log.error_message }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if email_logs.has_other_pages %}
+        <div class="row mt-4">
+            <div class="col-12">
+                <nav aria-label="Email logs pagination">
+                    <ul class="pagination justify-content-center">
+                        {% if email_logs.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if date_filter %}&date={{ date_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">&laquo; First</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ email_logs.previous_page_number }}{% if date_filter %}&date={{ date_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">Previous</a>
+                            </li>
+                        {% endif %}
+                        
+                        <li class="page-item active">
+                            <span class="page-link">{{ email_logs.number }} of {{ email_logs.paginator.num_pages }}</span>
+                        </li>
+                        
+                        {% if email_logs.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ email_logs.next_page_number }}{% if date_filter %}&date={{ date_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">Next</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ email_logs.paginator.num_pages }}{% if date_filter %}&date={{ date_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}">Last &raquo;</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+        {% endif %}
+
+    {% else %}
+        <!-- Empty State -->
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="text-center py-5">
+                    <div class="mb-4">
+                        <i class="bi bi-inbox text-muted" style="font-size: 4rem;"></i>
+                    </div>
+                    <h4 class="text-muted">No Email History Found</h4>
+                    <p class="text-muted">
+                        {% if date_filter or status_filter %}
+                            No emails match your current filters. Try adjusting your search criteria.
+                        {% else %}
+                            You haven't sent any emails yet. Start communicating with your students!
+                        {% endif %}
+                    </p>
+                    <div class="mt-4">
+                        {% if date_filter or status_filter %}
+                            <a href="{% url 'instructor_email_history' %}" class="btn btn-outline-secondary me-2">
+                                <i class="bi bi-x-circle me-2"></i>Clear Filters
+                            </a>
+                        {% endif %}
+                        <a href="{% url 'instructor_email_management' %}" class="btn btn-primary">
+                            <i class="bi bi-envelope me-2"></i>Send Your First Email
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

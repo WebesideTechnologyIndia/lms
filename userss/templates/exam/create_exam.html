@@ -1,0 +1,309 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Exam - LMS Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="card-title">
+                        <i class="fas fa-plus-circle text-primary"></i>
+                        Create New Exam
+                    </h4>
+                    <p class="text-muted mb-0">Set up a new exam with timing, questions, and assignment options</p>
+                </div>
+                
+                <div class="card-body">
+                    <form method="post" id="examForm">
+                        {% csrf_token %}
+                        
+                        <!-- Basic Information -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <h5 class="text-primary border-bottom pb-2">
+                                    <i class="fas fa-info-circle"></i> Basic Information
+                                </h5>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label class="form-label">Exam Title *</label>
+                                {{ form.title }}
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">Exam Type *</label>
+                                {{ form.exam_type }}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label class="form-label">Description *</label>
+                                {{ form.description }}
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label class="form-label">Instructions for Students</label>
+                                {{ form.instructions }}
+                            </div>
+                        </div>
+                        
+                        <!-- Marks Configuration -->
+                        <div class="row mb-4 mt-4">
+                            <div class="col-12">
+                                <h5 class="text-primary border-bottom pb-2">
+                                    <i class="fas fa-medal"></i> Marks Configuration
+                                </h5>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Total Marks *</label>
+                                {{ form.total_marks }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Passing Marks *</label>
+                                {{ form.passing_marks }}
+                            </div>
+                        </div>
+                        
+                        <!-- Timing Configuration -->
+                        <div class="row mb-4 mt-4">
+                            <div class="col-12">
+                                <h5 class="text-primary border-bottom pb-2">
+                                    <i class="fas fa-clock"></i> Timing Configuration
+                                </h5>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label">Timing Type *</label>
+                                {{ form.timing_type }}
+                                <div class="form-text">Choose how time limits will be applied to this exam</div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3" id="timing-options">
+                            <div class="col-md-6" id="per-question-timing" style="display: none;">
+                                <label class="form-label">Time Per Question (Minutes)</label>
+                                {{ form.time_per_question_minutes }}
+                                <div class="form-text">Time limit for each individual question</div>
+                            </div>
+                            <div class="col-md-6" id="total-exam-timing" style="display: none;">
+                                <label class="form-label">Total Exam Time (Minutes)</label>
+                                {{ form.total_exam_time_minutes }}
+                                <div class="form-text">Total time limit for the entire exam</div>
+                            </div>
+                        </div>
+                        
+                        <!-- Exam Settings -->
+                        <div class="row mb-4 mt-4">
+                            <div class="col-12">
+                                <h5 class="text-primary border-bottom pb-2">
+                                    <i class="fas fa-cog"></i> Exam Settings
+                                </h5>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    {{ form.allow_retake }}
+                                    <label class="form-check-label" for="{{ form.allow_retake.id_for_label }}">
+                                        Allow Retake
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    {{ form.show_results_immediately }}
+                                    <label class="form-check-label" for="{{ form.show_results_immediately.id_for_label }}">
+                                        Show Results Immediately
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    {{ form.randomize_questions }}
+                                    <label class="form-check-label" for="{{ form.randomize_questions.id_for_label }}">
+                                        Randomize Questions
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Max Attempts</label>
+                                {{ form.max_attempts }}
+                            </div>
+                            <div class="col-md-6" id="mcq-options" style="display: none;">
+                                <div class="form-check mt-4">
+                                    {{ form.randomize_options }}
+                                    <label class="form-check-label" for="{{ form.randomize_options.id_for_label }}">
+                                        Randomize MCQ Options
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Schedule -->
+                        <div class="row mb-4 mt-4">
+                            <div class="col-12">
+                                <h5 class="text-primary border-bottom pb-2">
+                                    <i class="fas fa-calendar"></i> Schedule (Optional)
+                                </h5>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Start Date & Time</label>
+                                {{ form.start_datetime }}
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">End Date & Time</label>
+                                {{ form.end_datetime }}
+                            </div>
+                        </div>
+                        
+                        <!-- Status -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Status</label>
+                                {{ form.status }}
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="d-flex gap-2">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save"></i> Create Exam
+                                    </button>
+                                    <a href="{% url 'exam_dashboard' %}" class="btn btn-secondary">
+                                        <i class="fas fa-times"></i> Cancel
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Exam Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="previewContent">
+                <!-- Preview content will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Show/hide timing options based on timing type
+    $('#id_timing_type').change(function() {
+        var timingType = $(this).val();
+        
+        $('#per-question-timing').hide();
+        $('#total-exam-timing').hide();
+        
+        if (timingType === 'per_question') {
+            $('#per-question-timing').show();
+        } else if (timingType === 'total_exam') {
+            $('#total-exam-timing').show();
+        }
+    });
+    
+    // Show/hide MCQ options based on exam type
+    $('#id_exam_type').change(function() {
+        var examType = $(this).val();
+        
+        if (examType === 'mcq') {
+            $('#mcq-options').show();
+        } else {
+            $('#mcq-options').hide();
+        }
+    });
+    
+    // Initialize timing options on page load
+    $('#id_timing_type').trigger('change');
+    $('#id_exam_type').trigger('change');
+    
+    // Form validation
+    $('#examForm').submit(function(e) {
+        var examType = $('#id_exam_type').val();
+        var timingType = $('#id_timing_type').val();
+        var totalMarks = parseInt($('#id_total_marks').val());
+        var passingMarks = parseInt($('#id_passing_marks').val());
+        
+        // Validate passing marks
+        if (passingMarks > totalMarks) {
+            e.preventDefault();
+            alert('Passing marks cannot be greater than total marks!');
+            return false;
+        }
+        
+        // Validate timing settings
+        if (timingType === 'per_question') {
+            var timePerQuestion = parseInt($('#id_time_per_question_minutes').val());
+            if (!timePerQuestion || timePerQuestion < 1) {
+                e.preventDefault();
+                alert('Please set time per question (minimum 1 minute)!');
+                return false;
+            }
+        } else if (timingType === 'total_exam') {
+            var totalTime = parseInt($('#id_total_exam_time_minutes').val());
+            if (!totalTime || totalTime < 5) {
+                e.preventDefault();
+                alert('Please set total exam time (minimum 5 minutes)!');
+                return false;
+            }
+        }
+        
+        return true;
+    });
+    
+    // Auto-calculate time estimates
+    function updateTimeEstimate() {
+        var timingType = $('#id_timing_type').val();
+        var timePerQuestion = parseInt($('#id_time_per_question_minutes').val()) || 0;
+        var totalTime = parseInt($('#id_total_exam_time_minutes').val()) || 0;
+        
+        var estimate = '';
+        if (timingType === 'per_question' && timePerQuestion > 0) {
+            estimate = 'Estimated total time: ' + (timePerQuestion * 10) + ' minutes (for 10 questions)';
+        } else if (timingType === 'total_exam' && totalTime > 0) {
+            estimate = 'Total exam duration: ' + totalTime + ' minutes';
+        }
+        
+        // You can add estimate display here if needed
+    }
+    
+    $('#id_time_per_question_minutes, #id_total_exam_time_minutes').on('input', updateTimeEstimate);
+});
+</script>
+{% endblock %}

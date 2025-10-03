@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Fee Structures - LMS Admin{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fees:admin_fees_dashboard' %}">Fees</a></li>
+        <li class="breadcrumb-item active">Fee Structures</li>
+    </ol>
+</nav>
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-cog me-2"></i>Manage Fee Structures
+        </h2>
+        <p class="text-muted mb-0">Create and manage fee payment structures</p>
+    </div>
+    <div>
+        <a href="{% url 'fees:create_fee_structure' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Create New Structure
+        </a>
+    </div>
+</div>
+
+<!-- Fee Structures List -->
+<div class="card">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+            <i class="fas fa-list me-2"></i>Fee Structures
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Structure Name</th>
+                        <th>Total Amount</th>
+                        <th>Payment Type</th>
+                        <th>EMI Duration</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for structure in fee_structures %}
+                    <tr>
+                        <td>
+                            <strong>{{ structure.name }}</strong><br>
+                            <small class="text-muted">{{ structure.code }}</small>
+                        </td>
+                        <td>
+                            <strong class="text-primary">${{ structure.total_amount }}</strong>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">{{ structure.get_payment_type_display }}</span>
+                        </td>
+                        <td>
+                            {% if structure.payment_type == 'emi' %}
+                                {{ structure.emi_duration_months }} months
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if structure.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="btn-group">
+                                <a href="{% url 'fees:edit_fee_structure' structure.id %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4">
+                            <div class="empty-state">
+                                <i class="fas fa-cog text-muted mb-3" style="font-size: 3rem;"></i>
+                                <h5 class="text-muted">No Fee Structures Found</h5>
+                                <p class="text-muted">Create your first fee structure to get started.</p>
+                                <a href="{% url 'fees:create_fee_structure' %}" class="btn btn-primary">
+                                    <i class="fas fa-plus me-2"></i>Create Fee Structure
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

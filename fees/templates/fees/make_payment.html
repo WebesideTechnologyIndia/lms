@@ -1,0 +1,637 @@
+{% extends 'students/student_base.html' %}
+
+{% block title %}Make Payment - {{ assignment.course.title }}{% endblock %}
+
+{% block page_title %}Make Payment{% endblock %}
+
+{% block content %}
+<!-- Course Header -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center">
+                    {% if assignment.course.thumbnail %}
+                        <img src="{{ assignment.course.thumbnail.url }}" 
+                             class="rounded me-3" 
+                             alt="{{ assignment.course.title }}"
+                             style="width: 60px; height: 60px; object-fit: cover;">
+                    {% else %}
+                        <div class="bg-primary rounded me-3 d-flex align-items-center justify-content-center text-white"
+                             style="width: 60px; height: 60px;">
+                            <i class="fas fa-book"></i>
+                        </div>
+                    {% endif %}
+                    
+                    <div>
+                        <h5 class="mb-1">{{ assignment.course.title }}</h5>
+                        <p class="text-muted mb-0">{{ assignment.course.course_code }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <a href="{% url 'fees:student_course_fees' assignment.id %}" 
+                   class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Details
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Options -->
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Payment Amount Selection -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-calculator me-2"></i>Select Payment Amount
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Full Course Payment -->
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-success payment-option" data-payment-type="full">
+                            <div class="card-body text-center">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="payment_type" 
+                                           id="payment_full" value="full" checked>
+                                    <label class="form-check-label w-100" for="payment_full">
+                                        <i class="fas fa-money-bill-wave fa-2x text-success mb-2 d-block"></i>
+                                        <h6>Pay Full Amount</h6>
+                                        <h4 class="text-success">${{ full_amount }}</h4>
+                                        <p class="text-muted small mb-0">Clear all pending dues</p>
+                                        {% if full_amount < assignment.total_amount %}
+                                            <span class="badge bg-success mt-2">Save on late fees!</span>
+                                        {% endif %}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Current EMI Payment -->
+                    {% if current_emi %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-warning payment-option" data-payment-type="current_emi">
+                            <div class="card-body text-center">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="payment_type" 
+                                           id="payment_emi" value="current_emi">
+                                    <label class="form-check-label w-100" for="payment_emi">
+                                        <i class="fas fa-calendar-check fa-2x text-warning mb-2 d-block"></i>
+                                        <h6>Pay Current EMI</h6>
+                                        <h4 class="text-warning">${{ current_emi.amount }}</h4>
+                                        <p class="text-muted small mb-0">
+                                            EMI {{ current_emi.installment_number }} - Due: {{ current_emi.due_date|date:"M d" }}
+                                        </p>
+                                        {% if current_emi.due_date < today %}
+                                            <span class="badge bg-danger mt-2">Overdue</span>
+                                        {% elif current_emi.due_date == today %}
+                                            <span class="badge bg-warning mt-2">Due Today</span>
+                                        {% endif %}
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Overdue Amount Payment -->
+                    {% if overdue_amount > 0 %}
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-danger payment-option" data-payment-type="overdue">
+                            <div class="card-body text-center">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="payment_type" 
+                                           id="payment_overdue" value="overdue">
+                                    <label class="form-check-label w-100" for="payment_overdue">
+                                        <i class="fas fa-exclamation-triangle fa-2x text-danger mb-2 d-block"></i>
+                                        <h6>Pay Overdue Amount</h6>
+                                        <h4 class="text-danger">${{ overdue_amount }}</h4>
+                                        <p class="text-muted small mb-0">Clear all overdue EMIs</p>
+                                        <span class="badge bg-danger mt-2">Urgent</span>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Custom Amount -->
+                    <div class="col-md-6 mb-3">
+                        <div class="card border-info payment-option" data-payment-type="custom">
+                            <div class="card-body text-center">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="payment_type" 
+                                           id="payment_custom" value="custom">
+                                    <label class="form-check-label w-100" for="payment_custom">
+                                        <i class="fas fa-edit fa-2x text-info mb-2 d-block"></i>
+                                        <h6>Custom Amount</h6>
+                                        <div class="input-group mt-2">
+                                            <span class="input-group-text">$</span>
+                                            <input type="number" class="form-control" id="custom_amount" 
+                                                   placeholder="0.00" min="1" max="{{ full_amount }}" step="0.01">
+                                        </div>
+                                        <p class="text-muted small mt-2 mb-0">Enter your preferred amount</p>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Method Selection -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-credit-card me-2"></i>Select Payment Method
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Credit/Debit Card -->
+                    <div class="col-md-4 mb-3">
+                        <div class="card payment-method" data-method="card">
+                            <div class="card-body text-center">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="payment_method" 
+                                           id="method_card" value="card" checked>
+                                    <label class="form-check-label w-100" for="method_card">
+                                        <i class="fas fa-credit-card fa-2x text-primary mb-2 d-block"></i>
+                                        <h6>Card Payment</h6>
+                                        <p class="text-muted small mb-0">Credit/Debit Card</p>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- UPI Payment -->
+                    <div class="col-md-4 mb-3">
+                        <div class="card payment-method" data-method="upi">
+                            <div class="card-body text-center">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="payment_method" 
+                                           id="method_upi" value="upi">
+                                    <label class="form-check-label w-100" for="method_upi">
+                                        <i class="fas fa-mobile-alt fa-2x text-success mb-2 d-block"></i>
+                                        <h6>UPI Payment</h6>
+                                        <p class="text-muted small mb-0">GPay, PhonePe, Paytm</p>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Net Banking -->
+                    <div class="col-md-4 mb-3">
+                        <div class="card payment-method" data-method="netbanking">
+                            <div class="card-body text-center">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="payment_method" 
+                                           id="method_netbanking" value="netbanking">
+                                    <label class="form-check-label w-100" for="method_netbanking">
+                                        <i class="fas fa-university fa-2x text-info mb-2 d-block"></i>
+                                        <h6>Net Banking</h6>
+                                        <p class="text-muted small mb-0">All major banks</p>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Form -->
+        <form id="payment-form" method="post">
+            {% csrf_token %}
+            <input type="hidden" id="final_amount" name="amount" value="{{ full_amount }}">
+            <input type="hidden" id="final_payment_type" name="payment_type" value="full">
+            <input type="hidden" id="final_payment_method" name="payment_method" value="card">
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-shield-alt me-2"></i>Secure Payment
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="cardholder_name" class="form-label">Cardholder Name</label>
+                                <input type="text" class="form-control" id="cardholder_name" 
+                                       placeholder="Enter your name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label for="card_number" class="form-label">Card Number</label>
+                                <input type="text" class="form-control" id="card_number" 
+                                       placeholder="1234 5678 9012 3456" maxlength="19" required>
+                            </div>
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="mb-3">
+                                        <label for="expiry_date" class="form-label">Expiry Date</label>
+                                        <input type="text" class="form-control" id="expiry_date" 
+                                               placeholder="MM/YY" maxlength="5" required>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="mb-3">
+                                        <label for="cvv" class="form-label">CVV</label>
+                                        <input type="password" class="form-control" id="cvv" 
+                                               placeholder="123" maxlength="3" required>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="bg-light p-3 rounded">
+                                <h6 class="mb-3">
+                                    <i class="fas fa-lock me-2"></i>Security Features
+                                </h6>
+                                <ul class="list-unstyled mb-0">
+                                    <li class="mb-2">
+                                        <i class="fas fa-check text-success me-2"></i>256-bit SSL Encryption
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check text-success me-2"></i>PCI DSS Compliant
+                                    </li>
+                                    <li class="mb-2">
+                                        <i class="fas fa-check text-success me-2"></i>Secure Gateway
+                                    </li>
+                                    <li>
+                                        <i class="fas fa-check text-success me-2"></i>Bank-level Security
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-4">
+                <button type="submit" class="btn btn-success btn-lg px-5" id="pay-now-btn">
+                    <i class="fas fa-lock me-2"></i>Pay Now - $<span id="display-amount">{{ full_amount }}</span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Payment Summary Sidebar -->
+    <div class="col-lg-4">
+        <div class="card sticky-top">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-receipt me-2"></i>Payment Summary
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Course Details -->
+                <div class="mb-3">
+                    <h6>Course Details</h6>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span>Course:</span>
+                        <span class="fw-bold">{{ assignment.course.course_code }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Total Fee:</span>
+                        <span>${{ assignment.total_amount }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Paid:</span>
+                        <span class="text-success">${{ assignment.amount_paid }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Pending:</span>
+                        <span class="text-danger">${{ assignment.amount_pending }}</span>
+                    </div>
+                </div>
+
+                <!-- Payment Details -->
+                <div class="mb-3">
+                    <h6>Payment Details</h6>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span>Amount:</span>
+                        <span class="fw-bold" id="summary-amount">${{ full_amount }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Processing Fee:</span>
+                        <span>$0.00</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Tax:</span>
+                        <span>$0.00</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between fw-bold">
+                        <span>Total:</span>
+                        <span id="summary-total">${{ full_amount }}</span>
+                    </div>
+                </div>
+
+                <!-- Payment Type -->
+                <div class="mb-3">
+                    <h6>Payment Type</h6>
+                    <hr>
+                    <span class="badge bg-info" id="payment-type-badge">Full Payment</span>
+                </div>
+
+                <!-- Terms -->
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="terms" required>
+                    <label class="form-check-label small" for="terms">
+                        I agree to the <a href="#" target="_blank">Terms & Conditions</a> and 
+                        <a href="#" target="_blank">Privacy Policy</a>
+                    </label>
+                </div>
+
+                <!-- Contact Info -->
+                <div class="bg-light p-3 rounded">
+                    <h6 class="mb-2">Need Help?</h6>
+                    <div class="small">
+                        <div class="mb-1">
+                            <i class="fas fa-phone me-2"></i>+1 (555) 123-4567
+                        </div>
+                        <div class="mb-1">
+                            <i class="fas fa-envelope me-2"></i>support@example.com
+                        </div>
+                        <div>
+                            <i class="fas fa-clock me-2"></i>24/7 Support Available
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Payment amount selection
+    const paymentOptions = document.querySelectorAll('input[name="payment_type"]');
+    const customAmountInput = document.getElementById('custom_amount');
+    const finalAmountInput = document.getElementById('final_amount');
+    const displayAmount = document.getElementById('display-amount');
+    const summaryAmount = document.getElementById('summary-amount');
+    const summaryTotal = document.getElementById('summary-total');
+    const paymentTypeBadge = document.getElementById('payment-type-badge');
+
+    // Payment amounts
+    const amounts = {
+        full: {{ full_amount }},
+        current_emi: {% if current_emi %}{{ current_emi.amount }}{% else %}0{% endif %},
+        overdue: {{ overdue_amount|default:0 }},
+        custom: 0
+    };
+
+    const paymentTypeNames = {
+        full: 'Full Payment',
+        current_emi: 'Current EMI',
+        overdue: 'Overdue Amount',
+        custom: 'Custom Amount'
+    };
+
+    // Handle payment option changes
+    paymentOptions.forEach(function(option) {
+        option.addEventListener('change', function() {
+            updatePaymentAmount();
+            updatePaymentCards();
+        });
+    });
+
+    // Handle custom amount input
+    customAmountInput.addEventListener('input', function() {
+        if (document.getElementById('payment_custom').checked) {
+            amounts.custom = parseFloat(this.value) || 0;
+            updatePaymentAmount();
+        }
+    });
+
+    function updatePaymentAmount() {
+        const selectedType = document.querySelector('input[name="payment_type"]:checked').value;
+        const amount = amounts[selectedType];
+        
+        finalAmountInput.value = amount;
+        displayAmount.textContent = amount.toFixed(2);
+        summaryAmount.textContent = '$' + amount.toFixed(2);
+        summaryTotal.textContent = '$' + amount.toFixed(2);
+        paymentTypeBadge.textContent = paymentTypeNames[selectedType];
+        
+        // Update form data
+        document.getElementById('final_payment_type').value = selectedType;
+    }
+
+    function updatePaymentCards() {
+        const cards = document.querySelectorAll('.payment-option');
+        cards.forEach(function(card) {
+            card.classList.remove('border-primary', 'bg-light');
+        });
+        
+        const selectedType = document.querySelector('input[name="payment_type"]:checked').value;
+        const selectedCard = document.querySelector(`.payment-option[data-payment-type="${selectedType}"]`);
+        if (selectedCard) {
+            selectedCard.classList.add('border-primary', 'bg-light');
+        }
+    }
+
+    // Payment method selection
+    const paymentMethods = document.querySelectorAll('input[name="payment_method"]');
+    paymentMethods.forEach(function(method) {
+        method.addEventListener('change', function() {
+            updatePaymentMethodCards();
+            document.getElementById('final_payment_method').value = this.value;
+        });
+    });
+
+    function updatePaymentMethodCards() {
+        const cards = document.querySelectorAll('.payment-method');
+        cards.forEach(function(card) {
+            card.classList.remove('border-primary', 'bg-light');
+        });
+        
+        const selectedMethod = document.querySelector('input[name="payment_method"]:checked').value;
+        const selectedCard = document.querySelector(`.payment-method[data-method="${selectedMethod}"]`);
+        if (selectedCard) {
+            selectedCard.classList.add('border-primary', 'bg-light');
+        }
+    }
+
+    // Format card number input
+    document.getElementById('card_number').addEventListener('input', function() {
+        let value = this.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+        let matches = value.match(/\d{4,16}/g);
+        let match = matches && matches[0] || '';
+        let parts = [];
+        
+        for (let i = 0, len = match.length; i < len; i += 4) {
+            parts.push(match.substring(i, i + 4));
+        }
+        
+        if (parts.length) {
+            this.value = parts.join(' ');
+        } else {
+            this.value = value;
+        }
+    });
+
+    // Format expiry date input
+    document.getElementById('expiry_date').addEventListener('input', function() {
+        let value = this.value.replace(/\D/g, '');
+        if (value.length >= 2) {
+            value = value.substring(0, 2) + '/' + value.substring(2, 4);
+        }
+        this.value = value;
+    });
+
+    // CVV input validation
+    document.getElementById('cvv').addEventListener('input', function() {
+        this.value = this.value.replace(/\D/g, '');
+    });
+
+    // Form submission
+    document.getElementById('payment-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        // Validate form
+        if (!document.getElementById('terms').checked) {
+            alert('Please accept the terms and conditions to proceed.');
+            return;
+        }
+        
+        const amount = parseFloat(finalAmountInput.value);
+        if (amount <= 0) {
+            alert('Please enter a valid payment amount.');
+            return;
+        }
+        
+        // Show loading state
+        const payButton = document.getElementById('pay-now-btn');
+        const originalText = payButton.innerHTML;
+        payButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+        payButton.disabled = true;
+        
+        // Simulate payment processing (replace with actual payment gateway integration)
+        setTimeout(function() {
+            // In real implementation, this would be handled by the payment gateway
+            alert('Payment processed successfully! You will be redirected to the confirmation page.');
+            
+            // Reset button state (for demo purposes)
+            payButton.innerHTML = originalText;
+            payButton.disabled = false;
+            
+            // Redirect to success page (uncomment in real implementation)
+            // window.location.href = "{% url 'fees:payment_success' %}";
+        }, 3000);
+    });
+
+    // Initialize card selection
+    updatePaymentCards();
+    updatePaymentMethodCards();
+});
+
+// Add hover effects to cards
+document.addEventListener('DOMContentLoaded', function() {
+    const cards = document.querySelectorAll('.card');
+    cards.forEach(function(card) {
+        card.addEventListener('mouseenter', function() {
+            if (!this.classList.contains('border-primary')) {
+                this.style.transform = 'translateY(-2px)';
+                this.style.transition = 'transform 0.2s ease';
+            }
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+});
+</script>
+
+<style>
+.payment-option, .payment-method {
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid #dee2e6;
+}
+
+.payment-option:hover, .payment-method:hover {
+    border-color: #007bff;
+    box-shadow: 0 2px 8px rgba(0,123,255,0.2);
+}
+
+.payment-option.border-primary, .payment-method.border-primary {
+    border-color: #007bff !important;
+    background-color: rgba(0,123,255,0.1) !important;
+}
+
+.form-check-input:checked {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.sticky-top {
+    top: 20px;
+}
+
+#custom_amount:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+}
+
+.btn-success:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.fa-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Card input styling */
+.form-control:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+}
+
+/* Security badge styling */
+.bg-light {
+    background-color: #f8f9fa !important;
+}
+
+/* Payment summary styling */
+.card-header.bg-primary {
+    background-color: #007bff !important;
+}
+
+/* Badge styling */
+.badge {
+    font-size: 0.75em;
+}
+</style>
+{% endblock %}

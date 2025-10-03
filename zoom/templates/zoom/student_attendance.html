@@ -1,0 +1,193 @@
+{% extends 'students/student_base.html' %}
+{% load static %}
+
+{% block title %}My Attendance - Student Panel{% endblock %}
+{% block page_title %}Attendance History{% endblock %}
+
+{% block content %}
+<!-- Header with Stats -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="bg-gradient-info text-white p-4 rounded-3">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h2 class="mb-2">
+                        <i class="fas fa-check-square me-2"></i>
+                        My Attendance Record
+                    </h2>
+                    <p class="mb-0 opacity-75">
+                        Track your session attendance and participation
+                    </p>
+                </div>
+                <div class="col-md-6">
+                    <div class="row text-center">
+                        <div class="col-4">
+                            <h3 class="mb-1">{{ total_sessions }}</h3>
+                            <small>Total Sessions</small>
+                        </div>
+                        <div class="col-4">
+                            <h3 class="mb-1">{{ total_attended }}</h3>
+                            <small>Attended</small>
+                        </div>
+                        <div class="col-4">
+                            <h3 class="mb-1">{{ attendance_percentage }}%</h3>
+                            <small>Attendance Rate</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Attendance Percentage Card -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="mb-0">Overall Attendance</h5>
+                    <span class="badge {% if attendance_percentage >= 75 %}bg-success{% elif attendance_percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %} fs-6">
+                        {{ attendance_percentage }}%
+                    </span>
+                </div>
+                <div class="progress" style="height: 25px;">
+                    <div class="progress-bar {% if attendance_percentage >= 75 %}bg-success{% elif attendance_percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                         role="progressbar" 
+                         style="width: {{ attendance_percentage }}%;" 
+                         aria-valuenow="{{ attendance_percentage }}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100">
+                        {{ attendance_percentage }}%
+                    </div>
+                </div>
+                <p class="text-muted small mt-2 mb-0">
+                    {% if attendance_percentage >= 75 %}
+                        <i class="fas fa-check-circle text-success me-1"></i>
+                        Excellent attendance! Keep it up!
+                    {% elif attendance_percentage >= 50 %}
+                        <i class="fas fa-exclamation-triangle text-warning me-1"></i>
+                        Good attendance, but try to improve further.
+                    {% else %}
+                        <i class="fas fa-times-circle text-danger me-1"></i>
+                        Low attendance. Please attend more sessions regularly.
+                    {% endif %}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Attendance Records -->
+<div class="card">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">
+            <i class="fas fa-list text-primary me-2"></i>
+            Attendance History
+        </h5>
+    </div>
+    <div class="card-body p-0">
+        {% if attendance_records %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Session</th>
+                            <th>Batch</th>
+                            <th>Date</th>
+                            <th>Joined At</th>
+                            <th>Left At</th>
+                            <th>Duration</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for record in attendance_records %}
+                        <tr>
+                            <td>
+                                <a href="{% url 'zoom:student_session_detail' record.session.id %}" 
+                                   class="text-decoration-none">
+                                    {{ record.session.title }}
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">
+                                    {{ record.session.batch.name }}
+                                </span>
+                            </td>
+                            <td>{{ record.session.scheduled_date|date:"M d, Y" }}</td>
+                            <td>
+                                {% if record.joined_at %}
+                                    <i class="fas fa-sign-in-alt text-success me-1"></i>
+                                    {{ record.joined_at|time:"g:i A" }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if record.left_at %}
+                                    <i class="fas fa-sign-out-alt text-danger me-1"></i>
+                                    {{ record.left_at|time:"g:i A" }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if record.duration_minutes %}
+                                    <span class="badge bg-info">
+                                        {{ record.duration_minutes }} min
+                                    </span>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if record.joined_at %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check me-1"></i>Present
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-times me-1"></i>Absent
+                                    </span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-clipboard-list fa-4x text-muted mb-4"></i>
+                <h4 class="text-muted mb-3">No Attendance Records</h4>
+                <p class="text-muted mb-4">
+                    Your attendance records will appear here once you start attending sessions.
+                </p>
+                <a href="{% url 'zoom:student_sessions_browse' %}" class="btn btn-primary">
+                    <i class="fas fa-video me-2"></i>View Available Sessions
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.bg-gradient-info {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.progress {
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+</style>
+{% endblock %}

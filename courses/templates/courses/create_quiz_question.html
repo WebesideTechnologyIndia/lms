@@ -1,0 +1,659 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Quiz Question - {{ lesson.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.question-type-card {
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+.question-type-card:hover {
+    border-color: #0d6efd;
+    transform: translateY(-2px);
+}
+.question-type-card.selected {
+    border-color: #0d6efd;
+    background-color: #f8f9ff;
+}
+.choice-input-group {
+    margin-bottom: 10px;
+}
+#choices-section {
+    display: none;
+}
+.fade-in {
+    animation: fadeIn 0.3s ease-in;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="welcome-card">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb" class="mb-2">
+                <ol class="breadcrumb text-white-50">
+                    <li class="breadcrumb-item"><a href="{% url 'courses:course_dashboard' %}" class="text-white-50">Courses</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'courses:course_detail' course.id %}" class="text-white-50">{{ course.course_code }}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'courses:course_modules' course.id %}" class="text-white-50">Modules</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'courses:module_lessons' course.id module.id %}" class="text-white-50">{{ module.title }}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'courses:manage_quiz_questions' course.id module.id lesson.id %}" class="text-white-50">Quiz Questions</a></li>
+                    <li class="breadcrumb-item active text-white">Create Question</li>
+                </ol>
+            </nav>
+            <h1 class="mb-2">
+                <i class="fas fa-plus me-3"></i>
+                Create Quiz Question
+            </h1>
+            <p class="mb-0 opacity-75">{{ lesson.title }} - Add a new question to your quiz</p>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <form method="post" id="questionForm">
+            {% csrf_token %}
+            
+            <!-- Question Type Selection -->
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list-ul me-2"></i>
+                        Step 1: Choose Question Type
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card question-type-card h-100" data-type="mcq">
+                                <div class="card-body text-center">
+                                    <div class="bg-primary text-white rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                        <i class="fas fa-list"></i>
+                                    </div>
+                                    <h5>Multiple Choice</h5>
+                                    <p class="text-muted small">Question with multiple answer options. Students select one correct answer.</p>
+                                    <div class="form-check">
+                                        <input type="radio" name="question_type" value="mcq" class="form-check-input" id="id_question_type_0">
+                                        <label for="id_question_type_0" class="form-check-label">
+                                            Select Multiple Choice
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card question-type-card h-100" data-type="true_false">
+                                <div class="card-body text-center">
+                                    <div class="bg-info text-white rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                        <i class="fas fa-check"></i>
+                                    </div>
+                                    <h5>True/False</h5>
+                                    <p class="text-muted small">Simple true or false question. Quick to create and answer.</p>
+                                    <div class="form-check">
+                                        <input type="radio" name="question_type" value="true_false" class="form-check-input" id="id_question_type_1">
+                                        <label for="id_question_type_1" class="form-check-label">
+                                            Select True/False
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card question-type-card h-100" data-type="short_answer">
+                                <div class="card-body text-center">
+                                    <div class="bg-secondary text-white rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 60px; height: 60px;">
+                                        <i class="fas fa-edit"></i>
+                                    </div>
+                                    <h5>Short Answer</h5>
+                                    <p class="text-muted small">Text-based answer question. Requires manual grading.</p>
+                                    <div class="form-check">
+                                        <input type="radio" name="question_type" value="short_answer" class="form-check-input" id="id_question_type_2">
+                                        <label for="id_question_type_2" class="form-check-label">
+                                            Select Short Answer
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Question Details -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-question-circle me-2"></i>
+                        Step 2: Question Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="{{ question_form.question_text.id_for_label }}" class="form-label">Question Text *</label>
+                        {{ question_form.question_text }}
+                        {% if question_form.question_text.errors %}
+                            <div class="invalid-feedback d-block">{{ question_form.question_text.errors.0 }}</div>
+                        {% endif %}
+                        <div class="form-text">Write a clear, concise question. You can use HTML formatting if needed.</div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ question_form.points.id_for_label }}" class="form-label">Points *</label>
+                                {{ question_form.points }}
+                                {% if question_form.points.errors %}
+                                    <div class="invalid-feedback d-block">{{ question_form.points.errors.0 }}</div>
+                                {% endif %}
+                                <div class="form-text">How many points is this question worth?</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <!-- Points will be shown here as a visual indicator -->
+                            <div class="pt-2">
+                                <div class="d-flex align-items-center">
+                                    <span class="me-2">Point Value:</span>
+                                    <span id="point-display" class="badge bg-success fs-6">1</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ question_form.explanation.id_for_label }}" class="form-label">Explanation (Optional)</label>
+                        {{ question_form.explanation }}
+                        {% if question_form.explanation.errors %}
+                            <div class="invalid-feedback d-block">{{ question_form.explanation.errors.0 }}</div>
+                        {% endif %}
+                        <div class="form-text">Provide an explanation that will be shown to students after they answer (if quiz settings allow).</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Multiple Choice Options (shown only for MCQ) -->
+            <div class="card mb-4" id="choices-section">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list-ol me-2"></i>
+                        Step 3: Answer Choices
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Add at least 2 choices. Check the box next to the correct answer(s).
+                    </p>
+                    
+                    <div id="choices-container">
+                        <div class="choice-input-group">
+                            <div class="input-group">
+                                <span class="input-group-text">A</span>
+                                <input type="text" class="form-control" name="choice_text[]" placeholder="Enter choice A" required>
+                                <div class="input-group-text">
+                                    <input type="checkbox" name="correct_choice[]" value="0" class="form-check-input mt-0">
+                                    <label class="ms-2 small">Correct</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="choice-input-group">
+                            <div class="input-group">
+                                <span class="input-group-text">B</span>
+                                <input type="text" class="form-control" name="choice_text[]" placeholder="Enter choice B" required>
+                                <div class="input-group-text">
+                                    <input type="checkbox" name="correct_choice[]" value="1" class="form-check-input mt-0">
+                                    <label class="ms-2 small">Correct</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-outline-primary btn-sm" id="add-choice">
+                            <i class="fas fa-plus me-1"></i>Add Another Choice
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm ms-2" id="remove-choice">
+                            <i class="fas fa-minus me-1"></i>Remove Last Choice
+                        </button>
+                    </div>
+                    
+                    <div class="alert alert-info mt-3">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-lightbulb me-1"></i>
+                            Tips for Good Multiple Choice Questions:
+                        </h6>
+                        <ul class="mb-0 small">
+                            <li>Make all choices plausible but only one clearly correct</li>
+                            <li>Keep choices roughly the same length</li>
+                            <li>Avoid "all of the above" or "none of the above" unless necessary</li>
+                            <li>Use 3-5 choices for optimal difficulty</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- True/False Instructions (shown only for True/False) -->
+            <div class="card mb-4" id="true-false-section" style="display: none;">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-check me-2"></i>
+                        Step 3: True/False Answer
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label">Select the correct answer:</label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input type="radio" name="true_false_answer" value="true" class="form-check-input" id="answer_true">
+                                    <label for="answer_true" class="form-check-label">
+                                        <i class="fas fa-check text-success me-2"></i>True
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input type="radio" name="true_false_answer" value="false" class="form-check-input" id="answer_false">
+                                    <label for="answer_false" class="form-check-label">
+                                        <i class="fas fa-times text-danger me-2"></i>False
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-info-circle me-1"></i>
+                            True/False Question Tips:
+                        </h6>
+                        <ul class="mb-0 small">
+                            <li>Make statements clearly true or false, avoid ambiguity</li>
+                            <li>Avoid absolute words like "always" or "never" unless truly absolute</li>
+                            <li>Focus on important concepts, not trivial details</li>
+                            <li>Ensure the statement tests understanding, not memorization</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Short Answer Instructions (shown only for Short Answer) -->
+            <div class="card mb-4" id="short-answer-section" style="display: none;">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>
+                        Step 3: Short Answer Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label for="expected_answer" class="form-label">Sample/Expected Answer (Optional)</label>
+                        <textarea class="form-control" id="expected_answer" name="expected_answer" rows="3" placeholder="Provide a sample answer or key points you expect in the answer..."></textarea>
+                        <div class="form-text">This will help you grade consistently and can be shown to students as feedback.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="max_length" class="form-label">Maximum Answer Length</label>
+                        <select class="form-select" id="max_length" name="max_length">
+                            <option value="100">100 characters (1-2 sentences)</option>
+                            <option value="250" selected>250 characters (short paragraph)</option>
+                            <option value="500">500 characters (long paragraph)</option>
+                            <option value="1000">1000 characters (multiple paragraphs)</option>
+                        </select>
+                        <div class="form-text">Set a character limit to guide student responses.</div>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            Manual Grading Required
+                        </h6>
+                        <p class="mb-2">Short answer questions require manual grading by instructors. Students will type their answers in a text box.</p>
+                        <small class="text-muted">Consider creating a rubric to ensure consistent grading across all submissions.</small>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <h6>Tips for Good Short Answer Questions:</h6>
+                        <ul class="small text-muted">
+                            <li>Be specific about the expected length of the answer</li>
+                            <li>Provide clear criteria for what makes a good answer</li>
+                            <li>Consider providing a sample answer in the explanation</li>
+                            <li>Use for questions that require critical thinking or analysis</li>
+                            <li>Ask "how" or "why" questions to encourage deeper thinking</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Validation Messages -->
+            <div class="alert alert-danger" id="validation-alert" style="display: none;">
+                <h6 class="alert-heading">
+                    <i class="fas fa-exclamation-triangle me-1"></i>
+                    Please fix the following issues:
+                </h6>
+                <ul id="validation-errors" class="mb-0"></ul>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{% url 'courses:manage_quiz_questions' course.id module.id lesson.id %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-warning btn-lg" id="submit-btn">
+                            <i class="fas fa-save me-2"></i>
+                            Create Question
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const questionTypeCards = document.querySelectorAll('.question-type-card');
+    const questionTypeRadios = document.querySelectorAll('input[name="question_type"]');
+    const choicesSection = document.getElementById('choices-section');
+    const trueFalseSection = document.getElementById('true-false-section');
+    const shortAnswerSection = document.getElementById('short-answer-section');
+    const pointsInput = document.querySelector('input[name="points"]');
+    const pointDisplay = document.getElementById('point-display');
+    const addChoiceBtn = document.getElementById('add-choice');
+    const removeChoiceBtn = document.getElementById('remove-choice');
+    const choicesContainer = document.getElementById('choices-container');
+    const form = document.getElementById('questionForm');
+    const validationAlert = document.getElementById('validation-alert');
+    const validationErrors = document.getElementById('validation-errors');
+    
+    let choiceCount = 2;
+    const choiceLabels = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+
+    // Handle question type selection
+    questionTypeCards.forEach(card => {
+        card.addEventListener('click', function() {
+            const type = this.dataset.type;
+            const radio = this.querySelector('input[type="radio"]');
+            
+            // Clear previous selections
+            questionTypeCards.forEach(c => c.classList.remove('selected'));
+            questionTypeRadios.forEach(r => r.checked = false);
+            
+            // Select current
+            this.classList.add('selected');
+            radio.checked = true;
+            
+            showSectionForType(type);
+        });
+    });
+
+    // Handle radio button changes
+    questionTypeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            if (this.checked) {
+                const card = this.closest('.question-type-card');
+                questionTypeCards.forEach(c => c.classList.remove('selected'));
+                card.classList.add('selected');
+                showSectionForType(this.value);
+            }
+        });
+    });
+
+    function showSectionForType(type) {
+        // Hide all sections
+        choicesSection.style.display = 'none';
+        trueFalseSection.style.display = 'none';
+        shortAnswerSection.style.display = 'none';
+        
+        // Show relevant section with animation
+        if (type === 'mcq') {
+            choicesSection.style.display = 'block';
+            choicesSection.classList.add('fade-in');
+        } else if (type === 'true_false') {
+            trueFalseSection.style.display = 'block';
+            trueFalseSection.classList.add('fade-in');
+        } else if (type === 'short_answer') {
+            shortAnswerSection.style.display = 'block';
+            shortAnswerSection.classList.add('fade-in');
+        }
+    }
+
+    // Handle points input change
+    if (pointsInput) {
+        pointsInput.addEventListener('input', function() {
+            const value = this.value || '1';
+            pointDisplay.textContent = value;
+            
+            // Change badge color based on value
+            pointDisplay.className = 'badge fs-6 ' + (
+                parseInt(value) >= 5 ? 'bg-danger' :
+                parseInt(value) >= 3 ? 'bg-warning' : 'bg-success'
+            );
+        });
+    }
+
+    // Add choice functionality
+    addChoiceBtn.addEventListener('click', function() {
+        if (choiceCount < choiceLabels.length) {
+            const choiceHtml = `
+                <div class="choice-input-group fade-in">
+                    <div class="input-group">
+                        <span class="input-group-text">${choiceLabels[choiceCount]}</span>
+                        <input type="text" class="form-control" name="choice_text[]" placeholder="Enter choice ${choiceLabels[choiceCount]}" required>
+                        <div class="input-group-text">
+                            <input type="checkbox" name="correct_choice[]" value="${choiceCount}" class="form-check-input mt-0">
+                            <label class="ms-2 small">Correct</label>
+                        </div>
+                    </div>
+                </div>
+            `;
+            choicesContainer.insertAdjacentHTML('beforeend', choiceHtml);
+            choiceCount++;
+            
+            // Disable add button if max choices reached
+            if (choiceCount >= choiceLabels.length) {
+                addChoiceBtn.disabled = true;
+            }
+            
+            // Enable remove button
+            removeChoiceBtn.disabled = false;
+        }
+    });
+
+    // Remove choice functionality
+    removeChoiceBtn.addEventListener('click', function() {
+        if (choiceCount > 2) {
+            const lastChoice = choicesContainer.lastElementChild;
+            lastChoice.remove();
+            choiceCount--;
+            
+            // Disable remove button if minimum choices reached
+            if (choiceCount <= 2) {
+                removeChoiceBtn.disabled = true;
+            }
+            
+            // Enable add button
+            addChoiceBtn.disabled = false;
+        }
+    });
+
+    // Form validation
+    form.addEventListener('submit', function(e) {
+        const errors = [];
+        validationAlert.style.display = 'none';
+        validationErrors.innerHTML = '';
+
+        // Check if question type is selected
+        const questionTypeSelected = document.querySelector('input[name="question_type"]:checked');
+        if (!questionTypeSelected) {
+            errors.push('Please select a question type');
+        }
+
+        // Check question text
+        const questionText = document.querySelector('textarea[name="question_text"]');
+        if (questionText && questionText.value.trim() === '') {
+            errors.push('Question text is required');
+        }
+
+        // Check points
+        const points = document.querySelector('input[name="points"]');
+        if (points && (points.value === '' || parseInt(points.value) < 1)) {
+            errors.push('Points must be at least 1');
+        }
+
+        // Type-specific validation
+        if (questionTypeSelected) {
+            const type = questionTypeSelected.value;
+            
+            if (type === 'mcq') {
+                // Check if at least one choice is marked as correct
+                const correctChoices = document.querySelectorAll('input[name="correct_choice[]"]:checked');
+                if (correctChoices.length === 0) {
+                    errors.push('Please select at least one correct answer for multiple choice question');
+                }
+                
+                // Check if all visible choices have text
+                const choiceInputs = document.querySelectorAll('input[name="choice_text[]"]');
+                let emptyChoices = 0;
+                choiceInputs.forEach(input => {
+                    if (input.value.trim() === '') {
+                        emptyChoices++;
+                    }
+                });
+                if (emptyChoices > 0) {
+                    errors.push('All answer choices must have text');
+                }
+            } else if (type === 'true_false') {
+                // Check if true/false answer is selected
+                const trueFalseAnswer = document.querySelector('input[name="true_false_answer"]:checked');
+                if (!trueFalseAnswer) {
+                    errors.push('Please select the correct answer (True or False)');
+                }
+            }
+        }
+
+        // Show errors if any
+        if (errors.length > 0) {
+            e.preventDefault();
+            errors.forEach(error => {
+                const li = document.createElement('li');
+                li.textContent = error;
+                validationErrors.appendChild(li);
+            });
+            validationAlert.style.display = 'block';
+            validationAlert.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    });
+
+    // Initialize remove button state
+    removeChoiceBtn.disabled = true;
+
+    // Auto-resize textareas
+    const textareas = document.querySelectorAll('textarea');
+    textareas.forEach(textarea => {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+    });
+
+    // Character counter for short answer max length
+    const maxLengthSelect = document.getElementById('max_length');
+    if (maxLengthSelect) {
+        maxLengthSelect.addEventListener('change', function() {
+            const value = this.value;
+            const description = this.options[this.selectedIndex].text;
+            
+            // Update the help text
+            const helpText = this.parentNode.querySelector('.form-text');
+            helpText.textContent = `Students will be limited to ${value} characters (${description.split('(')[1].replace(')', '')}).`;
+        });
+    }
+
+    // Live preview for question text
+    const questionTextArea = document.querySelector('textarea[name="question_text"]');
+    if (questionTextArea) {
+        questionTextArea.addEventListener('input', function() {
+            // You could add a live preview feature here if needed
+            const wordCount = this.value.trim().split(/\s+/).length;
+            const charCount = this.value.length;
+            
+            // Update help text with character/word count
+            let helpText = this.parentNode.querySelector('.form-text');
+            if (this.value.trim()) {
+                helpText.innerHTML = `Write a clear, concise question. You can use HTML formatting if needed. <small class="text-muted">(${charCount} characters, ${wordCount} words)</small>`;
+            } else {
+                helpText.textContent = 'Write a clear, concise question. You can use HTML formatting if needed.';
+            }
+        });
+    }
+
+    // Handle correct answer selection for MCQ (only allow one correct answer)
+    document.addEventListener('change', function(e) {
+        if (e.target.name === 'correct_choice[]') {
+            // For single correct answer, uncheck others when one is checked
+            const checkboxes = document.querySelectorAll('input[name="correct_choice[]"]');
+            if (e.target.checked) {
+                checkboxes.forEach(cb => {
+                    if (cb !== e.target) {
+                        cb.checked = false;
+                    }
+                });
+            }
+        }
+    });
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + Enter to submit
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            form.submit();
+        }
+        
+        // Escape to cancel
+        if (e.key === 'Escape') {
+            const cancelBtn = document.querySelector('a[href*="manage_quiz_questions"]');
+            if (cancelBtn && confirm('Are you sure you want to cancel? Any unsaved changes will be lost.')) {
+                window.location.href = cancelBtn.href;
+            }
+        }
+    });
+
+    // Warn about unsaved changes
+    let formModified = false;
+    const formInputs = form.querySelectorAll('input, textarea, select');
+    formInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            formModified = true;
+        });
+    });
+
+    window.addEventListener('beforeunload', function(e) {
+        if (formModified) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
+
+    // Remove unsaved changes warning when form is submitted
+    form.addEventListener('submit', function() {
+        formModified = false;
+    });
+});
+</script>
+{% endblock %}

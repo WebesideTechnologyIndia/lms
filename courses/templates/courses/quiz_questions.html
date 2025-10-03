@@ -1,0 +1,404 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Quiz Questions - {{ lesson.title }}{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="welcome-card">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb" class="mb-2">
+                <ol class="breadcrumb text-white-50">
+                    <li class="breadcrumb-item"><a href="{% url 'courses:course_dashboard' %}" class="text-white-50">Courses</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'courses:course_detail' course.id %}" class="text-white-50">{{ course.course_code }}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'courses:course_modules' course.id %}" class="text-white-50">Modules</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'courses:module_lessons' course.id module.id %}" class="text-white-50">{{ module.title }}</a></li>
+                    <li class="breadcrumb-item active text-white">Quiz Questions</li>
+                </ol>
+            </nav>
+            <h1 class="mb-2">
+                <i class="fas fa-question-circle me-3"></i>
+                Quiz Questions
+            </h1>
+            <p class="mb-0 opacity-75">{{ lesson.title }} - Manage quiz questions and answers</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'courses:create_quiz_question' course.id module.id lesson.id %}" class="btn btn-light btn-lg">
+                <i class="fas fa-plus me-2"></i>
+                Add Question
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Quiz Info -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-number text-warning">{{ questions.count }}</div>
+                    <div class="stats-label">Questions</div>
+                </div>
+                <div class="text-warning" style="font-size: 2.5rem; opacity: 0.3;">
+                    <i class="fas fa-question-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-number text-info">{{ quiz_content.time_limit_minutes }}</div>
+                    <div class="stats-label">Time Limit (min)</div>
+                </div>
+                <div class="text-info" style="font-size: 2.5rem; opacity: 0.3;">
+                    <i class="fas fa-clock"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-number text-success">{{ quiz_content.passing_score }}%</div>
+                    <div class="stats-label">Passing Score</div>
+                </div>
+                <div class="text-success" style="font-size: 2.5rem; opacity: 0.3;">
+                    <i class="fas fa-trophy"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-number text-primary">{{ quiz_content.max_attempts }}</div>
+                    <div class="stats-label">Max Attempts</div>
+                </div>
+                <div class="text-primary" style="font-size: 2.5rem; opacity: 0.3;">
+                    <i class="fas fa-redo"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quiz Settings -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-cog me-2"></i>
+                    Quiz Settings
+                </h5>
+                <a href="{% url 'courses:edit_lesson' course.id module.id lesson.id %}" class="btn btn-light btn-sm">
+                    <i class="fas fa-edit me-1"></i>Edit Settings
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Instructions:</h6>
+                        <p class="text-muted">{{ quiz_content.instructions|default:"No instructions provided" }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Configuration:</h6>
+                        <div class="d-flex flex-wrap gap-2">
+                            <span class="badge bg-{% if quiz_content.show_correct_answers %}success{% else %}secondary{% endif %}">
+                                <i class="fas fa-{% if quiz_content.show_correct_answers %}check{% else %}times{% endif %} me-1"></i>
+                                Show Answers
+                            </span>
+                            <span class="badge bg-{% if quiz_content.randomize_questions %}warning{% else %}secondary{% endif %}">
+                                <i class="fas fa-{% if quiz_content.randomize_questions %}shuffle{% else %}list{% endif %} me-1"></i>
+                                Randomize
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Questions List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-list-ol me-2"></i>
+                    Quiz Questions
+                </h5>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'courses:module_lessons' course.id module.id %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Lessons
+                    </a>
+                    <a href="{% url 'courses:create_quiz_question' course.id module.id lesson.id %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus me-1"></i>Add Question
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if questions %}
+                    {% for question in questions %}
+                    <div class="card border-start border-warning border-3 mb-3">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="d-flex align-items-start">
+                                        <div class="rounded-circle bg-warning text-white d-flex align-items-center justify-content-center me-3" style="width: 35px; height: 35px; font-size: 14px;">
+                                            {{ question.order }}
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex align-items-center mb-2">
+                                                <h6 class="mb-0 me-2">{{ question.question_text|truncatechars:80 }}</h6>
+                                                <span class="badge bg-{% if question.question_type == 'mcq' %}primary{% elif question.question_type == 'true_false' %}info{% else %}secondary{% endif %}">
+                                                    {{ question.get_question_type_display }}
+                                                </span>
+                                                <span class="badge bg-success ms-1">{{ question.points }} pts</span>
+                                            </div>
+                                            
+                                            {% if question.question_type == 'mcq' %}
+                                                <div class="choices-preview">
+                                                    {% for choice in question.choices.all %}
+                                                        <div class="d-flex align-items-center mb-1">
+                                                            <i class="fas fa-{% if choice.is_correct %}check-circle text-success{% else %}circle text-muted{% endif %} me-2"></i>
+                                                            <span class="{% if choice.is_correct %}text-success fw-bold{% else %}text-muted{% endif %}">
+                                                                {{ choice.choice_text }}
+                                                            </span>
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                            
+                                            {% if question.explanation %}
+                                                <div class="mt-2">
+                                                    <small class="text-info">
+                                                        <i class="fas fa-info-circle me-1"></i>
+                                                        <strong>Explanation:</strong> {{ question.explanation|truncatechars:100 }}
+                                                    </small>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="d-flex justify-content-end align-items-center h-100">
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#questionPreview{{ question.id }}" title="Preview Question">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <a href="{% url 'courses:edit_quiz_question' course.id module.id lesson.id question.id %}" class="btn btn-sm btn-outline-primary" title="Edit Question">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            {% if question.question_type == 'mcq' %}
+                                                <a href="{% url 'courses:manage_quiz_choices' course.id module.id lesson.id question.id %}" class="btn btn-sm btn-outline-warning" title="Manage Choices">
+                                                    <i class="fas fa-list"></i>
+                                                </a>
+                                            {% endif %}
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveQuestion({{ question.id }}, 'up')" title="Move Up" {% if question.order == 1 %}disabled{% endif %}>
+                                                <i class="fas fa-arrow-up"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveQuestion({{ question.id }}, 'down')" title="Move Down">
+                                                <i class="fas fa-arrow-down"></i>
+                                            </button>
+                                            <a href="{% url 'courses:delete_quiz_question' course.id module.id lesson.id question.id %}" class="btn btn-sm btn-outline-danger" title="Delete Question">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Question Preview Modal -->
+                    <div class="modal fade" id="questionPreview{{ question.id }}" tabindex="-1">
+                        <div class="modal-dialog modal-lg">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">
+                                        <i class="fas fa-question-circle me-2"></i>
+                                        Question {{ question.order }}
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <h6>Question:</h6>
+                                        <p class="fs-5">{{ question.question_text }}</p>
+                                    </div>
+                                    
+                                    {% if question.question_type == 'mcq' %}
+                                        <h6>Answer Choices:</h6>
+                                        <div class="list-group">
+                                            {% for choice in question.choices.all %}
+                                                <div class="list-group-item d-flex justify-content-between align-items-center {% if choice.is_correct %}list-group-item-success{% endif %}">
+                                                    <span>{{ forloop.counter }}. {{ choice.choice_text }}</span>
+                                                    {% if choice.is_correct %}
+                                                        <i class="fas fa-check-circle text-success"></i>
+                                                    {% endif %}
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% elif question.question_type == 'true_false' %}
+                                        <h6>Type:</h6>
+                                        <p class="text-info">True/False Question</p>
+                                    {% else %}
+                                        <h6>Type:</h6>
+                                        <p class="text-info">Short Answer Question</p>
+                                    {% endif %}
+                                    
+                                    {% if question.explanation %}
+                                        <hr>
+                                        <h6>Explanation:</h6>
+                                        <p class="text-muted">{{ question.explanation }}</p>
+                                    {% endif %}
+                                    
+                                    <hr>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <small class="text-muted">
+                                                <i class="fas fa-star me-1"></i>
+                                                Points: {{ question.points }}
+                                            </small>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <small class="text-muted">
+                                                <i class="fas fa-sort me-1"></i>
+                                                Order: {{ question.order }}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <a href="{% url 'courses:edit_quiz_question' course.id module.id lesson.id question.id %}" class="btn btn-primary">Edit Question</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <!-- Quiz Management Tips -->
+                    <div class="alert alert-light mt-4">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            Quiz Management Tips
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled mb-0">
+                                    <li><i class="fas fa-check text-success me-2"></i>Mix different question types for variety</li>
+                                    <li><i class="fas fa-balance-scale text-info me-2"></i>Balance point distribution across questions</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled mb-0">
+                                    <li><i class="fas fa-comment text-warning me-2"></i>Add explanations to help students learn</li>
+                                    <li><i class="fas fa-sort text-primary me-2"></i>Order questions from easy to difficult</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-question-circle fa-4x text-muted mb-4"></i>
+                        <h4 class="text-muted mb-3">No questions added yet</h4>
+                        <p class="text-muted mb-4">Create your first quiz question to get started.</p>
+                        <a href="{% url 'courses:create_quiz_question' course.id module.id lesson.id %}" class="btn btn-warning btn-lg">
+                            <i class="fas fa-plus me-2"></i>
+                            Create First Question
+                        </a>
+                    </div>
+                    
+                    <!-- Question Types Guide -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card border-warning">
+                                <div class="card-header bg-warning text-white">
+                                    <h5 class="mb-0">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Question Types Available
+                                    </h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-4 text-center mb-3">
+                                            <div class="bg-primary text-white rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                                <i class="fas fa-list"></i>
+                                            </div>
+                                            <h6>Multiple Choice</h6>
+                                            <p class="small text-muted">Questions with multiple answer options</p>
+                                        </div>
+                                        <div class="col-md-4 text-center mb-3">
+                                            <div class="bg-info text-white rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                                <i class="fas fa-check"></i>
+                                            </div>
+                                            <h6>True/False</h6>
+                                            <p class="small text-muted">Simple true or false questions</p>
+                                        </div>
+                                        <div class="col-md-4 text-center mb-3">
+                                            <div class="bg-secondary text-white rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                                                <i class="fas fa-edit"></i>
+                                            </div>
+                                            <h6>Short Answer</h6>
+                                            <p class="small text-muted">Text-based answer questions</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function moveQuestion(questionId, direction) {
+    if (confirm('Are you sure you want to reorder this question?')) {
+        fetch(`/courses/quiz-questions/${questionId}/move/${direction}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while reordering questions.');
+        });
+    }
+}
+
+// Auto-hide alerts after 5 seconds
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(function() {
+        const alerts = document.querySelectorAll('.alert-dismissible');
+        alerts.forEach(function(alert) {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 5000);
+});
+</script>
+{% endblock %}

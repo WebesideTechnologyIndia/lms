@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Student Panel - LMS{% endblock %}</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- jQuery CDN -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <!-- Custom CSS -->
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --secondary-color: #6366f1;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --dark-color: #1f2937;
+            --light-bg: #f8fafc;
+        }
+
+        body {
+            background-color: var(--light-bg);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .sidebar {
+            background: linear-gradient(145deg, var(--primary-color), var(--secondary-color));
+            min-height: 100vh;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            padding: 12px 20px;
+            margin: 5px 10px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .sidebar .nav-link:hover,
+        .sidebar .nav-link.active {
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            transform: translateX(5px);
+        }
+
+        .sidebar .nav-link i {
+            width: 20px;
+            margin-right: 10px;
+        }
+
+        .main-content {
+            background-color: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            margin: 20px;
+            padding: 30px;
+        }
+
+        .profile-header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 30px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+
+        .profile-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 4px solid white;
+            object-fit: cover;
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            border-radius: 8px;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--secondary-color);
+            border-color: var(--secondary-color);
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+            color: var(--primary-color) !important;
+        }
+
+        .progress {
+            height: 8px;
+            border-radius: 10px;
+        }
+
+        .badge {
+            border-radius: 6px;
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background-color: var(--danger-color);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: -250px;
+                width: 250px;
+                z-index: 1000;
+                transition: left 0.3s ease;
+            }
+
+            .sidebar.show {
+                left: 0;
+            }
+
+            .main-content {
+                margin: 10px;
+                padding: 20px;
+            }
+        }
+
+        /* Custom filter for template lookups */
+        .d-none-custom {
+            display: none !important;
+        }
+        
+        {% block extra_css %}
+        {% endblock %}
+    </style>
+</head>
+<body>
+    <!-- Mobile Menu Toggle -->
+    <button class="btn btn-primary d-md-none position-fixed" 
+            style="top: 20px; left: 20px; z-index: 1001;"
+            onclick="toggleSidebar()">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-md-3 col-lg-2 px-0">
+                <div class="sidebar" id="sidebar">
+                    <!-- Brand -->
+                    <div class="text-center py-4 border-bottom border-light border-opacity-25">
+                        <h4 class="mb-0">
+                            <i class="fas fa-graduation-cap me-2"></i>
+                            LMS Student
+                        </h4>
+                    </div>
+
+                    <!-- Student Profile Summary -->
+                    <div class="p-3 border-bottom border-light border-opacity-25">
+                        <div class="d-flex align-items-center">
+                            {% if user.profile_picture %}
+                                <img src="{{ user.profile_picture.url }}" 
+                                     alt="Profile" 
+                                     class="rounded-circle me-3" 
+                                     style="width: 40px; height: 40px; object-fit: cover;">
+                            {% else %}
+                                <div class="bg-light rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                     style="width: 40px; height: 40px; color: var(--primary-color);">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                            {% endif %}
+                            <div>
+                                <div class="fw-bold">{{ user.get_full_name|default:user.username }}</div>
+                                <small class="opacity-75">Student</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Navigation -->
+                    <nav class="nav flex-column py-3">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'student_dashboard' %}active{% endif %}" 
+                           href="{% url 'student_dashboard' %}">
+                            <i class="fas fa-tachometer-alt"></i>
+                            Dashboard
+                        </a>
+                        
+                        <a class="nav-link {% if request.resolver_match.url_name == 'student_profile' %}active{% endif %}" 
+                           href="{% url 'student_profile' %}">
+                            <i class="fas fa-user-edit"></i>
+                            Profile
+                            {% if not user.profile or not user.profile.student_id %}
+                                <span class="badge bg-warning ms-2">!</span>
+                            {% endif %}
+                        </a>
+                        
+                        <a class="nav-link {% if 'courses' in request.resolver_match.url_name %}active{% endif %}" 
+                           href="{% url 'student_courses' %}">
+                            <i class="fas fa-book"></i>
+                            My Courses
+                            <span class="badge bg-primary ms-2">{{ enrolled_courses_count|default:0 }}</span>
+                        </a>
+                        
+                        <a class="nav-link {% if 'batches' in request.resolver_match.url_name %}active{% endif %}" 
+                           href="{% url 'student_batches' %}">
+                            <i class="fas fa-users"></i>
+                            My Batches
+                        </a>
+                        <!-- ADD THIS FEES SECTION -->
+<a class="nav-link {% if 'fees' in request.resolver_match.url_name %}active{% endif %}" 
+   href="{% url 'fees:student_fee_dashboard' %}">
+    <i class="fas fa-credit-card"></i>
+    My Fees
+</a>
+<!-- END FEES SECTION -->
+                        <a class="nav-link {% if 'browse' in request.resolver_match.url_name %}active{% endif %}" 
+                           href="{% url 'browse_courses' %}">
+                            <i class="fas fa-search"></i>
+                            Browse Courses
+                        </a>
+                        
+
+                        <!-- Sidebar mein Zoom section add karo -->
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'zoom:student_sessions_browse' %}">
+        <i class="fas fa-video"></i> Live Sessions
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'zoom:student_recordings' %}">
+        <i class="fas fa-play-circle"></i> Recordings
+    </a>
+</li>
+<li class="nav-item">
+    <a class="nav-link" href="{% url 'zoom:student_attendance' %}">
+        <i class="fas fa-check-square"></i> Attendance
+    </a>
+</li>
+
+                        <!-- EXAMS SECTION - NEW -->
+                        <a class="nav-link {% if 'exam' in request.resolver_match.url_name or 'student_exams' in request.resolver_match.url_name %}active{% endif %}" 
+                           href="{% url 'student_exams' %}">
+                            <i class="fas fa-clipboard-list"></i>
+                            My Exams
+                            {% comment %}
+                            <!-- Optional: Add exam notification badges -->
+                            <span class="badge bg-success ms-2" id="available-exams-count">0</span>
+                            {% endcomment %}
+                        </a>
+                        
+                        <a class="nav-link {% if 'progress' in request.resolver_match.url_name %}active{% endif %}" 
+                           href="{% url 'student_progress' %}">
+                            <i class="fas fa-chart-line"></i>
+                            Progress
+                        </a>
+                        
+                        <a class="nav-link {% if 'assignments' in request.resolver_match.url_name %}active{% endif %}" 
+                           href="{% url 'student_assignments' %}">
+                            <i class="fas fa-tasks"></i>
+                            Assignments
+                        </a>
+                        
+                        <a class="nav-link {% if 'certificates' in request.resolver_match.url_name %}active{% endif %}" 
+                           href="{% url 'student_certificates' %}">
+                            <i class="fas fa-certificate"></i>
+                            Certificates
+                        </a>
+                        
+                        <hr class="border-light border-opacity-25 mx-3">
+                        
+                        <a class="nav-link" href="{% url 'student_settings' %}">
+                            <i class="fas fa-cog"></i>
+                            Settings
+                        </a>
+                        
+                        <a class="nav-link" href="{% url 'user_login' %}">
+                            <i class="fas fa-sign-out-alt"></i>
+                            Logout
+                        </a>
+                    </nav>
+                </div>
+            </div>
+
+            <!-- Main Content -->
+            <div class="col-md-9 col-lg-10">
+                <!-- Top Navigation -->
+                <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom">
+                    <div class="container-fluid">
+                        <span class="navbar-brand">
+                            {% block page_title %}Student Dashboard{% endblock %}
+                        </span>
+                        
+                        <div class="d-flex align-items-center">
+                            <!-- Notifications -->
+                            <div class="dropdown me-3">
+                                <button class="btn btn-outline-secondary position-relative" 
+                                        type="button" 
+                                        data-bs-toggle="dropdown">
+                                    <i class="fas fa-bell"></i>
+                                    <span class="notification-badge">3</span>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><h6 class="dropdown-header">Notifications</h6></li>
+                                    <li><a class="dropdown-item" href="{% url 'student_exams' %}">New exam assigned</a></li>
+                                    <li><a class="dropdown-item" href="#">Batch lecture scheduled</a></li>
+                                    <li><a class="dropdown-item" href="#">Course completion certificate ready</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-center" href="#">View All</a></li>
+                                </ul>
+                            </div>
+
+                            <!-- User Menu -->
+                            <div class="dropdown">
+                                <button class="btn btn-outline-secondary dropdown-toggle" 
+                                        type="button" 
+                                        data-bs-toggle="dropdown">
+                                    {{ user.get_full_name|default:user.username }}
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" href="{% url 'student_profile' %}">
+                                        <i class="fas fa-user me-2"></i>Profile
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'student_settings' %}">
+                                        <i class="fas fa-cog me-2"></i>Settings
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" href="{% url 'user_login' %}">
+                                        <i class="fas fa-sign-out-alt me-2"></i>Logout
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </nav>
+
+                <!-- Profile Completion Alert -->
+                {% if not user.profile or not user.profile.student_id %}
+                <div class="alert alert-warning alert-dismissible fade show m-3" role="alert">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Complete Your Profile!</strong> 
+                    Please complete your profile to access all features and courses.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endif %}
+
+                <!-- Main Content Area -->
+                <div class="main-content">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+
+                    {% block content %}
+                    {% endblock %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Custom JS -->
+    <script>
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('show');
+        }
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(e) {
+            const sidebar = document.getElementById('sidebar');
+            const toggleBtn = document.querySelector('.btn');
+            
+            if (window.innerWidth <= 768) {
+                if (!sidebar.contains(e.target) && !toggleBtn.contains(e.target)) {
+                    sidebar.classList.remove('show');
+                }
+            }
+        });
+
+        // Auto-dismiss alerts after 5 seconds
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.alert:not(.alert-warning)');
+            alerts.forEach(function(alert) {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            });
+        }, 5000);
+
+        // Custom template filter function for dictionary lookups
+        jQuery.extend({
+            lookup: function(obj, key) {
+                if (obj && typeof obj === 'object') {
+                    return obj[key];
+                }
+                return null;
+            }
+        });
+
+        // Global template filter for use in templates
+        window.lookup = function(obj, key) {
+            if (obj && typeof obj === 'object') {
+                return obj[key];
+            }
+            return null;
+        };
+    </script>
+
+    {% block extra_js %}
+    {% endblock %}
+</body>
+</html>

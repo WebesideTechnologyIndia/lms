@@ -1,0 +1,204 @@
+<!-- courses/templates/courses/student_batches.html -->
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}My Batches{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    
+    <!-- Page Header -->
+    <div class="mb-4">
+        <h2><i class="fas fa-graduation-cap me-2"></i>My Learning Batches</h2>
+        <p class="text-muted">Track your progress across all enrolled batches</p>
+    </div>
+
+    {% if enrollments %}
+        <div class="row">
+            {% for enrollment in enrollments %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 shadow-sm hover-shadow">
+                        <!-- Batch Header -->
+                        <div class="card-header bg-gradient-primary text-white">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <h6 class="mb-1">{{ enrollment.batch.name }}</h6>
+                                    <small class="opacity-75">{{ enrollment.batch.code }}</small>
+                                </div>
+                                <span class="badge bg-light text-dark">
+                                    {{ enrollment.get_status_display }}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <!-- Course Info -->
+                        <div class="card-body">
+                            <h6 class="text-primary mb-2">{{ enrollment.batch.course.title }}</h6>
+                            
+                            <div class="mb-3">
+                                <small class="text-muted">
+                                    <i class="fas fa-calendar me-1"></i>
+                                    {{ enrollment.batch.start_date|date:"M d" }} - {{ enrollment.batch.end_date|date:"M d, Y" }}
+                                </small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <small class="text-muted">
+                                    <i class="fas fa-chalkboard-teacher me-1"></i>
+                                    {{ enrollment.batch.instructor.get_full_name|default:enrollment.batch.instructor.username }}
+                                </small>
+                            </div>
+                            
+                            <!-- Progress Bar -->
+                            <div class="mb-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <small><strong>Progress</strong></small>
+                                    <small class="text-muted">{{ enrollment.progress_percentage|floatformat:0 }}%</small>
+                                </div>
+                                <div class="progress" style="height: 8px;">
+                                    <div class="progress-bar bg-success" 
+                                         style="width: {{ enrollment.progress_percentage }}%"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Stats -->
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <div class="border-end">
+                                        <div class="fw-bold text-primary">{{ enrollment.batch.batch_modules.count }}</div>
+                                        <small class="text-muted">Modules</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="border-end">
+                                        <div class="fw-bold text-info">
+                                            {% with total=0 %}
+                                                {% for module in enrollment.batch.batch_modules.all %}
+                                                    {% with total=total|add:module.lessons.count %}{% endwith %}
+                                                {% endfor %}
+                                                {{ total }}
+                                            {% endwith %}
+                                        </div>
+                                        <small class="text-muted">Lessons</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="fw-bold text-warning">
+                                        {{ enrollment.batch.enrollments.count }}
+                                    </div>
+                                    <small class="text-muted">Students</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="card-footer bg-light">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">
+                                    Enrolled {{ enrollment.enrolled_at|timesince }} ago
+                                </small>
+                                <a href="{% url 'courses:student_batch_content' enrollment.batch.id %}" 
+                                   class="btn btn-primary btn-sm">
+                                    <i class="fas fa-play me-1"></i>Continue Learning
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Quick Stats -->
+        <div class="row mt-4">
+            <div class="col-md-3">
+                <div class="card text-center bg-primary text-white">
+                    <div class="card-body">
+                        <i class="fas fa-book-open fa-2x mb-2"></i>
+                        <h4>{{ enrollments|length }}</h4>
+                        <small>Active Batches</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center bg-success text-white">
+                    <div class="card-body">
+                        <i class="fas fa-check-circle fa-2x mb-2"></i>
+                        <h4>
+                            {{ enrollments|dictsort:"status"|dictsortreversed:"completed"|length }}
+                        </h4>
+                        <small>Completed</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center bg-info text-white">
+                    <div class="card-body">
+                        <i class="fas fa-clock fa-2x mb-2"></i>
+                        <h4>
+                            {% with total_time=0 %}
+                                {% for enrollment in enrollments %}
+                                    {% with total_time=total_time|add:enrollment.total_time_spent_minutes %}{% endwith %}
+                                {% endfor %}
+                                {{ total_time|floatformat:0 }}
+                            {% endwith %}
+                        </h4>
+                        <small>Minutes Studied</small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center bg-warning text-dark">
+                    <div class="card-body">
+                        <i class="fas fa-percentage fa-2x mb-2"></i>
+                        <h4>
+                            {% with total_progress=0 count=enrollments|length %}
+                                {% for enrollment in enrollments %}
+                                    {% with total_progress=total_progress|add:enrollment.progress_percentage %}{% endwith %}
+                                {% endfor %}
+                                {% if count > 0 %}
+                                    {% widthratio total_progress count 1 %}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            {% endwith %}
+                        </h4>
+                        <small>Avg Progress</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+    {% else %}
+        <!-- Empty State -->
+        <div class="text-center py-5">
+            <div class="mb-4">
+                <i class="fas fa-graduation-cap text-muted" style="font-size: 4rem;"></i>
+            </div>
+            <h4 class="text-muted">No Batches Yet</h4>
+            <p class="text-muted">You haven't enrolled in any batches yet. Browse available courses to get started!</p>
+            <a href="{% url 'courses:course_catalog' %}" class="btn btn-primary">
+                <i class="fas fa-search me-2"></i>Browse Courses
+            </a>
+        </div>
+    {% endif %}
+</div>
+
+<style>
+.hover-shadow {
+    transition: box-shadow 0.3s ease;
+}
+
+.hover-shadow:hover {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.bg-gradient-primary {
+    background: linear-gradient(45deg, #007bff, #6610f2);
+}
+
+.card-footer {
+    border-top: 1px solid rgba(0,0,0,.125);
+}
+</style>
+{% endblock %}

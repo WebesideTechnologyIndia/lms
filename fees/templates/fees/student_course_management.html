@@ -1,0 +1,827 @@
+{% extends 'base.html' %}
+
+{% block title %}Student Course Management - LMS Admin{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item active">Student Course Management</li>
+    </ol>
+</nav>
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-user-graduate me-2"></i>Student Course Management
+        </h2>
+        <p class="text-muted mb-0">Manage student course access and batch enrollments</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#bulkActionModal">
+            <i class="fas fa-tasks me-2"></i>Bulk Actions
+        </button>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#filterModal">
+            <i class="fas fa-filter me-2"></i>Filter Students
+        </button>
+    </div>
+</div>
+
+<!-- Messages -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Search and Filter Bar -->
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="GET" class="row align-items-end">
+            <div class="col-md-4">
+                <label class="form-label">Search Student</label>
+                <input type="text" name="search" class="form-control" 
+                       placeholder="Name, email, or username..." 
+                       value="{{ request.GET.search }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Course</label>
+                <select name="course" class="form-select">
+                    <option value="">All Courses</option>
+                    {% for course in courses %}
+                        <option value="{{ course.id }}" 
+                                {% if request.GET.course == course.id|stringformat:"s" %}selected{% endif %}>
+                            {{ course.title }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="locked" {% if request.GET.status == 'locked' %}selected{% endif %}>Locked</option>
+                    <option value="unlocked" {% if request.GET.status == 'unlocked' %}selected{% endif %}>Unlocked</option>
+                    <option value="overdue" {% if request.GET.status == 'overdue' %}selected{% endif %}>Payment Overdue</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search me-2"></i>Search
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Students List -->
+{% for student in students %}
+<div class="card shadow-sm mb-4">
+    <div class="card-header bg-light">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="d-flex align-items-center">
+                <div class="avatar-placeholder bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
+                     style="width: 50px; height: 50px; font-size: 20px;">
+                    {{ student.first_name.0 }}{{ student.last_name.0 }}
+                </div>
+                <div>
+                    <h5 class="mb-1">{{ student.get_full_name }}</h5>
+                    <p class="text-muted mb-0">
+                        <i class="fas fa-envelope me-2"></i>{{ student.email }}
+                        <span class="ms-3">
+                            <i class="fas fa-user me-2"></i>{{ student.username }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+            <div class="d-flex gap-2">
+                {% if student.total_overdue_amount > 0 %}
+                    <span class="badge bg-danger">
+                        <i class="fas fa-exclamation-triangle me-1"></i>
+                        Overdue: ${{ student.total_overdue_amount }}
+                    </span>
+                {% endif %}
+                <span class="badge bg-info">
+                    {{ student.enrollments.count }} Course{{ student.enrollments.count|pluralize }}
+                </span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card-body">
+        <!-- Course Enrollments -->
+        {% for enrollment in student.active_enrollments %}
+        <div class="course-section mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="fas fa-book text-primary me-2"></i>
+                    <h6 class="mb-0">{{ enrollment.course.title }}</h6>
+                    <span class="badge bg-secondary ms-2">{{ enrollment.course.course_code }}</span>
+                    
+                    {% if enrollment.is_course_locked %}
+                        <span class="badge bg-danger ms-2">
+                            <i class="fas fa-lock me-1"></i>LOCKED
+                        </span>
+                    {% else %}
+                        <span class="badge bg-success ms-2">
+                            <i class="fas fa-unlock me-1"></i>ACTIVE
+                        </span>
+                    {% endif %}
+                </div>
+                
+                <div class="d-flex gap-2">
+                    {% if enrollment.fee_assignment %}
+                        {% if enrollment.is_course_locked %}
+                            <button class="btn btn-sm btn-success unlock-course-btn" 
+                                    data-student-id="{{ student.id }}" 
+                                    data-course-id="{{ enrollment.course.id }}"
+                                    data-student-name="{{ student.get_full_name }}"
+                                    data-course-name="{{ enrollment.course.title }}">
+                                <i class="fas fa-unlock me-1"></i>Unlock Course
+                            </button>
+                        {% else %}
+                            <button class="btn btn-sm btn-danger lock-course-btn" 
+                                    data-student-id="{{ student.id }}" 
+                                    data-course-id="{{ enrollment.course.id }}"
+                                    data-student-name="{{ student.get_full_name }}"
+                                    data-course-name="{{ enrollment.course.title }}">
+                                <i class="fas fa-lock me-1"></i>Lock Course
+                            </button>
+                        {% endif %}
+                        
+<a href="{% url 'fees:student_fee_detail' enrollment.fee_assignment.id %}"                           class="btn btn-sm btn-outline-primary">
+                            <i class="fas fa-dollar-sign me-1"></i>Fee Details
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- Fee Information -->
+            {% if enrollment.fee_assignment %}
+            <div class="row mb-3">
+                <div class="col-md-3">
+                    <small class="text-muted">Total Amount</small>
+                    <div class="fw-bold">${{ enrollment.fee_assignment.total_amount }}</div>
+                </div>
+                <div class="col-md-3">
+                    <small class="text-muted">Amount Paid</small>
+                    <div class="fw-bold text-success">${{ enrollment.fee_assignment.amount_paid }}</div>
+                </div>
+                <div class="col-md-3">
+                    <small class="text-muted">Amount Pending</small>
+                    <div class="fw-bold text-danger">${{ enrollment.fee_assignment.amount_pending }}</div>
+                </div>
+                <div class="col-md-3">
+                    <small class="text-muted">Progress</small>
+                    <div class="progress" style="height: 20px;">
+                        <div class="progress-bar bg-success" 
+                             style="width: {{ enrollment.fee_assignment.get_completion_percentage }}%">
+                            {{ enrollment.fee_assignment.get_completion_percentage }}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Batch Enrollments -->
+            {% if enrollment.batch_enrollments %}
+            <div class="batches-section">
+                <h6 class="text-muted mb-3">
+                    <i class="fas fa-users me-2"></i>Batch Enrollments
+                </h6>
+                
+                <div class="row">
+                    {% for batch in enrollment.batch_enrollments %}
+                    <div class="col-md-6 mb-3">
+                        <div class="batch-item p-3 {% if batch.is_batch_active %}unlocked{% else %}locked{% endif %}">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <div>
+                                    <h6 class="mb-1">{{ batch.name }}</h6>
+                                    <small class="text-muted">{{ batch.code }}</small>
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    {% if batch.is_batch_active %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i>Active
+                                        </span>
+                                        <button class="btn btn-sm btn-outline-danger lock-batch-btn" 
+                                                data-student-id="{{ student.id }}" 
+                                                data-batch-id="{{ batch.id }}"
+                                                data-student-name="{{ student.get_full_name }}"
+                                                data-batch-name="{{ batch.name }}">
+                                            <i class="fas fa-lock"></i>
+                                        </button>
+                                    {% else %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-ban me-1"></i>Locked
+                                        </span>
+                                        <button class="btn btn-sm btn-outline-success unlock-batch-btn" 
+                                                data-student-id="{{ student.id }}" 
+                                                data-batch-id="{{ batch.id }}"
+                                                data-student-name="{{ student.get_full_name }}"
+                                                data-batch-name="{{ batch.name }}">
+                                            <i class="fas fa-unlock"></i>
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="row text-center">
+                                <div class="col-6">
+                                    <small class="text-muted">Start Date</small>
+                                    <div class="small fw-bold">{{ batch.start_date }}</div>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">End Date</small>
+                                    <div class="small fw-bold">{{ batch.end_date }}</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if not forloop.last %}<hr>{% endif %}
+        {% endfor %}
+        
+        <!-- No enrollments message -->
+        {% if not student.active_enrollments %}
+        <div class="text-center py-4">
+            <i class="fas fa-graduation-cap text-muted" style="font-size: 48px;"></i>
+            <h6 class="text-muted mt-3">No course enrollments found</h6>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% empty %}
+<div class="card shadow-sm">
+    <div class="card-body text-center py-5">
+        <i class="fas fa-users text-muted" style="font-size: 64px;"></i>
+        <h4 class="text-muted mt-3 mb-2">No Students Found</h4>
+        <p class="text-muted">Try adjusting your search criteria or filters.</p>
+    </div>
+</div>
+{% endfor %}
+
+<!-- Pagination -->
+{% if students.has_other_pages %}
+<nav aria-label="Page navigation">
+    <ul class="pagination justify-content-center">
+        {% if students.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ students.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.course %}&course={{ request.GET.course }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
+                    <i class="fas fa-chevron-left"></i>
+                </a>
+            </li>
+        {% endif %}
+        
+        {% for num in students.paginator.page_range %}
+            {% if students.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+            {% elif num > students.number|add:'-3' and num < students.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.course %}&course={{ request.GET.course }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">{{ num }}</a>
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if students.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ students.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.course %}&course={{ request.GET.course }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
+                    <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Lock/Unlock Course Modal -->
+<div class="modal fade" id="lockUnlockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="lockUnlockModalTitle">Confirm Action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="lockUnlockModalBody">
+                <!-- Content will be populated by JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmActionBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Actions Modal -->
+<div class="modal fade" id="bulkActionModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Bulk Actions</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="bulkActionForm">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">Select Action</label>
+                        <select class="form-select" name="bulk_action" required>
+                            <option value="">-- Choose Action --</option>
+                            <option value="lock_course">Lock Course for All Students</option>
+                            <option value="unlock_course">Unlock Course for All Students</option>
+                            <option value="lock_overdue">Lock Courses for Overdue Students</option>
+                            <option value="unlock_paid">Unlock Courses for Paid Students</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Select Course</label>
+                        <select class="form-select" name="course_id" required>
+                            <option value="">-- Choose Course --</option>
+                            {% for course in courses %}
+                                <option value="{{ course.id }}">{{ course.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reason</label>
+                        <textarea class="form-control" name="reason" rows="3" 
+                                  placeholder="Enter reason for this action..." required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="submitBulkAction()">Execute Action</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    let currentAction = null;
+    let actionData = {};
+    const lockUnlockModal = new bootstrap.Modal(document.getElementById('lockUnlockModal'));
+
+    // Lock Course Buttons
+    document.querySelectorAll('.lock-course-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            currentAction = 'lock_course';
+            actionData = {
+                student_id: this.dataset.studentId,
+                course_id: this.dataset.courseId,
+                student_name: this.dataset.studentName,
+                course_name: this.dataset.courseName
+            };
+            
+            document.getElementById('lockUnlockModalTitle').textContent = 'Lock Course Access';
+            document.getElementById('lockUnlockModalBody').innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This action will lock course access.
+                </div>
+                <p>Are you sure you want to <strong>lock</strong> course access for:</p>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-user me-2"></i><strong>Student:</strong> ${actionData.student_name}</li>
+                    <li><i class="fas fa-book me-2"></i><strong>Course:</strong> ${actionData.course_name}</li>
+                </ul>
+                <div class="mb-3">
+                    <label class="form-label">Reason for locking:</label>
+                    <textarea class="form-control" id="actionReason" rows="3" 
+                              placeholder="Enter reason for locking course access..."></textarea>
+                </div>
+            `;
+            document.getElementById('confirmActionBtn').textContent = 'Lock Course';
+            document.getElementById('confirmActionBtn').className = 'btn btn-danger';
+            lockUnlockModal.show();
+        });
+    });
+
+    // Unlock Course Buttons
+    document.querySelectorAll('.unlock-course-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            currentAction = 'unlock_course';
+            actionData = {
+                student_id: this.dataset.studentId,
+                course_id: this.dataset.courseId,
+                student_name: this.dataset.studentName,
+                course_name: this.dataset.courseName
+            };
+            
+            document.getElementById('lockUnlockModalTitle').textContent = 'Unlock Course Access';
+            document.getElementById('lockUnlockModalBody').innerHTML = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Action:</strong> This will unlock course access.
+                </div>
+                <p>Are you sure you want to <strong>unlock</strong> course access for:</p>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-user me-2"></i><strong>Student:</strong> ${actionData.student_name}</li>
+                    <li><i class="fas fa-book me-2"></i><strong>Course:</strong> ${actionData.course_name}</li>
+                </ul>
+                <div class="mb-3">
+                    <label class="form-label">Unlock until (optional):</label>
+                    <input type="date" class="form-control" id="unlockUntil" 
+                           min="${new Date().toISOString().split('T')[0]}">
+                    <small class="form-text">Leave empty for permanent unlock</small>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Reason for unlocking:</label>
+                    <textarea class="form-control" id="actionReason" rows="3" 
+                              placeholder="Enter reason for unlocking course access..."></textarea>
+                </div>
+            `;
+            document.getElementById('confirmActionBtn').textContent = 'Unlock Course';
+            document.getElementById('confirmActionBtn').className = 'btn btn-success';
+            lockUnlockModal.show();
+        });
+    });
+
+    // Lock Batch Buttons
+    document.querySelectorAll('.lock-batch-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            currentAction = 'lock_batch';
+            actionData = {
+                student_id: this.dataset.studentId,
+                batch_id: this.dataset.batchId,
+                student_name: this.dataset.studentName,
+                batch_name: this.dataset.batchName
+            };
+            
+            document.getElementById('lockUnlockModalTitle').textContent = 'Lock Batch Access';
+            document.getElementById('lockUnlockModalBody').innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Warning:</strong> This action will lock batch access.
+                </div>
+                <p>Are you sure you want to <strong>lock</strong> batch access for:</p>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-user me-2"></i><strong>Student:</strong> ${actionData.student_name}</li>
+                    <li><i class="fas fa-users me-2"></i><strong>Batch:</strong> ${actionData.batch_name}</li>
+                </ul>
+                <div class="mb-3">
+                    <label class="form-label">Reason for locking:</label>
+                    <textarea class="form-control" id="actionReason" rows="3" 
+                              placeholder="Enter reason for locking batch access..."></textarea>
+                </div>
+            `;
+            document.getElementById('confirmActionBtn').textContent = 'Lock Batch';
+            document.getElementById('confirmActionBtn').className = 'btn btn-danger';
+            lockUnlockModal.show();
+        });
+    });
+
+    // Unlock Batch Buttons
+    document.querySelectorAll('.unlock-batch-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            currentAction = 'unlock_batch';
+            actionData = {
+                student_id: this.dataset.studentId,
+                batch_id: this.dataset.batchId,
+                student_name: this.dataset.studentName,
+                batch_name: this.dataset.batchName
+            };
+            
+            document.getElementById('lockUnlockModalTitle').textContent = 'Unlock Batch Access';
+            document.getElementById('lockUnlockModalBody').innerHTML = `
+                <div class="alert alert-success">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Action:</strong> This will unlock batch access.
+                </div>
+                <p>Are you sure you want to <strong>unlock</strong> batch access for:</p>
+                <ul class="list-unstyled">
+                    <li><i class="fas fa-user me-2"></i><strong>Student:</strong> ${actionData.student_name}</li>
+                    <li><i class="fas fa-users me-2"></i><strong>Batch:</strong> ${actionData.batch_name}</li>
+                </ul>
+                <div class="mb-3">
+                    <label class="form-label">Reason for unlocking:</label>
+                    <textarea class="form-control" id="actionReason" rows="3" 
+                              placeholder="Enter reason for unlocking batch access..."></textarea>
+                </div>
+            `;
+            document.getElementById('confirmActionBtn').textContent = 'Unlock Batch';
+            document.getElementById('confirmActionBtn').className = 'btn btn-success';
+            lockUnlockModal.show();
+        });
+    });
+
+    // Confirm Action Button
+    document.getElementById('confirmActionBtn').addEventListener('click', function() {
+        const reason = document.getElementById('actionReason').value;
+        const unlockUntil = document.getElementById('unlockUntil')?.value;
+        
+        if (!reason.trim()) {
+            alert('Please provide a reason for this action.');
+            return;
+        }
+
+        // Prepare form data
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+        formData.append('action', currentAction);
+        formData.append('reason', reason);
+        
+        if (unlockUntil) {
+            formData.append('unlock_until', unlockUntil);
+        }
+
+        // Add action-specific data
+        Object.keys(actionData).forEach(key => {
+            formData.append(key, actionData[key]);
+        });
+
+        // Submit form
+        fetch('{% url "fees:student_course_management_action" %}', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show success message
+                showAlert('success', data.message);
+                // Reload page to reflect changes
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                showAlert('danger', data.message || 'An error occurred');
+            }
+            lockUnlockModal.hide();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showAlert('danger', 'An error occurred while processing the request');
+            lockUnlockModal.hide();
+        });
+    });
+
+    // Show alert function
+    function showAlert(type, message) {
+        const alertHTML = `
+            <div class="alert alert-${type} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        
+        const container = document.querySelector('.container-fluid');
+        container.insertAdjacentHTML('afterbegin', alertHTML);
+        
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            const alert = document.querySelector('.alert');
+            if (alert) {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            }
+        }, 5000);
+    }
+});
+
+// Bulk Action Function
+function submitBulkAction() {
+    const form = document.getElementById('bulkActionForm');
+    const formData = new FormData(form);
+    
+    if (!form.checkValidity()) {
+        form.reportValidity();
+        return;
+    }
+
+    fetch('{% url "fees:bulk_course_action" %}', {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showAlert('success', data.message);
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            showAlert('danger', data.message || 'An error occurred');
+        }
+        bootstrap.Modal.getInstance(document.getElementById('bulkActionModal')).hide();
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('danger', 'An error occurred while processing the bulk action');
+        bootstrap.Modal.getInstance(document.getElementById('bulkActionModal')).hide();
+    });
+}
+</script>
+
+<style>
+    .card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 0 20px rgba(0,0,0,0.1);
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #0b5ed7, #0a58ca);
+        transform: translateY(-1px);
+    }
+    
+    .breadcrumb {
+        background: transparent;
+        padding: 0;
+    }
+    
+    .breadcrumb-item a {
+        color: #0d6efd;
+        text-decoration: none;
+    }
+    
+    .breadcrumb-item a:hover {
+        text-decoration: underline;
+    }
+    
+    .batch-item {
+        background: #f8fafc;
+        border-radius: 8px;
+        transition: all 0.2s ease;
+        border: 1px solid #e2e8f0;
+    }
+    
+    .batch-item:hover {
+        background: #e2e8f0;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .batch-item.locked {
+        background: linear-gradient(135deg, #fef2f2, #fce7e7);
+        border-color: #fca5a5;
+    }
+    
+    .batch-item.unlocked {
+        background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+        border-color: #86efac;
+    }
+    
+    .course-section {
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 20px;
+        background: #ffffff;
+    }
+    
+    .progress {
+        border-radius: 10px;
+        background-color: #e9ecef;
+    }
+    
+    .progress-bar {
+        border-radius: 10px;
+    }
+    
+    .badge {
+        font-size: 0.75em;
+        border-radius: 6px;
+    }
+    
+    .avatar-placeholder {
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+    
+    .btn-sm {
+        padding: 0.375rem 0.75rem;
+        font-size: 0.875rem;
+        border-radius: 6px;
+    }
+    
+    .alert {
+        border-radius: 8px;
+        border: none;
+    }
+    
+    .modal-content {
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+    }
+    
+    .modal-header {
+        border-bottom: 1px solid #e9ecef;
+        border-radius: 12px 12px 0 0;
+    }
+    
+    .modal-footer {
+        border-top: 1px solid #e9ecef;
+        border-radius: 0 0 12px 12px;
+    }
+    
+    .table-responsive {
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    @media (max-width: 768px) {
+        .d-flex.gap-2 {
+            flex-direction: column;
+        }
+        
+        .btn-sm {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+        
+        .batch-item {
+            margin-bottom: 1rem;
+        }
+        
+        .row.text-center {
+            text-align: left !important;
+        }
+    }
+    
+    /* Loading Animation */
+    .loading {
+        opacity: 0.6;
+        pointer-events: none;
+    }
+    
+    .loading::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 20px;
+        height: 20px;
+        margin: -10px 0 0 -10px;
+        border: 2px solid #0d6efd;
+        border-radius: 50%;
+        border-top-color: transparent;
+        animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+    
+    /* Custom Scrollbar */
+    .modal-body {
+        max-height: 70vh;
+        overflow-y: auto;
+    }
+    
+    .modal-body::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .modal-body::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 4px;
+    }
+    
+    .modal-body::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 4px;
+    }
+    
+    .modal-body::-webkit-scrollbar-thumb:hover {
+        background: #a8a8a8;
+    }
+    </style>
+    {% endblock %}

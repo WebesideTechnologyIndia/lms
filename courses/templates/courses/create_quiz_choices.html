@@ -1,0 +1,1029 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manage Choices - {{ question.question_text|truncatechars:50 }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.choice-card {
+    border: 2px solid #e9ecef;
+    transition: all 0.3s ease;
+    position: relative;
+}
+.choice-card:hover {
+    border-color: #0d6efd;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+.choice-card.correct {
+    border-color: #198754;
+    background-color: #f8fff9;
+}
+.choice-card.incorrect {
+    border-color: #dc3545;
+    background-color: #fff8f8;
+}
+.choice-letter {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+.choice-actions {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+.choice-card:hover .choice-actions {
+    opacity: 1;
+}
+.add-choice-area {
+    border: 2px dashed #dee2e6;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+.add-choice-area:hover {
+    border-color: #0d6efd;
+    background-color: #f8f9ff;
+}
+.sortable-ghost {
+    opacity: 0.5;
+}
+.sortable-chosen {
+    transform: rotate(5deg);
+}
+.drag-handle {
+    cursor: grab;
+    color: #6c757d;
+}
+.drag-handle:hover {
+    color: #0d6efd;
+}
+.choice-stats {
+    font-size: 0.8rem;
+    color: #6c757d;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="welcome-card">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb" class="mb-2">
+                <ol class="breadcrumb text-white-50">
+                    <li class="breadcrumb-item"><a href="{% url 'courses:course_dashboard' %}" class="text-white-50">Courses</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'courses:course_detail' course.id %}" class="text-white-50">{{ course.course_code }}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'courses:course_modules' course.id %}" class="text-white-50">Modules</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'courses:module_lessons' course.id module.id %}" class="text-white-50">{{ module.title }}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'courses:manage_quiz_questions' course.id module.id lesson.id %}" class="text-white-50">Quiz Questions</a></li>
+                    <li class="breadcrumb-item active text-white">Manage Choices</li>
+                </ol>
+            </nav>
+            <h1 class="mb-2">
+                <i class="fas fa-list-ol me-3"></i>
+                Manage Answer Choices
+            </h1>
+            <p class="mb-0 opacity-75">{{ question.question_text|truncatechars:100 }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="text-white-50">
+                <div><strong>Points:</strong> {{ question.points }}</div>
+                <div><strong>Type:</strong> {{ question.get_question_type_display }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Question Preview -->
+<div class="card mb-4">
+    <div class="card-header bg-info text-white">
+        <h5 class="mb-0">
+            <i class="fas fa-eye me-2"></i>
+            Question Preview
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="question-preview p-3 bg-light rounded">
+            <h6 class="text-primary mb-2">Question ({{ question.points }} points):</h6>
+            <div class="question-text">{{ question.question_text|safe }}</div>
+            {% if question.explanation %}
+                <div class="mt-3">
+                    <h6 class="text-secondary mb-2">Explanation:</h6>
+                    <div class="explanation-text text-muted">{{ question.explanation|safe }}</div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Choices Management -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-cogs me-2"></i>
+                    Answer Choices
+                </h5>
+                <div class="choice-stats">
+                    <span class="badge bg-light text-dark me-2">
+                        Total: <span id="total-choices">{{ choices|length }}</span>
+                    </span>
+                    <span class="badge bg-success me-2">
+                        Correct: <span id="correct-choices">{{ correct_count }}</span>
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if question.question_type == 'mcq' %}
+                    <!-- Multiple Choice Choices -->
+                    <div id="choices-list" class="mb-4">
+                        {% for choice in choices %}
+                            <div class="choice-card card mb-3 {% if choice.is_correct %}correct{% endif %}" data-choice-id="{{ choice.id }}">
+                                <div class="card-body">
+                                    <div class="choice-actions">
+                                        <button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="editChoice({{ choice.id }})">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteChoice({{ choice.id }})">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                    <div class="d-flex align-items-start">
+                                        <div class="drag-handle me-3 mt-1">
+                                            <i class="fas fa-grip-vertical"></i>
+                                        </div>
+                                        <div class="choice-letter bg-{% if choice.is_correct %}success{% else %}secondary{% endif %} text-white me-3">
+                                            {{ choice.choice_letter }}
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <div class="choice-text">{{ choice.choice_text }}</div>
+                                            {% if choice.is_correct %}
+                                                <span class="badge bg-success mt-2">
+                                                    <i class="fas fa-check me-1"></i>Correct Answer
+                                                </span>
+                                            {% endif %}
+                                        </div>
+                                        <div class="choice-controls ms-3">
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input correct-toggle" 
+                                                       data-choice-id="{{ choice.id }}" 
+                                                       {% if choice.is_correct %}checked{% endif %}>
+                                                <label class="form-check-label small">Correct</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        {% empty %}
+                            <div class="text-center text-muted py-4" id="no-choices-message">
+                                <i class="fas fa-list-ol fa-3x mb-3"></i>
+                                <h5>No choices added yet</h5>
+                                <p>Start by adding your first answer choice below.</p>
+                            </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Add New Choice -->
+                    <div class="add-choice-area card text-center py-4 mb-3" onclick="showAddChoiceForm()">
+                        <div class="card-body">
+                            <i class="fas fa-plus fa-2x text-primary mb-2"></i>
+                            <h6 class="text-primary mb-1">Add New Choice</h6>
+                            <p class="text-muted small mb-0">Click to add another answer option</p>
+                        </div>
+                    </div>
+
+                {% elif question.question_type == 'true_false' %}
+                    <!-- True/False Choices -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="choice-card card h-100 {% if true_choice.is_correct %}correct{% endif %}">
+                                <div class="card-body text-center">
+                                    <div class="choice-letter bg-{% if true_choice.is_correct %}success{% else %}secondary{% endif %} text-white mx-auto mb-3">
+                                        T
+                                    </div>
+                                    <h5>True</h5>
+                                    <div class="form-check mt-3">
+                                        <input type="radio" name="correct_answer" value="true" class="form-check-input" 
+                                               id="true_option" {% if true_choice.is_correct %}checked{% endif %}>
+                                        <label for="true_option" class="form-check-label">Mark as Correct</label>
+                                    </div>
+                                    {% if true_choice.is_correct %}
+                                        <span class="badge bg-success mt-2">
+                                            <i class="fas fa-check me-1"></i>Correct Answer
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="choice-card card h-100 {% if false_choice.is_correct %}correct{% endif %}">
+                                <div class="card-body text-center">
+                                    <div class="choice-letter bg-{% if false_choice.is_correct %}success{% else %}secondary{% endif %} text-white mx-auto mb-3">
+                                        F
+                                    </div>
+                                    <h5>False</h5>
+                                    <div class="form-check mt-3">
+                                        <input type="radio" name="correct_answer" value="false" class="form-check-input" 
+                                               id="false_option" {% if false_choice.is_correct %}checked{% endif %}>
+                                        <label for="false_option" class="form-check-label">Mark as Correct</label>
+                                    </div>
+                                    {% if false_choice.is_correct %}
+                                        <span class="badge bg-success mt-2">
+                                            <i class="fas fa-check me-1"></i>Correct Answer
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                {% else %}
+                    <!-- Short Answer - No choices needed -->
+                    <div class="alert alert-info text-center">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Short answer questions don't require predefined choices. Students will type their answers directly.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <a href="{% url 'courses:manage_quiz_questions' course.id module.id lesson.id %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>
+                            Back to Questions
+                        </a>
+                        <a href="{% url 'courses:edit_question' course.id module.id lesson.id question.id %}" class="btn btn-outline-primary ms-2">
+                            <i class="fas fa-edit me-2"></i>
+                            Edit Question
+                        </a>
+                    </div>
+                    <div>
+                        {% if question.question_type == 'mcq' %}
+                            <button type="button" class="btn btn-success" onclick="saveChoiceOrder()">
+                                <i class="fas fa-save me-2"></i>
+                                Save Changes
+                            </button>
+                        {% elif question.question_type == 'true_false' %}
+                            <button type="button" class="btn btn-success" onclick="saveTrueFalseAnswer()">
+                                <i class="fas fa-save me-2"></i>
+                                Save Answer
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Choice Modal -->
+<div class="modal fade" id="choiceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-plus me-2"></i>
+                    <span id="modal-title">Add New Choice</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="choiceForm">
+                <div class="modal-body">
+                    <input type="hidden" id="choice-id" name="choice_id">
+                    
+                    <div class="mb-3">
+                        <label for="choice-text" class="form-label">Choice Text *</label>
+                        <textarea class="form-control" id="choice-text" name="choice_text" rows="3" 
+                                  placeholder="Enter the answer choice text..." required></textarea>
+                        <div class="form-text">Be clear and concise. Keep similar length to other choices.</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="is-correct" name="is_correct">
+                            <label for="is-correct" class="form-check-label">
+                                <strong>This is the correct answer</strong>
+                            </label>
+                        </div>
+                        <div class="form-text text-warning">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            Only one choice should be marked as correct for multiple choice questions.
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-lightbulb me-1"></i>
+                            Choice Writing Tips:
+                        </h6>
+                        <ul class="mb-0 small">
+                            <li>Make incorrect choices plausible but clearly wrong</li>
+                            <li>Avoid giving clues through choice length or complexity</li>
+                            <li>Use parallel structure for all choices</li>
+                            <li>Don't use "all of the above" unless necessary</li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-2"></i>
+                        <span id="save-btn-text">Add Choice</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-trash me-2"></i>
+                    Delete Choice
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center">
+                    <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                    <h5>Are you sure?</h5>
+                    <p class="text-muted">This will permanently delete the choice:</p>
+                    <div class="alert alert-light">
+                        <strong id="delete-choice-text"></strong>
+                    </div>
+                    <p class="text-danger small mb-0">This action cannot be undone.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirm-delete">
+                    <i class="fas fa-trash me-2"></i>
+                    Delete Choice
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Actions -->
+{% if question.question_type == 'mcq' and choices|length > 2 %}
+<div class="card mt-4">
+    <div class="card-header bg-warning text-white">
+        <h5 class="mb-0">
+            <i class="fas fa-tools me-2"></i>
+            Bulk Actions
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4">
+                <button type="button" class="btn btn-outline-primary w-100" onclick="shuffleChoices()">
+                    <i class="fas fa-random me-2"></i>
+                    Shuffle Order
+                </button>
+            </div>
+            <div class="col-md-4">
+                <button type="button" class="btn btn-outline-secondary w-100" onclick="resetChoiceOrder()">
+                    <i class="fas fa-sort-alpha-down me-2"></i>
+                    Reset to A-Z
+                </button>
+            </div>
+            <div class="col-md-4">
+                <button type="button" class="btn btn-outline-warning w-100" onclick="duplicateChoices()">
+                    <i class="fas fa-copy me-2"></i>
+                    Duplicate Set
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- Include SortableJS for drag and drop -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const choicesList = document.getElementById('choices-list');
+    const choiceModal = new bootstrap.Modal(document.getElementById('choiceModal'));
+    const deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    const choiceForm = document.getElementById('choiceForm');
+    let currentChoiceId = null;
+    let deleteChoiceId = null;
+    
+    // Initialize sortable for MCQ choices
+    if (choicesList && '{{ question.question_type }}' === 'mcq') {
+        new Sortable(choicesList, {
+            handle: '.drag-handle',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            onEnd: function(evt) {
+                updateChoiceOrder();
+            }
+        });
+    }
+
+    // Show add choice form
+    window.showAddChoiceForm = function() {
+        document.getElementById('modal-title').textContent = 'Add New Choice';
+        document.getElementById('save-btn-text').textContent = 'Add Choice';
+        document.getElementById('choice-id').value = '';
+        document.getElementById('choice-text').value = '';
+        document.getElementById('is-correct').checked = false;
+        currentChoiceId = null;
+        choiceModal.show();
+    };
+
+    // Edit choice
+    window.editChoice = function(choiceId) {
+        currentChoiceId = choiceId;
+        document.getElementById('modal-title').textContent = 'Edit Choice';
+        document.getElementById('save-btn-text').textContent = 'Update Choice';
+        
+        // Get choice data from the card
+        const choiceCard = document.querySelector(`[data-choice-id="${choiceId}"]`);
+        const choiceText = choiceCard.querySelector('.choice-text').textContent;
+        const isCorrect = choiceCard.classList.contains('correct');
+        
+        document.getElementById('choice-id').value = choiceId;
+        document.getElementById('choice-text').value = choiceText;
+        document.getElementById('is-correct').checked = isCorrect;
+        
+        choiceModal.show();
+    };
+
+    // Delete choice
+    window.deleteChoice = function(choiceId) {
+        deleteChoiceId = choiceId;
+        const choiceCard = document.querySelector(`[data-choice-id="${choiceId}"]`);
+        const choiceText = choiceCard.querySelector('.choice-text').textContent;
+        document.getElementById('delete-choice-text').textContent = choiceText;
+        deleteModal.show();
+    };
+
+    // Handle choice form submission
+    choiceForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const url = currentChoiceId ? 
+            `/courses/{{ course.id }}/modules/{{ module.id }}/lessons/{{ lesson.id }}/questions/{{ question.id }}/choices/${currentChoiceId}/update/` :
+            `/courses/{{ course.id }}/modules/{{ module.id }}/lessons/{{ lesson.id }}/questions/{{ question.id }}/choices/create/`;
+        
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                choiceModal.hide();
+                showNotification('Choice saved successfully!', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(data.error || 'Error saving choice', 'danger');
+            }
+        })
+        .catch(error => {
+            showNotification('Network error occurred', 'danger');
+            console.error('Error:', error);
+        });
+    });
+
+    // Handle delete confirmation
+    document.getElementById('confirm-delete').addEventListener('click', function() {
+        if (deleteChoiceId) {
+            fetch(`/courses/{{ course.id }}/modules/{{ module.id }}/lessons/{{ lesson.id }}/questions/{{ question.id }}/choices/${deleteChoiceId}/delete/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    deleteModal.hide();
+                    showNotification('Choice deleted successfully!', 'success');
+                    setTimeout(() => location.reload(), 1000);
+                } else {
+                    showNotification(data.error || 'Error deleting choice', 'danger');
+                }
+            })
+            .catch(error => {
+                showNotification('Network error occurred', 'danger');
+                console.error('Error:', error);
+            });
+        }
+    });
+
+    // Handle correct answer toggle
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('correct-toggle')) {
+            const choiceId = e.target.dataset.choiceId;
+            const isCorrect = e.target.checked;
+            
+            // For MCQ, ensure only one correct answer
+            if ('{{ question.question_type }}' === 'mcq' && isCorrect) {
+                document.querySelectorAll('.correct-toggle').forEach(toggle => {
+                    if (toggle !== e.target) {
+                        toggle.checked = false;
+                    }
+                });
+            }
+            
+            updateCorrectAnswer(choiceId, isCorrect);
+        }
+    });
+
+    // Handle True/False answer change
+    document.addEventListener('change', function(e) {
+        if (e.target.name === 'correct_answer') {
+            saveTrueFalseAnswer();
+        }
+    });
+
+    // Update correct answer via AJAX
+    function updateCorrectAnswer(choiceId, isCorrect) {
+        fetch(`/courses/{{ course.id }}/modules/{{ module.id }}/lessons/{{ lesson.id }}/questions/{{ question.id }}/choices/${choiceId}/toggle-correct/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ is_correct: isCorrect })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateChoiceCard(choiceId, isCorrect);
+                updateStats();
+                showNotification('Answer updated successfully!', 'success');
+            } else {
+                showNotification(data.error || 'Error updating answer', 'danger');
+                // Revert checkbox state
+                e.target.checked = !isCorrect;
+            }
+        })
+        .catch(error => {
+            showNotification('Network error occurred', 'danger');
+            console.error('Error:', error);
+            // Revert checkbox state
+            e.target.checked = !isCorrect;
+        });
+    }
+
+    // Update choice card appearance
+    function updateChoiceCard(choiceId, isCorrect) {
+        const choiceCard = document.querySelector(`[data-choice-id="${choiceId}"]`);
+        const choiceLetter = choiceCard.querySelector('.choice-letter');
+        const badge = choiceCard.querySelector('.badge');
+        
+        if (isCorrect) {
+            choiceCard.classList.add('correct');
+            choiceCard.classList.remove('incorrect');
+            choiceLetter.className = 'choice-letter bg-success text-white me-3';
+            
+            if (!badge) {
+                const badgeHtml = '<span class="badge bg-success mt-2"><i class="fas fa-check me-1"></i>Correct Answer</span>';
+                choiceCard.querySelector('.choice-text').insertAdjacentHTML('afterend', badgeHtml);
+            }
+        } else {
+            choiceCard.classList.remove('correct');
+            choiceLetter.className = 'choice-letter bg-secondary text-white me-3';
+            
+            if (badge) {
+                badge.remove();
+            }
+        }
+    }
+
+    // Update statistics
+    function updateStats() {
+        const totalChoices = document.querySelectorAll('.choice-card').length;
+        const correctChoices = document.querySelectorAll('.choice-card.correct').length;
+        
+        document.getElementById('total-choices').textContent = totalChoices;
+        document.getElementById('correct-choices').textContent = correctChoices;
+    }
+
+    // Save True/False answer
+    window.saveTrueFalseAnswer = function() {
+        const selectedAnswer = document.querySelector('input[name="correct_answer"]:checked');
+        if (!selectedAnswer) {
+            showNotification('Please select the correct answer', 'warning');
+            return;
+        }
+
+        fetch(`/courses/{{ course.id }}/modules/{{ module.id }}/lessons/{{ lesson.id }}/questions/{{ question.id }}/set-true-false-answer/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ correct_answer: selectedAnswer.value })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showNotification('Answer saved successfully!', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification(data.error || 'Error saving answer', 'danger');
+            }
+        })
+        .catch(error => {
+            showNotification('Network error occurred', 'danger');
+            console.error('Error:', error);
+        });
+    };
+
+    // Update choice order after drag and drop
+    function updateChoiceOrder() {
+        const choiceCards = document.querySelectorAll('.choice-card');
+        const choiceOrder = Array.from(choiceCards).map(card => card.dataset.choiceId);
+        
+        fetch(`/courses/{{ course.id }}/modules/{{ module.id }}/lessons/{{ lesson.id }}/questions/{{ question.id }}/reorder-choices/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ choice_order: choiceOrder })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                updateChoiceLetters();
+                showNotification('Choice order updated!', 'info');
+            } else {
+                showNotification('Error updating order', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+
+    // Update choice letters (A, B, C, etc.) after reordering
+    function updateChoiceLetters() {
+        const choiceCards = document.querySelectorAll('.choice-card');
+        const letters = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'];
+        
+        choiceCards.forEach((card, index) => {
+            const letterElement = card.querySelector('.choice-letter');
+            letterElement.textContent = letters[index];
+        });
+    }
+
+    // Save choice order manually
+    window.saveChoiceOrder = function() {
+        updateChoiceOrder();
+    };
+
+    // Shuffle choices
+    window.shuffleChoices = function() {
+        const choicesContainer = document.getElementById('choices-list');
+        const choiceCards = Array.from(choicesContainer.querySelectorAll('.choice-card'));
+        
+        // Fisher-Yates shuffle algorithm
+        for (let i = choiceCards.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [choiceCards[i], choiceCards[j]] = [choiceCards[j], choiceCards[i]];
+        }
+        
+        // Clear container and re-append shuffled cards
+        choicesContainer.innerHTML = '';
+        choiceCards.forEach(card => {
+            card.classList.add('fade-in');
+            choicesContainer.appendChild(card);
+        });
+        
+        updateChoiceLetters();
+        showNotification('Choices shuffled!', 'info');
+    };
+
+    // Reset choice order to alphabetical
+    window.resetChoiceOrder = function() {
+        const choicesContainer = document.getElementById('choices-list');
+        const choiceCards = Array.from(choicesContainer.querySelectorAll('.choice-card'));
+        
+        // Sort by original order (you might want to store original order in data attributes)
+        choiceCards.sort((a, b) => {
+            return parseInt(a.dataset.choiceId) - parseInt(b.dataset.choiceId);
+        });
+        
+        // Clear container and re-append sorted cards
+        choicesContainer.innerHTML = '';
+        choiceCards.forEach(card => choicesContainer.appendChild(card));
+        
+        updateChoiceLetters();
+        showNotification('Choice order reset to original!', 'info');
+    };
+
+    // Duplicate choices (for creating similar questions)
+    window.duplicateChoices = function() {
+        if (confirm('This will create a copy of this question with the same choices. Continue?')) {
+            fetch(`/courses/{{ course.id }}/modules/{{ module.id }}/lessons/{{ lesson.id }}/questions/{{ question.id }}/duplicate/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Question duplicated successfully!', 'success');
+                    setTimeout(() => {
+                        window.location.href = `/courses/{{ course.id }}/modules/{{ module.id }}/lessons/{{ lesson.id }}/questions/${data.new_question_id}/choices/`;
+                    }, 1500);
+                } else {
+                    showNotification(data.error || 'Error duplicating question', 'danger');
+                }
+            })
+            .catch(error => {
+                showNotification('Network error occurred', 'danger');
+                console.error('Error:', error);
+            });
+        }
+    };
+
+    // Notification system
+    function showNotification(message, type = 'info') {
+        // Remove existing notifications
+        const existingNotifications = document.querySelectorAll('.floating-notification');
+        existingNotifications.forEach(notification => notification.remove());
+        
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} floating-notification position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);';
+        notification.innerHTML = `
+            <div class="d-flex align-items-center">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'danger' ? 'exclamation-circle' : 'info-circle'} me-2"></i>
+                <span>${message}</span>
+                <button type="button" class="btn-close ms-auto" onclick="this.parentElement.parentElement.remove()"></button>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+
+    // Auto-save functionality
+    let autoSaveTimeout;
+    function scheduleAutoSave() {
+        clearTimeout(autoSaveTimeout);
+        autoSaveTimeout = setTimeout(() => {
+            if ('{{ question.question_type }}' === 'mcq') {
+                updateChoiceOrder();
+            }
+        }, 2000);
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + N for new choice
+        if ((e.ctrlKey || e.metaKey) && e.key === 'n' && '{{ question.question_type }}' === 'mcq') {
+            e.preventDefault();
+            showAddChoiceForm();
+        }
+        
+        // Ctrl/Cmd + S to save
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            if ('{{ question.question_type }}' === 'mcq') {
+                saveChoiceOrder();
+            } else if ('{{ question.question_type }}' === 'true_false') {
+                saveTrueFalseAnswer();
+            }
+        }
+        
+        // Escape to close modals
+        if (e.key === 'Escape') {
+            choiceModal.hide();
+            deleteModal.hide();
+        }
+    });
+
+    // Choice text length validation
+    document.getElementById('choice-text').addEventListener('input', function() {
+        const length = this.value.length;
+        const helpText = this.parentNode.querySelector('.form-text');
+        
+        if (length > 200) {
+            helpText.innerHTML = `<span class="text-warning">Choice text is getting long (${length} characters). Consider shortening it.</span>`;
+            this.classList.add('border-warning');
+        } else if (length > 100) {
+            helpText.innerHTML = `<span class="text-info">Good length (${length} characters). Keep choices similar in length.</span>`;
+            this.classList.remove('border-warning');
+        } else {
+            helpText.textContent = 'Be clear and concise. Keep similar length to other choices.';
+            this.classList.remove('border-warning');
+        }
+    });
+
+    // Initialize stats
+    updateStats();
+
+    // Check if question has no correct answer
+    const correctChoicesCount = document.querySelectorAll('.choice-card.correct').length;
+    if ('{{ question.question_type }}' === 'mcq' && correctChoicesCount === 0) {
+        showNotification('This question has no correct answer marked. Please set one.', 'warning');
+    }
+
+    // Preview mode toggle
+    let previewMode = false;
+    window.togglePreview = function() {
+        previewMode = !previewMode;
+        const choiceCards = document.querySelectorAll('.choice-card');
+        
+        choiceCards.forEach(card => {
+            const actions = card.querySelector('.choice-actions');
+            const controls = card.querySelector('.choice-controls');
+            const dragHandle = card.querySelector('.drag-handle');
+            
+            if (previewMode) {
+                actions.style.display = 'none';
+                controls.style.display = 'none';
+                dragHandle.style.display = 'none';
+                card.style.cursor = 'default';
+            } else {
+                actions.style.display = 'block';
+                controls.style.display = 'block';
+                dragHandle.style.display = 'block';
+                card.style.cursor = 'pointer';
+            }
+        });
+        
+        const previewBtn = document.getElementById('preview-btn');
+        if (previewBtn) {
+            previewBtn.innerHTML = previewMode ? 
+                '<i class="fas fa-edit me-2"></i>Edit Mode' : 
+                '<i class="fas fa-eye me-2"></i>Preview Mode';
+            previewBtn.className = previewMode ? 'btn btn-outline-warning' : 'btn btn-outline-info';
+        }
+    };
+
+    // Choice analytics (if you want to track choice selection in real quizzes)
+    function showChoiceAnalytics() {
+        // This would show statistics about how often each choice was selected
+        // Useful for identifying confusing distractors
+        console.log('Choice analytics feature - implement based on your quiz attempt data');
+    }
+
+    // Export choices for use in other questions
+    window.exportChoices = function() {
+        const choices = [];
+        document.querySelectorAll('.choice-card').forEach(card => {
+            choices.push({
+                text: card.querySelector('.choice-text').textContent,
+                is_correct: card.classList.contains('correct')
+            });
+        });
+        
+        const dataStr = JSON.stringify(choices, null, 2);
+        const dataBlob = new Blob([dataStr], {type: 'application/json'});
+        const url = URL.createObjectURL(dataBlob);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `question_${{'{{ question.id }}'}}_choices.json`;
+        link.click();
+        
+        URL.revokeObjectURL(url);
+        showNotification('Choices exported successfully!', 'success');
+    };
+
+    // Import choices from file
+    window.importChoices = function() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const choices = JSON.parse(e.target.result);
+                        if (Array.isArray(choices) && choices.length > 0) {
+                            // Process imported choices
+                            console.log('Importing choices:', choices);
+                            showNotification('Choices imported successfully!', 'success');
+                            // You would implement the actual import logic here
+                        } else {
+                            showNotification('Invalid file format', 'danger');
+                        }
+                    } catch (error) {
+                        showNotification('Error reading file', 'danger');
+                    }
+                };
+                reader.readAsText(file);
+            }
+        };
+        input.click();
+    };
+
+    // Add CSS for floating notification
+    const style = document.createElement('style');
+    style.textContent = `
+        .floating-notification {
+            animation: slideInRight 0.3s ease-out;
+        }
+        @keyframes slideInRight {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+    `;
+    document.head.appendChild(style);
+});
+</script>
+
+<!-- Additional Tools Section -->
+<div class="card mt-4">
+    <div class="card-header bg-dark text-white">
+        <h5 class="mb-0">
+            <i class="fas fa-wrench me-2"></i>
+            Additional Tools
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-3">
+                <button type="button" class="btn btn-outline-info w-100 mb-2" id="preview-btn" onclick="togglePreview()">
+                    <i class="fas fa-eye me-2"></i>
+                    Preview Mode
+                </button>
+            </div>
+            <div class="col-md-3">
+                <button type="button" class="btn btn-outline-secondary w-100 mb-2" onclick="exportChoices()">
+                    <i class="fas fa-download me-2"></i>
+                    Export Choices
+                </button>
+            </div>
+            <div class="col-md-3">
+                <button type="button" class="btn btn-outline-secondary w-100 mb-2" onclick="importChoices()">
+                    <i class="fas fa-upload me-2"></i>
+                    Import Choices
+                </button>
+            </div>
+            <div class="col-md-3">
+                <button type="button" class="btn btn-outline-info w-100 mb-2" onclick="showChoiceAnalytics()">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    View Analytics
+                </button>
+            </div>
+        </div>
+        
+        <div class="mt-3 text-center">
+            <small class="text-muted">
+                <strong>Keyboard Shortcuts:</strong> 
+                Ctrl+N (New Choice) • Ctrl+S (Save) • Esc (Close Modals) • Drag to reorder choices
+            </small>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden CSRF Token for AJAX requests -->
+{% csrf_token %}
+
+{% endblock %}

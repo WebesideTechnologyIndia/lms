@@ -1,0 +1,121 @@
+<!-- courses/templates/courses/batch_list.html -->
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Batches - {{ course.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    
+    
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-users me-2"></i>Course Batches</h2>
+            <p class="text-muted mb-0">{{ course.title }} - {{ course.course_code }}</p>
+        </div>
+        
+        <div>
+            <a href="{% url 'courses:create_batch' course.id %}" class="btn btn-success">
+                <i class="fas fa-plus me-2"></i>Create New Batch
+            </a>
+            <a href="{% url 'courses:course_detail' course.id %}" class="btn btn-outline-secondary ms-2">
+                <i class="fas fa-arrow-left me-2"></i>Back to Course
+            </a>
+        </div>
+    </div>
+
+    <!-- Batches Grid -->
+    {% if batches %}
+        <div class="row">
+            {% for batch in batches %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 shadow-sm">
+                        <div class="card-header bg-primary text-white d-flex justify-content-between">
+                            <h6 class="mb-0">{{ batch.name }}</h6>
+                            <span class="badge bg-light text-dark">{{ batch.code }}</span>
+                        </div>
+                        
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <strong>Status:</strong>
+                                {% if batch.status == 'active' %}
+                                    <span class="badge bg-success">Active</span>
+                                {% elif batch.status == 'draft' %}
+                                    <span class="badge bg-warning">Draft</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ batch.get_status_display }}</span>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-2">
+                                <small><strong>Duration:</strong></small><br>
+                                <small class="text-muted">
+                                    {{ batch.start_date|date:"M d, Y" }} - {{ batch.end_date|date:"M d, Y" }}
+                                </small>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <small><strong>Instructor:</strong></small><br>
+                                <small class="text-muted">{{ batch.instructor.get_full_name|default:batch.instructor.username }}</small>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <small><strong>Enrollment:</strong></small><br>
+                                <div class="progress" style="height: 15px;">
+                                    {% with enrolled=batch.get_enrolled_count %}
+                                        <div class="progress-bar" style="width: {% widthratio enrolled batch.max_students 100 %}%">
+                                            {{ enrolled }}/{{ batch.max_students }}
+                                        </div>
+                                    {% endwith %}
+                                </div>
+                            </div>
+                            
+                            <div class="mb-2">
+                                <small><strong>Content Type:</strong></small><br>
+                                <small class="text-muted">
+                                    {% if batch.content_type == 'fresh' %}
+                                        <i class="fas fa-plus-circle text-success me-1"></i>Fresh Content
+                                    {% else %}
+                                        <i class="fas fa-copy text-info me-1"></i>Copied from Course
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="card-footer bg-light">
+                            <div class="btn-group w-100" role="group">
+                                <a href="{% url 'courses:batch_detail' course.id batch.id %}" 
+                                   class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                                <a href="{% url 'courses:edit_batch' course.id batch.id %}" 
+                                   class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                <a href="{% url 'courses:batch_enrollments' course.id batch.id %}" 
+                                   class="btn btn-outline-info btn-sm">
+                                    <i class="fas fa-users"></i> Students
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <!-- Empty State -->
+        <div class="text-center py-5">
+            <div class="mb-4">
+                <i class="fas fa-users text-muted" style="font-size: 4rem;"></i>
+            </div>
+            <h4 class="text-muted">No Batches Yet</h4>
+            <p class="text-muted">Create your first batch to start managing student groups.</p>
+            <a href="{% url 'courses:create_batch' course.id %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create First Batch
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

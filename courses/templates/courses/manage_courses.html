@@ -1,0 +1,284 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Manage Courses{% endblock %}
+
+{% block content %}
+<!-- Welcome Header -->
+<div class="welcome-card">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1 class="mb-2">
+                <i class="fas fa-list me-3"></i>
+                Manage Courses
+            </h1>
+            <p class="mb-0 opacity-75">View, edit, and manage all your courses in one place</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'courses:create_course' %}" class="btn btn-light btn-lg">
+                <i class="fas fa-plus me-2"></i>
+                Create New Course
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filters -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-filter me-2"></i>
+                    Search & Filter
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="get" class="row g-3">
+                    <div class="col-md-3">
+                        <label class="form-label">Search</label>
+                        {{ search_form.search }}
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Category</label>
+                        {{ search_form.category }}
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Difficulty</label>
+                        {{ search_form.difficulty }}
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Type</label>
+                        {{ search_form.course_type }}
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label">Sort By</label>
+                        {{ search_form.sort_by }}
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end">
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Courses Table -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-book me-2"></i>
+                    Courses List
+                </h5>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'courses:course_analytics' %}" class="btn btn-sm btn-outline-info">
+                        <i class="fas fa-chart-bar me-1"></i>Analytics
+                    </a>
+                    <a href="{% url 'courses:create_course' %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus me-1"></i>Add Course
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if courses %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Course Code</th>
+                                    <th>Title</th>
+                                    <th>Category</th>
+                                    <th>Instructor</th>
+                                    <th>Status</th>
+                                    <th>Enrollments</th>
+                                    <th>Price</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for course in courses %}
+                                <tr>
+                                    <td>
+                                        <strong class="text-primary">{{ course.course_code }}</strong>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <strong>{{ course.title|truncatechars:30 }}</strong>
+                                            {% if course.is_featured %}
+                                                <span class="badge bg-warning text-dark ms-1">Featured</span>
+                                            {% endif %}
+                                        </div>
+                                        <small class="text-muted">{{ course.short_description|truncatechars:50 }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-light text-dark">{{ course.category.name }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-2" style="width: 30px; height: 30px; font-size: 12px;">
+                                                {{ course.instructor.first_name|first|default:course.instructor.username|first }}
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold">{{ course.instructor.get_full_name|default:course.instructor.username }}</div>
+                                                <small class="text-muted">{{ course.instructor.email }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if course.status == 'published' %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check-circle me-1"></i>Published
+                                            </span>
+                                        {% elif course.status == 'draft' %}
+                                            <span class="badge bg-warning">
+                                                <i class="fas fa-edit me-1"></i>Draft
+                                            </span>
+                                        {% elif course.status == 'archived' %}
+                                            <span class="badge bg-secondary">
+                                                <i class="fas fa-archive me-1"></i>Archived
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-info">{{ course.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <span class="badge bg-info me-2">{{ course.enrollment_count }}</span>
+                                            <small class="text-muted">/ {{ course.max_students }}</small>
+                                        </div>
+                                        {% if course.enrollment_count >= course.max_students %}
+                                            <small class="text-danger">Full</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if course.is_free %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-gift me-1"></i>Free
+                                            </span>
+                                        {% else %}
+                                            <div>
+                                                <strong>${{ course.get_effective_price }}</strong>
+                                                {% if course.discounted_price and course.price != course.discounted_price %}
+                                                    <small class="text-muted text-decoration-line-through">${{ course.price }}</small>
+                                                    <span class="badge bg-danger ms-1">{{ course.get_discount_percentage }}% OFF</span>
+                                                {% endif %}
+                                            </div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'courses:course_detail' course.id %}" class="btn btn-sm btn-outline-info" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'courses:edit_course' course.id %}" class="btn btn-sm btn-outline-primary" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'courses:course_modules' course.id %}" class="btn btn-sm btn-outline-secondary" title="Modules">
+                                                <i class="fas fa-list"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-outline-warning" onclick="toggleCourseStatus({{ course.id }}, '{{ course.status }}')" title="Toggle Status">
+                                                {% if course.status == 'published' %}
+                                                    <i class="fas fa-pause"></i>
+                                                {% else %}
+                                                    <i class="fas fa-play"></i>
+                                                {% endif %}
+                                            </button>
+                                            <a href="{% url 'courses:delete_course' course.id %}" class="btn btn-sm btn-outline-danger" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if courses.has_other_pages %}
+                    <nav aria-label="Course pagination" class="mt-4">
+                        <ul class="pagination justify-content-center">
+                            {% if courses.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ courses.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}">
+                                        <i class="fas fa-chevron-left"></i> Previous
+                                    </a>
+                                </li>
+                            {% endif %}
+                            
+                            {% for num in courses.paginator.page_range %}
+                                {% if num == courses.number %}
+                                    <li class="page-item active">
+                                        <span class="page-link">{{ num }}</span>
+                                    </li>
+                                {% elif num > courses.number|add:'-3' and num < courses.number|add:'3' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}">{{ num }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+                            
+                            {% if courses.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ courses.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.category %}&category={{ request.GET.category }}{% endif %}">
+                                        Next <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-book fa-4x text-muted mb-4"></i>
+                        <h4 class="text-muted mb-3">No courses found</h4>
+                        <p class="text-muted mb-4">Get started by creating your first course or adjust your search filters.</p>
+                        <div>
+                            <a href="{% url 'courses:create_course' %}" class="btn btn-primary me-2">
+                                <i class="fas fa-plus me-2"></i>Create Course
+                            </a>
+                            <a href="{% url 'courses:manage_courses' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-refresh me-2"></i>Clear Filters
+                            </a>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function toggleCourseStatus(courseId, currentStatus) {
+    if (confirm('Are you sure you want to change the course status?')) {
+        fetch(`/courses/${courseId}/toggle-status/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while updating the status.');
+        });
+    }
+}
+</script>
+{% endblock %}

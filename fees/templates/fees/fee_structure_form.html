@@ -1,0 +1,345 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - LMS Admin{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fees:admin_fees_dashboard' %}">Fees</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fees:manage_fee_structures' %}">Fee Structures</a></li>
+        <li class="breadcrumb-item active">{{ title }}</li>
+    </ol>
+</nav>
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-cog me-2"></i>{{ title }}
+        </h2>
+        <p class="text-muted mb-0">Configure fee structure and payment options</p>
+    </div>
+    <div>
+        <a href="{% url 'fees:manage_fee_structures' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to List
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Fee Structure Form -->
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-edit me-2"></i>Fee Structure Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="feeStructureForm">
+                    {% csrf_token %}
+                    
+                    <!-- Basic Information -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Basic Information</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.name.id_for_label }}" class="form-label">Structure Name *</label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="text-danger small">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.code.id_for_label }}" class="form-label">Structure Code *</label>
+                            {{ form.code }}
+                            {% if form.code.errors %}
+                                <div class="text-danger small">{{ form.code.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-12 mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="text-danger small">{{ form.description.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Payment Configuration -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Payment Configuration</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.total_amount.id_for_label }}" class="form-label">Total Amount ($) *</label>
+                            {{ form.total_amount }}
+                            {% if form.total_amount.errors %}
+                                <div class="text-danger small">{{ form.total_amount.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.payment_type.id_for_label }}" class="form-label">Payment Type *</label>
+                            {{ form.payment_type }}
+                            {% if form.payment_type.errors %}
+                                <div class="text-danger small">{{ form.payment_type.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- EMI Settings (conditional) -->
+                    <div class="row mb-4" id="emi-settings" style="display: none;">
+                        <div class="col-12">
+                            <h6 class="text-warning border-bottom pb-2">EMI Settings</h6>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.emi_duration_months.id_for_label }}" class="form-label">EMI Duration</label>
+                            {{ form.emi_duration_months }}
+                            {% if form.emi_duration_months.errors %}
+                                <div class="text-danger small">{{ form.emi_duration_months.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.emi_amount.id_for_label }}" class="form-label">EMI Amount ($)</label>
+                            {{ form.emi_amount }}
+                            <small class="text-muted">Auto-calculated if left empty</small>
+                            {% if form.emi_amount.errors %}
+                                <div class="text-danger small">{{ form.emi_amount.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.down_payment.id_for_label }}" class="form-label">Down Payment ($)</label>
+                            {{ form.down_payment }}
+                            {% if form.down_payment.errors %}
+                                <div class="text-danger small">{{ form.down_payment.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Fees & Penalties -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-danger border-bottom pb-2">Fees & Penalties</h6>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.grace_period_days.id_for_label }}" class="form-label">Grace Period (Days)</label>
+                            {{ form.grace_period_days }}
+                            {% if form.grace_period_days.errors %}
+                                <div class="text-danger small">{{ form.grace_period_days.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.late_fee_amount.id_for_label }}" class="form-label">Late Fee Amount ($)</label>
+                            {{ form.late_fee_amount }}
+                            {% if form.late_fee_amount.errors %}
+                                <div class="text-danger small">{{ form.late_fee_amount.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <label for="{{ form.late_fee_percentage.id_for_label }}" class="form-label">Late Fee (%)</label>
+                            {{ form.late_fee_percentage }}
+                            {% if form.late_fee_percentage.errors %}
+                                <div class="text-danger small">{{ form.late_fee_percentage.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Discounts -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-success border-bottom pb-2">Discounts</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.early_payment_discount.id_for_label }}" class="form-label">Early Payment Discount (%)</label>
+                            {{ form.early_payment_discount }}
+                            {% if form.early_payment_discount.errors %}
+                                <div class="text-danger small">{{ form.early_payment_discount.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.bulk_discount.id_for_label }}" class="form-label">Bulk Discount (%)</label>
+                            {{ form.bulk_discount }}
+                            {% if form.bulk_discount.errors %}
+                                <div class="text-danger small">{{ form.bulk_discount.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-info border-bottom pb-2">Status</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check">
+                                {{ form.is_active }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                    Active Structure
+                                </label>
+                            </div>
+                            {% if form.is_active.errors %}
+                                <div class="text-danger small">{{ form.is_active.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check">
+                                {{ form.is_default }}
+                                <label class="form-check-label" for="{{ form.is_default.id_for_label }}">
+                                    Default Structure
+                                </label>
+                            </div>
+                            {% if form.is_default.errors %}
+                                <div class="text-danger small">{{ form.is_default.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'fees:manage_fee_structures' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Save Fee Structure
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- EMI Calculator -->
+        <div class="card shadow">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-calculator me-2"></i>EMI Calculator
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Total Amount</label>
+                    <div class="form-control" id="calc-total">$0.00</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Down Payment</label>
+                    <div class="form-control" id="calc-down">$0.00</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">EMI Duration</label>
+                    <div class="form-control" id="calc-duration">-- months</div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label"><strong>Calculated EMI</strong></label>
+                    <div class="form-control bg-primary text-white fw-bold" id="calc-emi">$0.00</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview -->
+        <div class="card shadow mt-3">
+            <div class="card-header bg-secondary text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-eye me-2"></i>Structure Preview
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="structure-preview">
+                    <p class="text-muted">Preview will appear as you fill the form</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const paymentTypeField = document.getElementById('{{ form.payment_type.id_for_label }}');
+        const emiSettings = document.getElementById('emi-settings');
+        const totalAmountField = document.getElementById('{{ form.total_amount.id_for_label }}');
+        const downPaymentField = document.getElementById('{{ form.down_payment.id_for_label }}');
+        const emiDurationField = document.getElementById('{{ form.emi_duration_months.id_for_label }}');
+        const emiAmountField = document.getElementById('{{ form.emi_amount.id_for_label }}');
+
+        // Toggle EMI settings based on payment type
+        function toggleEmiSettings() {
+            if (paymentTypeField.value === 'emi') {
+                emiSettings.style.display = 'block';
+            } else {
+                emiSettings.style.display = 'none';
+            }
+        }
+
+        // Calculate EMI
+        function calculateEMI() {
+            const totalAmount = parseFloat(totalAmountField.value) || 0;
+            const downPayment = parseFloat(downPaymentField.value) || 0;
+            const duration = parseInt(emiDurationField.value) || 0;
+
+            if (totalAmount > 0 && duration > 0) {
+                const remainingAmount = totalAmount - downPayment;
+                const emiAmount = remainingAmount / duration;
+
+                // Update calculator display
+                document.getElementById('calc-total').textContent = '$' + totalAmount.toFixed(2);
+                document.getElementById('calc-down').textContent = '$' + downPayment.toFixed(2);
+                document.getElementById('calc-duration').textContent = duration + ' months';
+                document.getElementById('calc-emi').textContent = '$' + emiAmount.toFixed(2);
+
+                // Auto-fill EMI amount if empty
+                if (!emiAmountField.value) {
+                    emiAmountField.value = emiAmount.toFixed(2);
+                }
+            }
+        }
+
+        // Update preview
+        function updatePreview() {
+            const name = document.getElementById('{{ form.name.id_for_label }}').value;
+            const paymentType = paymentTypeField.value;
+            const totalAmount = parseFloat(totalAmountField.value) || 0;
+            
+            let previewHtml = '<div class="preview-item">';
+            
+            if (name) {
+                previewHtml += `<h6>${name}</h6>`;
+            }
+            
+            if (totalAmount > 0) {
+                previewHtml += `<p><strong>Total: $${totalAmount.toFixed(2)}</strong></p>`;
+            }
+            
+            if (paymentType) {
+                previewHtml += `<p>Type: ${paymentType.charAt(0).toUpperCase() + paymentType.slice(1)}</p>`;
+            }
+            
+            previewHtml += '</div>';
+            
+            document.getElementById('structure-preview').innerHTML = previewHtml;
+        }
+
+        // Event listeners
+        paymentTypeField.addEventListener('change', toggleEmiSettings);
+        [totalAmountField, downPaymentField, emiDurationField].forEach(field => {
+            field.addEventListener('input', calculateEMI);
+        });
+        
+        // Update preview on all relevant fields
+        document.querySelectorAll('#feeStructureForm input, #feeStructureForm select, #feeStructureForm textarea').forEach(field => {
+            field.addEventListener('input', updatePreview);
+            field.addEventListener('change', updatePreview);
+        });
+
+        // Initial setup
+        toggleEmiSettings();
+        calculateEMI();
+        updatePreview();
+    });
+</script>
+{% endblock %}

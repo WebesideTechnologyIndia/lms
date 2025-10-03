@@ -1,0 +1,529 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ session.title }} - Session Detail{% endblock %}
+
+{% block extra_css %}
+<style>
+    .session-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    
+    .status-badge {
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .status-scheduled {
+        background-color: #dbeafe;
+        color: #1e40af;
+        border: 2px solid #3b82f6;
+    }
+    
+    .status-live {
+        background-color: #dcfce7;
+        color: #166534;
+        border: 2px solid #22c55e;
+        animation: pulse 2s infinite;
+    }
+    
+    .status-completed {
+        background-color: #f3f4f6;
+        color: #374151;
+        border: 2px solid #9ca3af;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.4); }
+        50% { box-shadow: 0 0 30px rgba(34, 197, 94, 0.6); }
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        padding: 2rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        border: 1px solid #e5e7eb;
+        margin-bottom: 1.5rem;
+    }
+    
+    .session-stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 10px;
+        text-align: center;
+        border: 1px solid #e5e7eb;
+    }
+    
+    .stat-number {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #3b82f6;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        color: #6b7280;
+        font-size: 0.875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .avatar-sm {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #3b82f6;
+        color: white;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+    
+    .btn-mark {
+        padding: 0.35rem 0.75rem;
+        border: none;
+        border-radius: 4px;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    
+    .btn-mark-present {
+        background: #22c55e;
+        color: white;
+    }
+    
+    .btn-mark-absent {
+        background: #ef4444;
+        color: white;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Add this after the main attendance table in your template -->
+
+<!-- Locked Students Alert (if any) -->
+{% if locked_students_info %}
+<div class="alert alert-warning mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">
+            <i class="fas fa-lock me-2"></i>
+            Locked/Inactive Students ({{ total_locked }})
+        </h5>
+        <span class="badge bg-warning text-dark">Cannot Access Session</span>
+    </div>
+    
+    <p class="mb-3">These students are enrolled but currently cannot access this session:</p>
+    
+    <div class="table-responsive">
+        <table class="table table-sm table-bordered">
+            <thead class="table-light">
+                <tr>
+                    <th width="5%">#</th>
+                    <th width="40%">Student</th>
+                    <th width="30%">Email</th>
+                    <th width="25%">Lock Reason</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in locked_students_info %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td>
+                        <i class="fas fa-user-lock text-danger me-2"></i>
+                        {{ item.student.get_full_name|default:item.student.username }}
+                    </td>
+                    <td>
+                        <small class="text-muted">{{ item.student.email }}</small>
+                    </td>
+                    <td>
+                        <span class="badge bg-danger">{{ item.lock_reason }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <small class="text-muted">
+        <i class="fas fa-info-circle me-1"></i>
+        Note: These students need to clear payment or get admin approval to access the session.
+    </small>
+</div>
+{% endif %}
+<div class="container-fluid py-4">
+    <!-- Session Header -->
+    <div class="session-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="h2 mb-2">{{ session.title }}</h1>
+                <p class="mb-1 opacity-90">
+                    <i class="fas fa-users me-2"></i>
+                    {{ session.batch.name }} - {{ session.batch.course.title }}
+                </p>
+                <p class="mb-0 opacity-90">
+                    <i class="fas fa-calendar me-2"></i>
+                    {{ session.scheduled_date|date:"D, M d, Y" }} at {{ session.start_time|time:"g:i A" }}
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <span class="status-badge status-{{ session.status|lower }}">
+                    {% if session.status == 'live' %}
+                        <i class="fas fa-circle me-1"></i>Live Now
+                    {% elif session.status == 'completed' %}
+                        <i class="fas fa-check-circle me-1"></i>Completed
+                    {% else %}
+                        <i class="fas fa-clock me-1"></i>{{ session.get_status_display }}
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Session Stats -->
+    <div class="session-stats">
+        <div class="stat-card">
+            <div class="stat-number">{{ session.duration_minutes }}</div>
+            <div class="stat-label">Duration (min)</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ total_students }}</div>
+            <div class="stat-label">Total Students</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number text-success">{{ present_count }}</div>
+            <div class="stat-label">Present</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number text-danger">{{ absent_count }}</div>
+            <div class="stat-label">Absent</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-number">{{ attendance_percentage }}%</div>
+            <div class="stat-label">Attendance Rate</div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Session Info -->
+            <div class="info-card">
+                <h4 class="mb-4">
+                    <i class="fas fa-info-circle text-primary me-2"></i>
+                    Session Information
+                </h4>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Instructor:</strong> {{ session.batch.instructor.get_full_name }}</p>
+                        <p><strong>Type:</strong> {{ session.get_session_type_display }}</p>
+                        <p><strong>Duration:</strong> {{ session.duration_minutes }} minutes</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Status:</strong> 
+                            <span class="badge bg-primary">{{ session.get_status_display }}</span>
+                        </p>
+                        <p><strong>Recording:</strong> 
+                            {% if session.is_recorded %}
+                                <span class="badge bg-success">Enabled</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Disabled</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+
+                {% if session.description %}
+                <div class="mt-3">
+                    <h5>Description</h5>
+                    <p>{{ session.description|linebreaks }}</p>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- ATTENDANCE SECTION -->
+            <div class="info-card">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4>
+                        <i class="fas fa-user-check text-success me-2"></i>
+                        Student Attendance
+                    </h4>
+                    {% if user.role == 'instructor' or user.role == 'superadmin' %}
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-primary" onclick="exportAttendance()">
+                            <i class="fas fa-download me-1"></i>Export
+                        </button>
+                        <button class="btn btn-sm btn-outline-success" onclick="markAllPresent()">
+                            <i class="fas fa-check-all me-1"></i>Mark All Present
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <!-- Attendance Progress Bar -->
+                <div class="progress mb-4" style="height: 35px;">
+                    <div class="progress-bar bg-success" style="width: {{ attendance_percentage }}%">
+                        {{ present_count }} Present ({{ attendance_percentage }}%)
+                    </div>
+                    <div class="progress-bar bg-danger" style="width: {{ 100|add:'-'|add:attendance_percentage }}%">
+                        {{ absent_count }} Absent
+                    </div>
+                </div>
+
+                <!-- Attendance Table -->
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th width="5%">#</th>
+                                <th width="30%">Student</th>
+                                <th width="15%">Status</th>
+                                <th width="15%">Join Time</th>
+                                <th width="15%">Duration</th>
+                                {% if user.role == 'instructor' or user.role == 'superadmin' %}
+                                <th width="20%">Actions</th>
+                                {% endif %}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in student_attendance %}
+                            <tr>
+                                <td>{{ forloop.counter }}</td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <span class="avatar-sm me-2">
+                                            {{ item.student.first_name|first|default:item.student.username|first|upper }}
+                                        </span>
+                                        <div>
+                                            <div class="fw-semibold">
+                                                {{ item.student.get_full_name|default:item.student.username }}
+                                            </div>
+                                            <small class="text-muted">{{ item.student.email }}</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if item.status == 'present' %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-check me-1"></i>Present
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-danger">
+                                            <i class="fas fa-times me-1"></i>Absent
+                                        </span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.join_time %}
+                                        <small>{{ item.join_time|time:"g:i A" }}</small>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if item.duration %}
+                                        <span class="badge bg-info">{{ item.duration }} min</span>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                                {% if user.role == 'instructor' or user.role == 'superadmin' %}
+                                <td>
+                                    {% if item.status == 'absent' %}
+                                        <button class="btn-mark btn-mark-present" 
+                                                onclick="markPresent({{ item.student.id }})">
+                                            <i class="fas fa-check me-1"></i>Mark Present
+                                        </button>
+                                    {% else %}
+                                        <button class="btn-mark btn-mark-absent" 
+                                                onclick="markAbsent({{ item.student.id }})">
+                                            <i class="fas fa-times me-1"></i>Mark Absent
+                                        </button>
+                                    {% endif %}
+                                </td>
+                                {% endif %}
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">
+                                    <i class="fas fa-users-slash fa-2x mb-2"></i>
+                                    <p class="mb-0">No students enrolled in this batch</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Quick Actions -->
+            <div class="info-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-cogs text-secondary me-2"></i>
+                    Quick Actions
+                </h5>
+                
+                <div class="d-grid gap-2">
+                    {% if user.role == 'instructor' or user.role == 'superadmin' %}
+                    {% if session.status == 'scheduled' %}
+                    <a href="#" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-edit me-1"></i>Edit Session
+                    </a>
+                    {% endif %}
+
+                    {% if session.status != 'completed' %}
+                    <a href="{% url 'zoom:end_session' session.id %}" class="btn btn-outline-danger btn-sm">
+                        <i class="fas fa-stop-circle me-1"></i>End Session
+                    </a>
+                    {% endif %}
+                    {% endif %}
+                    
+                    <button class="btn btn-outline-secondary btn-sm" onclick="shareSession()">
+                        <i class="fas fa-share me-1"></i>Share Session
+                    </button>
+                </div>
+            </div>
+
+            <!-- Session Timeline -->
+            <div class="info-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-clock text-warning me-2"></i>
+                    Session Timeline
+                </h5>
+                
+                <div class="timeline">
+                    <div class="mb-3">
+                        <strong>Created:</strong><br>
+                        <small class="text-muted">{{ session.created_at|date:"M d, Y g:i A" }}</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <strong>Scheduled:</strong><br>
+                        <small class="text-muted">{{ session.scheduled_date|date:"M d, Y" }} at {{ session.start_time|time:"g:i A" }}</small>
+                    </div>
+                    
+                    {% if session.status == 'completed' %}
+                    <div>
+                        <strong>Completed:</strong><br>
+                        <small class="text-success">Session finished</small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function markPresent(studentId) {
+    if (!confirm('Mark this student as present?')) return;
+    
+    fetch(`/zoom/api/session/{{ session.id }}/attendance/mark/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            student_id: studentId,
+            status: 'present'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || 'Failed to mark attendance');
+        }
+    });
+}
+
+function markAbsent(studentId) {
+    if (!confirm('Mark this student as absent?')) return;
+    
+    fetch(`/zoom/api/session/{{ session.id }}/attendance/mark/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            student_id: studentId,
+            status: 'absent'
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || 'Failed to mark attendance');
+        }
+    });
+}
+
+function exportAttendance() {
+    window.location.href = `/zoom/api/session/{{ session.id }}/attendance/export/`;
+}
+
+function markAllPresent() {
+    if (!confirm('Mark all students as present?')) return;
+    
+    fetch(`/zoom/api/session/{{ session.id }}/attendance/mark-all/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert(data.message || 'Failed to mark attendance');
+        }
+    });
+}
+
+function shareSession() {
+    const url = window.location.href;
+    const title = "{{ session.title|escapejs }}";
+    const text = `Join: ${title} on {{ session.scheduled_date|date:"M d, Y" }}`;
+    
+    if (navigator.share) {
+        navigator.share({ title, text, url });
+    } else {
+        navigator.clipboard.writeText(url);
+        alert('Session URL copied to clipboard!');
+    }
+}
+</script>
+{% endblock %}

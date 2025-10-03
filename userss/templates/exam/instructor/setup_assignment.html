@@ -1,0 +1,471 @@
+{% extends 'instructor_base.html' %}
+
+{% block title %}Setup Assignment - {{ exam.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .assignment-form-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .exam-header {
+        background: linear-gradient(135deg, #388e3c 0%, #81c784 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .progress-bar {
+        height: 8px;
+        border-radius: 4px;
+        background: #e9ecef;
+        margin-bottom: 1rem;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: #388e3c;
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+    
+    .form-section {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        border-left: 4px solid #388e3c;
+    }
+    
+    .section-icon {
+        background: #388e3c;
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+    }
+    
+    .file-restriction-card {
+        background: #fff3e0;
+        border-radius: 8px;
+        padding: 1rem;
+        border: 1px solid #ffcc02;
+    }
+    
+    .evaluation-card {
+        background: #e3f2fd;
+        border-radius: 8px;
+        padding: 1rem;
+        border: 1px solid #2196f3;
+    }
+    
+    .btn-publish {
+        background: linear-gradient(135deg, #388e3c, #2e7d32);
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+        color: white;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-publish:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(56, 142, 60, 0.4);
+        color: white;
+    }
+    
+    .preview-card {
+        background: #f5f5f5;
+        border-radius: 8px;
+        padding: 1.5rem;
+        border: 2px dashed #388e3c;
+    }
+    
+    .file-type-tag {
+        background: #388e3c;
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+        display: inline-block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Exam Header -->
+    <div class="exam-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="mb-1">{{ exam.title }}</h2>
+                <p class="mb-0 opacity-90">Setup Assignment Details & Requirements</p>
+            </div>
+            <div class="text-end">
+                <div class="mb-2">
+                    <span class="badge bg-white text-dark">{{ exam.get_exam_type_display }}</span>
+                    <span class="badge bg-white text-dark ms-2">{{ exam.total_marks }} Marks</span>
+                </div>
+                <a href="{% url 'instructor_exam_detail' exam.id %}" class="btn btn-light btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Exam
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress-bar">
+        <div class="progress-fill" style="width: 90%"></div>
+    </div>
+    <div class="d-flex justify-content-between text-muted small mb-4">
+        <span>Exam Created</span>
+        <span>Setting Up Assignment</span>
+        <span>Ready to Publish</span>
+    </div>
+
+    <form method="post" id="assignmentForm">
+        {% csrf_token %}
+        
+        <div class="row">
+            <!-- Main Form -->
+            <div class="col-lg-8">
+                <!-- Assignment Description Section -->
+                <div class="form-section">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="section-icon">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <h5 class="mb-0">Assignment Description</h5>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Assignment Description *</label>
+                        {{ form.assignment_description }}
+                        {% if form.assignment_description.errors %}
+                            <div class="text-danger small mt-1">{{ form.assignment_description.errors.0 }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">Provide detailed instructions about what students need to do</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Submission Guidelines</label>
+                        {{ form.submission_guidelines }}
+                        {% if form.submission_guidelines.errors %}
+                            <div class="text-danger small mt-1">{{ form.submission_guidelines.errors.0 }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">Guidelines for file naming, format, structure, etc.</small>
+                    </div>
+                </div>
+
+                <!-- File Restrictions Section -->
+                <div class="form-section">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="section-icon">
+                            <i class="fas fa-upload"></i>
+                        </div>
+                        <h5 class="mb-0">File Upload Settings</h5>
+                    </div>
+                    
+                    <div class="file-restriction-card">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Allowed File Types</label>
+                                    {{ form.allowed_file_types }}
+                                    {% if form.allowed_file_types.errors %}
+                                        <div class="text-danger small mt-1">{{ form.allowed_file_types.errors.0 }}</div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">Comma-separated extensions (e.g., pdf,doc,docx,txt)</small>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Maximum File Size (MB)</label>
+                                    {{ form.max_file_size_mb }}
+                                    {% if form.max_file_size_mb.errors %}
+                                        <div class="text-danger small mt-1">{{ form.max_file_size_mb.errors.0 }}</div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">Maximum size per file in megabytes</small>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Maximum Files Allowed</label>
+                                    {{ form.max_files_allowed }}
+                                    {% if form.max_files_allowed.errors %}
+                                        <div class="text-danger small mt-1">{{ form.max_files_allowed.errors.0 }}</div>
+                                    {% endif %}
+                                    <small class="form-text text-muted">How many files can a student upload</small>
+                                </div>
+                                
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <small>Students will be able to upload files during their assignment submission</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Evaluation Criteria Section -->
+                <div class="form-section">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="section-icon">
+                            <i class="fas fa-clipboard-check"></i>
+                        </div>
+                        <h5 class="mb-0">Evaluation Criteria</h5>
+                    </div>
+                    
+                    <div class="evaluation-card">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Grading Criteria</label>
+                            {{ form.evaluation_criteria }}
+                            {% if form.evaluation_criteria.errors %}
+                                <div class="text-danger small mt-1">{{ form.evaluation_criteria.errors.0 }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">Specify how you will evaluate and grade the submissions</small>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <small><strong>Note:</strong> Assignments require manual grading. You'll review each submission individually.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'instructor_exam_detail' exam.id %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Exam
+                    </a>
+                    <button type="submit" class="btn-publish">
+                        <i class="fas fa-rocket me-1"></i>Publish Assignment
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Preview Card -->
+                <div class="assignment-form-card">
+                    <h5 class="mb-3">
+                        <i class="fas fa-eye me-2"></i>Assignment Preview
+                    </h5>
+                    
+                    <div class="preview-card">
+                        <h6 class="text-muted mb-2">Current Settings:</h6>
+                        
+                        <div class="mb-3">
+                            <strong>Total Marks:</strong> {{ exam.total_marks }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <strong>Passing Marks:</strong> {{ exam.passing_marks }}
+                        </div>
+                        
+                        {% if exam.start_datetime %}
+                        <div class="mb-3">
+                            <strong>Available From:</strong><br>
+                            <small>{{ exam.start_datetime|date:"M d, Y H:i" }}</small>
+                        </div>
+                        {% endif %}
+                        
+                        {% if exam.end_datetime %}
+                        <div class="mb-3">
+                            <strong>Submission Deadline:</strong><br>
+                            <small>{{ exam.end_datetime|date:"M d, Y H:i" }}</small>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <strong>Max Attempts:</strong> {{ exam.max_attempts }}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <strong>Show Results:</strong> 
+                            {% if exam.show_results_immediately %}Immediately{% else %}After Manual Review{% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- File Types Preview -->
+                <div class="assignment-form-card" id="file-types-preview">
+                    <h6 class="mb-3">
+                        <i class="fas fa-file me-2"></i>Allowed File Types
+                    </h6>
+                    <div id="file-types-display">
+                        <div class="file-type-tag">PDF</div>
+                        <div class="file-type-tag">DOC</div>
+                        <div class="file-type-tag">DOCX</div>
+                        <div class="file-type-tag">TXT</div>
+                    </div>
+                    <small class="text-muted">Students can upload these file types</small>
+                </div>
+
+                <!-- Tips Card -->
+                <div class="assignment-form-card">
+                    <h6 class="mb-3">
+                        <i class="fas fa-lightbulb me-2"></i>Assignment Tips
+                    </h6>
+                    <ul class="list-unstyled small">
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Be specific about requirements
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Set clear submission guidelines
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Define evaluation criteria upfront
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Consider file size limitations
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            Allow appropriate file formats
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Grading Reminder -->
+                <div class="assignment-form-card">
+                    <div class="alert alert-info">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-info-circle me-2"></i>Manual Grading Required
+                        </h6>
+                        <small>
+                            Unlike MCQ exams, assignments require you to manually review and grade each submission. 
+                            You'll access the grading interface after students submit their work.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Update file types preview
+    const fileTypesInput = document.querySelector('input[name="allowed_file_types"]');
+    const fileTypesDisplay = document.getElementById('file-types-display');
+    
+    function updateFileTypesPreview() {
+        const fileTypes = fileTypesInput.value.split(',').map(type => type.trim().toUpperCase()).filter(type => type);
+        fileTypesDisplay.innerHTML = '';
+        
+        if (fileTypes.length > 0) {
+            fileTypes.forEach(type => {
+                const tag = document.createElement('div');
+                tag.className = 'file-type-tag';
+                tag.textContent = type;
+                fileTypesDisplay.appendChild(tag);
+            });
+        } else {
+            fileTypesDisplay.innerHTML = '<small class="text-muted">No file types specified</small>';
+        }
+    }
+    
+    fileTypesInput.addEventListener('input', updateFileTypesPreview);
+    
+    // Auto-resize textareas
+    const textareas = document.querySelectorAll('textarea');
+    textareas.forEach(textarea => {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+    });
+    
+    // Character counters
+    const assignmentDescription = document.querySelector('textarea[name="assignment_description"]');
+    if (assignmentDescription) {
+        const counter = document.createElement('small');
+        counter.className = 'text-muted float-end';
+        assignmentDescription.parentNode.appendChild(counter);
+        
+        function updateCounter() {
+            const length = assignmentDescription.value.length;
+            counter.textContent = `${length} characters`;
+            
+            if (length < 50) {
+                counter.className = 'text-danger float-end';
+            } else if (length > 2000) {
+                counter.className = 'text-warning float-end';
+            } else {
+                counter.className = 'text-muted float-end';
+            }
+        }
+        
+        assignmentDescription.addEventListener('input', updateCounter);
+        updateCounter();
+    }
+    
+    // Form validation
+    document.getElementById('assignmentForm').addEventListener('submit', function(e) {
+        const description = document.querySelector('textarea[name="assignment_description"]').value.trim();
+        const fileTypes = document.querySelector('input[name="allowed_file_types"]').value.trim();
+        const maxSize = document.querySelector('input[name="max_file_size_mb"]').value;
+        const maxFiles = document.querySelector('input[name="max_files_allowed"]').value;
+        
+        if (!description) {
+            e.preventDefault();
+            alert('Please provide an assignment description');
+            return false;
+        }
+        
+        if (description.length < 50) {
+            e.preventDefault();
+            alert('Assignment description should be at least 50 characters long');
+            return false;
+        }
+        
+        if (!fileTypes) {
+            e.preventDefault();
+            alert('Please specify allowed file types');
+            return false;
+        }
+        
+        if (!maxSize || maxSize < 1 || maxSize > 100) {
+            e.preventDefault();
+            alert('Please set a valid file size limit (1-100 MB)');
+            return false;
+        }
+        
+        if (!maxFiles || maxFiles < 1 || maxFiles > 10) {
+            e.preventDefault();
+            alert('Please set a valid maximum files limit (1-10 files)');
+            return false;
+        }
+        
+        // Confirm publication
+        const confirmed = confirm('Are you ready to publish this assignment? Students will be able to see and submit once published.');
+        if (!confirmed) {
+            e.preventDefault();
+            return false;
+        }
+    });
+    
+    // Initialize file types preview
+    updateFileTypesPreview();
+});
+</script>
+{% endblock %}

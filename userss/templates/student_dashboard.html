@@ -1,0 +1,312 @@
+{% extends 'students/student_base.html' %}
+
+{% block title %}Dashboard - Student Panel{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+<!-- Welcome Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="profile-header">
+            <div class="row align-items-center">
+                <div class="col-auto">
+                    {% if user.profile_picture %}
+                        <img src="{{ user.profile_picture.url }}" alt="Profile" class="profile-avatar">
+                    {% else %}
+                        <div class="profile-avatar bg-white d-flex align-items-center justify-content-center">
+                            <i class="fas fa-user text-primary fs-2"></i>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="col">
+                    <h2 class="mb-1">Welcome back, {{ user.get_full_name|default:user.username }}!</h2>
+                    <p class="mb-0 opacity-75">
+                        {% if user.profile.student_id %}
+                            Student ID: {{ user.profile.student_id }}
+                        {% else %}
+                            Complete your profile to get started
+                        {% endif %}
+                    </p>
+                </div>
+                <div class="col-auto">
+                    <div class="text-end">
+                        <div class="h5 mb-0">{{ today|date:"F d, Y" }}</div>
+                        <small class="opacity-75">{{ today|date:"l" }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Stats -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="text-primary mb-2">
+                    <i class="fas fa-book-open fa-2x"></i>
+                </div>
+                <h4 class="mb-1">{{ total_courses }}</h4>
+                <p class="text-muted mb-0">Enrolled Courses</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="text-success mb-2">
+                    <i class="fas fa-users fa-2x"></i>
+                </div>
+                <h4 class="mb-1">{{ total_batches }}</h4>
+                <p class="text-muted mb-0">Active Batches</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="text-warning mb-2">
+                    <i class="fas fa-chart-line fa-2x"></i>
+                </div>
+                <h4 class="mb-1">{{ overall_progress|floatformat:0 }}%</h4>
+                <p class="text-muted mb-0">Overall Progress</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card text-center h-100">
+            <div class="card-body">
+                <div class="text-info mb-2">
+                    <i class="fas fa-certificate fa-2x"></i>
+                </div>
+                <h4 class="mb-1">{{ completed_courses }}</h4>
+                <p class="text-muted mb-0">Completed</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content Row -->
+<div class="row">
+    <!-- Left Column -->
+    <div class="col-lg-8">
+        <!-- Current Courses -->
+        <div class="card mb-4">
+            <div class="card-header bg-transparent d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-book me-2"></i>
+                    Current Courses
+                </h5>
+                <a href="{% url 'student-
+                _courses' %}" class="btn btn-outline-primary btn-sm">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if active_courses %}
+                    {% for enrollment in active_courses %}
+                    <div class="d-flex align-items-center mb-3 p-3 bg-light rounded">
+                        <div class="me-3">
+                            {% if enrollment.course.thumbnail %}
+                                <img src="{{ enrollment.course.thumbnail.url }}" 
+                                     alt="{{ enrollment.course.title }}" 
+                                     class="rounded" 
+                                     style="width: 60px; height: 60px; object-fit: cover;">
+                            {% else %}
+                                <div class="bg-primary rounded d-flex align-items-center justify-content-center text-white" 
+                                     style="width: 60px; height: 60px;">
+                                    <i class="fas fa-book"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">{{ enrollment.course.title }}</h6>
+                            <small class="text-muted">{{ enrollment.course.instructor.get_full_name }}</small>
+                            <div class="progress mt-2" style="height: 6px;">
+                                <div class="progress-bar" 
+                                     role="progressbar" 
+                                     style="width: {{ enrollment.progress_percentage }}%"
+                                     aria-valuenow="{{ enrollment.progress_percentage }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100">
+                                </div>
+                            </div>
+                            <small class="text-muted">{{ enrollment.progress_percentage|floatformat:0 }}% Complete</small>
+                        </div>
+                        
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-book-open fa-3x text-muted mb-3"></i>
+                        <h6 class="text-muted">No courses enrolled yet</h6>
+                        <p class="text-muted">Browse our course catalog to get started</p>
+                        <a href="{% url 'browse_courses' %}" class="btn btn-primary">Browse Courses</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Recent Activity -->
+        <div class="card mb-4">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">
+                    <i class="fas fa-clock me-2"></i>
+                    Recent Activity
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if recent_activities %}
+                    {% for activity in recent_activities %}
+                    <div class="d-flex align-items-start mb-3">
+                        <div class="me-3">
+                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center text-white" 
+                                 style="width: 40px; height: 40px;">
+                                {% if activity.action == 'enroll_course' %}
+                                    <i class="fas fa-plus"></i>
+                                {% elif activity.action == 'login' %}
+                                    <i class="fas fa-sign-in-alt"></i>
+                                {% else %}
+                                    <i class="fas fa-check"></i>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="flex-grow-1">
+                            <p class="mb-1">{{ activity.description }}</p>
+                            <small class="text-muted">{{ activity.timestamp|timesince }} ago</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center py-3">No recent activity</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column -->
+    <div class="col-lg-4">
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt me-2"></i>
+                    Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'browse_courses' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-search me-2"></i>
+                        Browse Courses
+                    </a>
+                    
+                    <a href="{% url 'student_profile' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-user-edit me-2"></i>
+                        Update Profile
+                    </a>
+                    
+                    <a href="{% url 'student_progress' %}" class="btn btn-outline-info">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        View Progress
+                    </a>
+                    
+                    <a href="{% url 'student_certificates' %}" class="btn btn-outline-success">
+                        <i class="fas fa-certificate me-2"></i>
+                        My Certificates
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming Deadlines -->
+        <div class="card mb-4">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    Upcoming Deadlines
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if upcoming_deadlines %}
+                    {% for deadline in upcoming_deadlines %}
+                    <div class="d-flex justify-content-between align-items-center mb-3 p-2 bg-light rounded">
+                        <div>
+                            <h6 class="mb-1">{{ deadline.title }}</h6>
+                            <small class="text-muted">{{ deadline.course.title }}</small>
+                        </div>
+                        <div class="text-end">
+                            <small class="badge bg-warning">{{ deadline.due_date|date:"M d" }}</small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="text-muted text-center py-3">No upcoming deadlines</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Performance Summary -->
+        <div class="card">
+            <div class="card-header bg-transparent">
+                <h5 class="mb-0">
+                    <i class="fas fa-trophy me-2"></i>
+                    Performance
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-3">
+                    <div class="display-6 text-primary">{{ average_grade|default:"N/A" }}</div>
+                    <small class="text-muted">Average Grade</small>
+                </div>
+                
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="h5 text-success">{{ total_hours|default:0 }}</div>
+                        <small class="text-muted">Study Hours</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="h5 text-info">{{ completion_rate|default:0 }}%</div>
+                        <small class="text-muted">Completion Rate</small>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="text-center">
+                    <small class="text-muted">Keep up the great work!</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh dashboard every 5 minutes
+    setTimeout(function() {
+        location.reload();
+    }, 300000);
+
+    // Add some interactive animations
+    document.addEventListener('DOMContentLoaded', function() {
+        // Animate progress bars
+        const progressBars = document.querySelectorAll('.progress-bar');
+        progressBars.forEach(function(bar) {
+            const width = bar.style.width;
+            bar.style.width = '0%';
+            setTimeout(function() {
+                bar.style.transition = 'width 1s ease-in-out';
+                bar.style.width = width;
+            }, 100);
+        });
+    });
+</script>
+{% endblock %}

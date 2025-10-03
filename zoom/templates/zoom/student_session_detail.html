@@ -1,0 +1,329 @@
+{% extends 'students/student_base.html' %}
+{% load static %}
+
+{% block title %}{{ session.title }} - Session Details{% endblock %}
+{% block page_title %}Session Details{% endblock %}
+
+{% block content %}
+<!-- Back Button -->
+<div class="mb-3">
+    <a href="{% url 'zoom:student_sessions_browse' %}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-2"></i>Back to Sessions
+    </a>
+</div>
+
+<!-- Session Header -->
+<div class="card mb-4 border-0 shadow-sm">
+    <div class="card-body p-4" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="row align-items-center text-white">
+            <div class="col-md-8">
+                <div class="mb-2">
+                    <span class="badge bg-white text-primary me-2">{{ session.batch.name }}</span>
+                    {% if session.status == 'live' %}
+                        <span class="badge bg-danger pulse-badge">
+                            <i class="fas fa-circle me-1"></i>LIVE NOW
+                        </span>
+                    {% elif session.status == 'scheduled' %}
+                        <span class="badge bg-warning text-dark">Upcoming</span>
+                    {% else %}
+                        <span class="badge bg-success">Completed</span>
+                    {% endif %}
+                </div>
+                <h2 class="mb-2">{{ session.title }}</h2>
+                <p class="mb-0 opacity-75">
+                    <i class="fas fa-book me-2"></i>{{ session.batch.course.title }}
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                {% if is_live %}
+                    <a href="{% url 'zoom:join_meeting' session.id %}" class="btn btn-danger btn-lg">
+                        <i class="fas fa-video me-2"></i>Join Meeting
+                    </a>
+                {% elif is_upcoming %}
+                    <button class="btn btn-light btn-lg" disabled>
+                        <i class="fas fa-clock me-2"></i>Not Started Yet
+                    </button>
+                {% elif is_completed %}
+                    {% if session.recordings.exists %}
+                        <a href="#recordings-section" class="btn btn-success btn-lg">
+                            <i class="fas fa-play-circle me-2"></i>Watch Recording
+                        </a>
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Session Information -->
+<div class="row mb-4">
+    <!-- Main Details -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle text-primary me-2"></i>
+                    Session Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <div class="info-item mb-3">
+                            <label class="text-muted small">Date</label>
+                            <p class="mb-0 fw-bold">
+                                <i class="fas fa-calendar text-primary me-2"></i>
+                                {{ session.scheduled_date|date:"l, F d, Y" }}
+                            </p>
+                        </div>
+                        <div class="info-item mb-3">
+                            <label class="text-muted small">Time</label>
+                            <p class="mb-0 fw-bold">
+                                <i class="fas fa-clock text-primary me-2"></i>
+                                {{ session.start_time|time:"g:i A" }} - {{ session.end_time|time:"g:i A" }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-item mb-3">
+                            <label class="text-muted small">Duration</label>
+                            <p class="mb-0 fw-bold">
+                                <i class="fas fa-hourglass-half text-primary me-2"></i>
+                                {{ session.duration_minutes }} minutes
+                            </p>
+                        </div>
+                        <div class="info-item mb-3">
+                            <label class="text-muted small">Session Type</label>
+                            <p class="mb-0 fw-bold">
+                                <i class="fas fa-tag text-primary me-2"></i>
+                                {{ session.get_session_type_display }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                {% if session.description %}
+                <div class="mb-4">
+                    <label class="text-muted small">Description</label>
+                    <p class="mb-0">{{ session.description|linebreaks }}</p>
+                </div>
+                {% endif %}
+
+                <!-- Instructor Info -->
+                <div class="border-top pt-3">
+                    <label class="text-muted small">Instructor</label>
+                    <div class="d-flex align-items-center">
+                        {% if session.batch.instructor.profile_picture %}
+                            <img src="{{ session.batch.instructor.profile_picture.url }}" 
+                                 class="rounded-circle me-3" 
+                                 style="width: 50px; height: 50px; object-fit: cover;">
+                        {% else %}
+                            <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center me-3 text-white" 
+                                 style="width: 50px; height: 50px;">
+                                <i class="fas fa-user-tie"></i>
+                            </div>
+                        {% endif %}
+                        <div>
+                            <h6 class="mb-0">{{ session.batch.instructor.get_full_name }}</h6>
+                            <small class="text-muted">{{ session.batch.instructor.email }}</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Zoom Meeting Details -->
+        {% if session.zoom_meeting_id and is_live %}
+        <div class="card mb-4 border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fab fa-zoom me-2"></i>Meeting Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="text-muted small">Meeting ID</label>
+                        <div class="d-flex align-items-center">
+                            <code class="flex-grow-1">{{ session.zoom_meeting_id }}</code>
+                            <button class="btn btn-sm btn-outline-primary ms-2" 
+                                    onclick="copyToClipboard('{{ session.zoom_meeting_id }}')">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% if session.zoom_meeting_password %}
+                    <div class="col-md-6 mb-3">
+                        <label class="text-muted small">Password</label>
+                        <div class="d-flex align-items-center">
+                            <code class="flex-grow-1">{{ session.zoom_meeting_password }}</code>
+                            <button class="btn btn-sm btn-outline-primary ms-2" 
+                                    onclick="copyToClipboard('{{ session.zoom_meeting_password }}')">
+                                <i class="fas fa-copy"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                <div class="d-grid gap-2 mt-3">
+                    <a href="{{ session.zoom_join_url }}" class="btn btn-primary" target="_blank">
+                        <i class="fas fa-external-link-alt me-2"></i>Open in Zoom
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Recordings Section -->
+        {% if session.recordings.exists %}
+        <div class="card" id="recordings-section">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-play-circle text-success me-2"></i>
+                    Session Recordings
+                </h5>
+            </div>
+            <div class="card-body">
+                {% for recording in session.recordings.all %}
+                <div class="recording-item p-3 mb-3 border rounded">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">{{ recording.recording_type|title }}</h6>
+                            <small class="text-muted">
+                                <i class="fas fa-calendar me-1"></i>
+                                {{ recording.recording_start|date:"M d, Y g:i A" }}
+                            </small>
+                        </div>
+                        <span class="badge bg-success">{{ recording.file_size|filesizeformat }}</span>
+                    </div>
+                    <div class="mt-3">
+                        <a href="{% url 'zoom:play_recording' recording.id %}" class="btn btn-success">
+                            <i class="fas fa-play me-2"></i>Play Recording
+                        </a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Attendance Status -->
+        <div class="card mb-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-check-square text-success me-2"></i>
+                    Your Attendance
+                </h6>
+            </div>
+            <div class="card-body text-center">
+                {% if attendance %}
+                    <i class="fas fa-check-circle text-success fa-3x mb-3"></i>
+                    <h5 class="text-success">Attended</h5>
+                    <p class="text-muted small mb-0">
+                        Joined at: {{ attendance.joined_at|date:"g:i A" }}
+                    </p>
+                    {% if attendance.left_at %}
+                    <p class="text-muted small mb-0">
+                        Left at: {{ attendance.left_at|date:"g:i A" }}
+                    </p>
+                    {% endif %}
+                {% elif is_completed %}
+                    <i class="fas fa-times-circle text-danger fa-3x mb-3"></i>
+                    <h5 class="text-danger">Not Attended</h5>
+                    <p class="text-muted small mb-0">You did not attend this session</p>
+                {% else %}
+                    <i class="fas fa-clock text-warning fa-3x mb-3"></i>
+                    <h5 class="text-warning">Pending</h5>
+                    <p class="text-muted small mb-0">Session not completed yet</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="card mb-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-bolt text-warning me-2"></i>
+                    Quick Actions
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    {% if is_live %}
+                        <a href="{% url 'zoom:join_meeting' session.id %}" class="btn btn-danger">
+                            <i class="fas fa-video me-2"></i>Join Live Session
+                        </a>
+                    {% endif %}
+                    <a href="{% url 'zoom:student_sessions_browse' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-list me-2"></i>All Sessions
+                    </a>
+                    <a href="{% url 'zoom:student_attendance' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-history me-2"></i>My Attendance
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Batch Info -->
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-users text-primary me-2"></i>
+                    Batch Information
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-2">
+                    <strong>Batch:</strong><br>
+                    {{ session.batch.name }}
+                </p>
+                <p class="mb-2">
+                    <strong>Course:</strong><br>
+                    {{ session.batch.course.title }}
+                </p>
+                <p class="mb-0">
+                    <strong>Schedule:</strong><br>
+                    {{ session.batch.start_date|date:"M d" }} - {{ session.batch.end_date|date:"M d, Y" }}
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.pulse-badge {
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.info-item label {
+    display: block;
+    font-size: 0.85rem;
+    margin-bottom: 0.25rem;
+}
+
+.recording-item {
+    transition: all 0.3s ease;
+}
+
+.recording-item:hover {
+    background-color: #f8f9fa;
+    transform: translateX(5px);
+}
+</style>
+
+<script>
+function copyToClipboard(text) {
+    navigator.clipboard.writeText(text).then(() => {
+        alert('Copied to clipboard!');
+    });
+}
+</script>
+{% endblock %}

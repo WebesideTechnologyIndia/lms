@@ -1,0 +1,244 @@
+{% extends 'students/student_base.html' %}
+{% load static %}
+
+{% block title %}My Sessions - Student Panel{% endblock %}
+{% block page_title %}My Learning Sessions{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="bg-gradient-primary text-white p-4 rounded-3">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h2 class="mb-2">
+                        <i class="fas fa-video me-2"></i>
+                        My Live Sessions
+                    </h2>
+                    <p class="mb-0 opacity-75">
+                        Join live classes, access recordings, and track your attendance
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <div class="d-flex flex-column align-items-end">
+                        <h3 class="mb-1">{{ total_sessions }}</h3>
+                        <small>Total Sessions</small>
+                        <div class="mt-2">
+                            <span class="badge bg-white text-primary">
+                                {{ attended_sessions }} Attended
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <input type="text" class="form-control" name="search" 
+                       placeholder="Search sessions..." value="{{ search }}">
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" name="batch">
+                    <option value="">All Batches</option>
+                    {% for batch in student_batches %}
+                        <option value="{{ batch.id }}" {% if batch_filter == batch.id|stringformat:"s" %}selected{% endif %}>
+                            {{ batch.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" name="status">
+                    <option value="">All Status</option>
+                    <option value="scheduled" {% if status_filter == 'scheduled' %}selected{% endif %}>Upcoming</option>
+                    <option value="live" {% if status_filter == 'live' %}selected{% endif %}>Live Now</option>
+                    <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" name="date">
+                    <option value="">All Dates</option>
+                    <option value="today" {% if date_filter == 'today' %}selected{% endif %}>Today</option>
+                    <option value="week" {% if date_filter == 'week' %}selected{% endif %}>This Week</option>
+                    <option value="month" {% if date_filter == 'month' %}selected{% endif %}>This Month</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search me-2"></i>Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Live Sessions -->
+{% if live_sessions %}
+<div class="mb-4">
+    <h4 class="mb-3">
+        <span class="badge bg-danger">
+            <i class="fas fa-circle me-1 pulse"></i>Live Now
+        </span>
+    </h4>
+    <div class="row">
+        {% for session in live_sessions %}
+        <div class="col-md-6 mb-3">
+            <div class="card border-danger live-session-card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="card-title mb-0">{{ session.title }}</h5>
+                        <span class="badge bg-danger pulse-badge">LIVE</span>
+                    </div>
+                    <p class="text-muted small mb-2">
+                        <i class="fas fa-users me-1"></i>{{ session.batch.name }}
+                    </p>
+                    <p class="text-muted small mb-3">
+                        <i class="fas fa-clock me-1"></i>
+                        {{ session.start_time|time:"g:i A" }} - {{ session.end_time|time:"g:i A" }}
+                    </p>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'zoom:join_meeting' session.id %}" class="btn btn-danger">
+                            <i class="fas fa-video me-2"></i>Join Now
+                        </a>
+                        <a href="{% url 'zoom:student_session_detail' session.id %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-info-circle me-1"></i>Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Upcoming Sessions -->
+<div class="mb-4">
+    <h4 class="mb-3">
+        <i class="fas fa-calendar-alt text-primary me-2"></i>
+        Upcoming Sessions
+    </h4>
+    <div class="row">
+        {% for session in upcoming_sessions %}
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="card h-100 session-card">
+                <div class="card-body">
+                    <div class="mb-2">
+                        <span class="badge bg-primary">{{ session.batch.name }}</span>
+                        <span class="badge bg-secondary">{{ session.get_session_type_display }}</span>
+                    </div>
+                    <h5 class="card-title">{{ session.title }}</h5>
+                    <p class="card-text small text-muted">{{ session.description|truncatewords:15 }}</p>
+                    
+                    <div class="mb-3">
+                        <p class="mb-1">
+                            <i class="fas fa-calendar text-muted me-2"></i>
+                            <strong>{{ session.scheduled_date|date:"M d, Y" }}</strong>
+                        </p>
+                        <p class="mb-1">
+                            <i class="fas fa-clock text-muted me-2"></i>
+                            {{ session.start_time|time:"g:i A" }} - {{ session.end_time|time:"g:i A" }}
+                        </p>
+                        <p class="mb-0">
+                            <i class="fas fa-hourglass text-muted me-2"></i>
+                            {{ session.duration_minutes }} minutes
+                        </p>
+                    </div>
+                    
+                    <a href="{% url 'zoom:student_session_detail' session.id %}" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-eye me-2"></i>View Details
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                No upcoming sessions scheduled
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Completed Sessions -->
+<div class="mb-4">
+    <h4 class="mb-3">
+        <i class="fas fa-history text-success me-2"></i>
+        Recent Completed Sessions
+    </h4>
+    <div class="row">
+        {% for session in completed_sessions %}
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <span class="badge bg-success mb-2">Completed</span>
+                    <h6 class="card-title">{{ session.title }}</h6>
+                    <p class="small text-muted mb-2">{{ session.batch.name }}</p>
+                    <p class="small text-muted mb-3">
+                        <i class="fas fa-calendar me-1"></i>
+                        {{ session.scheduled_date|date:"M d, Y" }}
+                    </p>
+                    <div class="d-grid gap-1">
+                        <a href="{% url 'zoom:student_session_detail' session.id %}" class="btn btn-outline-secondary btn-sm">
+                            <i class="fas fa-info-circle me-1"></i>Details
+                        </a>
+                        {% if session.recordings.exists %}
+                        <a href="{% url 'zoom:student_recordings' %}?session={{ session.id }}" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-play-circle me-1"></i>Watch Recording
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-secondary">
+                No completed sessions yet
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.live-session-card {
+    animation: pulse-border 2s infinite;
+}
+
+@keyframes pulse-border {
+    0%, 100% { border-color: #dc3545; }
+    50% { border-color: #ff6b6b; }
+}
+
+.pulse-badge {
+    animation: pulse-glow 1.5s infinite;
+}
+
+@keyframes pulse-glow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.session-card {
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.session-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+}
+</style>
+{% endblock %}

@@ -1,0 +1,440 @@
+<!-- templates/webinars/confirm_payment.html -->
+{% extends 'webinars/base.html' %}
+
+{% block title %}Confirm Payment - {{ webinar.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Page Header -->
+            <div class="text-center mb-4">
+                <div class="payment-icon">
+                    <i class="fas fa-credit-card text-primary"></i>
+                </div>
+                <h1>Confirm Your Payment</h1>
+                <p class="lead text-muted">Complete your webinar registration</p>
+            </div>
+
+            <!-- Payment Summary Card -->
+            <div class="card payment-summary-card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-receipt me-2"></i>Payment Summary
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Webinar Details</h6>
+                            <div class="summary-item">
+                                <strong>Title:</strong> {{ webinar.title }}
+                            </div>
+                            <div class="summary-item">
+                                <strong>Date & Time:</strong> {{ webinar.scheduled_date|date:"M j, Y" }} at {{ webinar.scheduled_date|time:"g:i A" }}
+                            </div>
+                            <div class="summary-item">
+                                <strong>Duration:</strong> {{ webinar.duration_minutes }} minutes
+                            </div>
+                            <div class="summary-item">
+                                <strong>Instructor:</strong> {{ webinar.instructor.get_full_name }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Registration Details</h6>
+                            <div class="summary-item">
+                                <strong>Attendee:</strong> {{ registration.get_full_name }}
+                            </div>
+                            <div class="summary-item">
+                                <strong>Email:</strong> {{ registration.email }}
+                            </div>
+                            <div class="summary-item">
+                                <strong>Registration ID:</strong> #{{ registration.id }}
+                            </div>
+                            <div class="summary-item">
+                                <strong>Registration Date:</strong> {{ registration.registered_at|date:"M j, Y" }}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Price Summary -->
+                    <div class="price-summary mt-4 p-3">
+                        <div class="row align-items-center">
+                            <div class="col-8">
+                                <h5 class="mb-0">Total Amount</h5>
+                                <small class="text-muted">Webinar Registration Fee</small>
+                            </div>
+                            <div class="col-4 text-end">
+                                <h3 class="text-primary mb-0">₹{{ webinar.price }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Instructions Card -->
+            <div class="card payment-instructions-card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-mobile-alt me-2"></i>Payment Instructions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="payment-methods">
+                        <!-- UPI Payment -->
+                        <div class="payment-method active">
+                            <div class="method-header">
+                                <i class="fas fa-mobile-alt text-success"></i>
+                                <h6>UPI Payment (Recommended)</h6>
+                            </div>
+                            <div class="method-content">
+                                <ol class="payment-steps">
+                                    <li>
+                                        <strong>Open any UPI app</strong> (PhonePe, Google Pay, Paytm, etc.)
+                                    </li>
+                                    <li>
+                                        <strong>Send money to:</strong>
+                                        <div class="payment-detail">
+                                            <span class="detail-value">admin@company.com</span>
+                                            <button class="btn btn-sm btn-outline-primary copy-btn" 
+                                                    onclick="copyToClipboard('admin@company.com')">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <strong>Amount:</strong>
+                                        <div class="payment-detail">
+                                            <span class="detail-value">₹{{ webinar.price }}</span>
+                                            <button class="btn btn-sm btn-outline-primary copy-btn" 
+                                                    onclick="copyToClipboard('{{ webinar.price }}')">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <strong>Add this note/reference:</strong>
+                                        <div class="payment-detail">
+                                            <span class="detail-value">{{ registration.id }}-{{ webinar.slug }}</span>
+                                            <button class="btn btn-sm btn-outline-primary copy-btn" 
+                                                    onclick="copyToClipboard('{{ registration.id }}-{{ webinar.slug }}')">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </li>
+                                    <li>
+                                        <strong>Complete the payment</strong> and click "Confirm Payment" below
+                                    </li>
+                                </ol>
+                            </div>
+                        </div>
+
+                        <!-- Bank Transfer -->
+                        <div class="payment-method">
+                            <div class="method-header" data-bs-toggle="collapse" data-bs-target="#bankTransfer">
+                                <i class="fas fa-university text-info"></i>
+                                <h6>Bank Transfer</h6>
+                                <i class="fas fa-chevron-down ms-auto"></i>
+                            </div>
+                            <div class="collapse method-content" id="bankTransfer">
+                                <div class="bank-details">
+                                    <div class="bank-detail-item">
+                                        <strong>Account Name:</strong> Learning Platform Pvt Ltd
+                                    </div>
+                                    <div class="bank-detail-item">
+                                        <strong>Account Number:</strong> 1234567890123456
+                                    </div>
+                                    <div class="bank-detail-item">
+                                        <strong>IFSC Code:</strong> HDFC0001234
+                                    </div>
+                                    <div class="bank-detail-item">
+                                        <strong>Bank:</strong> HDFC Bank
+                                    </div>
+                                    <div class="bank-detail-item">
+                                        <strong>Reference:</strong> {{ registration.id }}-{{ webinar.slug }}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Confirmation Card -->
+            <div class="card confirmation-card">
+                <div class="card-body text-center">
+                    <h5 class="mb-3">
+                        <i class="fas fa-question-circle text-warning me-2"></i>
+                        Have you completed the payment?
+                    </h5>
+                    <p class="text-muted mb-4">
+                        Click the button below to confirm your payment. This will activate your registration 
+                        and upgrade your account to Webinar User status.
+                    </p>
+                    
+                    <!-- Confirmation Form -->
+                    <form method="post" class="confirmation-form">
+                        {% csrf_token %}
+                        
+                        <!-- Payment Verification -->
+                        <div class="form-check mb-4">
+                            <input class="form-check-input" type="checkbox" id="paymentVerification" required>
+                            <label class="form-check-label" for="paymentVerification">
+                                I confirm that I have made the payment of <strong>₹{{ webinar.price }}</strong> 
+                                using the above details and added the reference <strong>{{ registration.id }}-{{ webinar.slug }}</strong>
+                            </label>
+                        </div>
+                        
+                        <!-- Submit Button -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                            <button type="submit" class="btn btn-success btn-lg me-md-2" id="confirmBtn" disabled>
+                                <i class="fas fa-check me-2"></i>Yes, I've Completed the Payment
+                            </button>
+                            <a href="{% url 'webinars:registration_success' registration.id %}" 
+                               class="btn btn-outline-secondary btn-lg">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Registration
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Help Section -->
+            <div class="text-center mt-4">
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Having trouble with payment? Contact us at 
+                    <a href="mailto:support@company.com">support@company.com</a> 
+                    or call <a href="tel:+919876543210">+91 98765 43210</a>
+                </small>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .payment-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+    }
+    
+    .payment-summary-card,
+    .payment-instructions-card,
+    .confirmation-card {
+        border: none;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .card-header {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border-bottom: none;
+    }
+    
+    .summary-item {
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #f1f3f4;
+    }
+    
+    .summary-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+    
+    .price-summary {
+        background: #f8f9fa;
+        border: 2px dashed #667eea;
+        border-radius: 10px;
+    }
+    
+    .payment-methods {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .payment-method {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+    
+    .payment-method.active {
+        border-color: #667eea;
+        background: #f8f9ff;
+    }
+    
+    .method-header {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        cursor: pointer;
+        gap: 0.75rem;
+    }
+    
+    .method-header:hover {
+        background: rgba(102, 126, 234, 0.05);
+    }
+    
+    .method-header h6 {
+        margin: 0;
+        flex-grow: 1;
+    }
+    
+    .method-content {
+        padding: 0 1rem 1rem 1rem;
+    }
+    
+    .payment-steps {
+        margin: 0;
+        padding-left: 1.5rem;
+    }
+    
+    .payment-steps li {
+        margin-bottom: 1rem;
+        line-height: 1.6;
+    }
+    
+    .payment-detail {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 0.5rem;
+        padding: 0.5rem;
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+    }
+    
+    .detail-value {
+        font-family: monospace;
+        font-weight: bold;
+        color: #333;
+        flex-grow: 1;
+    }
+    
+    .copy-btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+    }
+    
+    .bank-details {
+        background: white;
+        padding: 1rem;
+        border-radius: 6px;
+        border: 1px solid #dee2e6;
+    }
+    
+    .bank-detail-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #f1f3f4;
+    }
+    
+    .bank-detail-item:last-child {
+        border-bottom: none;
+    }
+    
+    .form-check {
+        text-align: left;
+        background: #f8f9fa;
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid #28a745;
+    }
+    
+    .form-check-input:checked {
+        background-color: #28a745;
+        border-color: #28a745;
+    }
+    
+    .btn-success {
+        background: linear-gradient(135deg, #28a745, #20c997);
+        border: none;
+    }
+    
+    .btn-success:hover:not(:disabled) {
+        background: linear-gradient(135deg, #1e7e34, #17a2b8);
+        transform: translateY(-1px);
+    }
+    
+    .btn-success:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    
+    @media (max-width: 768px) {
+        .payment-detail {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .copy-btn {
+            margin-top: 0.5rem;
+        }
+        
+        .bank-detail-item {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .d-md-flex .btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(function() {
+            // Show success feedback
+            event.target.innerHTML = '<i class="fas fa-check"></i>';
+            event.target.classList.remove('btn-outline-primary');
+            event.target.classList.add('btn-success');
+            
+            setTimeout(() => {
+                event.target.innerHTML = '<i class="fas fa-copy"></i>';
+                event.target.classList.remove('btn-success');
+                event.target.classList.add('btn-outline-primary');
+            }, 1500);
+        });
+    }
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Enable/disable confirm button based on checkbox
+        const checkbox = document.getElementById('paymentVerification');
+        const confirmBtn = document.getElementById('confirmBtn');
+        
+        checkbox.addEventListener('change', function() {
+            confirmBtn.disabled = !this.checked;
+        });
+        
+        // Form submission handling
+        const form = document.querySelector('.confirmation-form');
+        form.addEventListener('submit', function(e) {
+            confirmBtn.disabled = true;
+            confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+        });
+        
+        // Collapse functionality for payment methods
+        document.querySelectorAll('.method-header').forEach(header => {
+            header.addEventListener('click', function() {
+                const icon = this.querySelector('.fa-chevron-down');
+                if (icon) {
+                    icon.classList.toggle('fa-chevron-down');
+                    icon.classList.toggle('fa-chevron-up');
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

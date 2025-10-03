@@ -1,0 +1,97 @@
+<!-- courses/templates/courses/batch_lesson_form.html -->
+
+{% extends "base.html" %}
+
+{% block title %}
+    {% if lesson %}Edit Lesson{% else %}Create Lesson{% endif %} - {{ module.title }}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-book-open me-2"></i>
+                        {% if lesson %}Edit Lesson{% else %}Create New Lesson{% endif %}
+                    </h5>
+                    <small>{{ module.title }} - {{ batch.name }}</small>
+                </div>
+                
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="mb-3">
+                                    <label for="{{ form.title.id_for_label }}" class="form-label">
+                                        <strong>Lesson Title</strong> <span class="text-danger">*</span>
+                                    </label>
+                                    {{ form.title }}
+                                    {% if form.title.errors %}
+                                        <div class="text-danger small">{{ form.title.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-3">
+                                    <label for="{{ form.lesson_type.id_for_label }}" class="form-label">
+                                        <strong>Content Type</strong>
+                                    </label>
+                                    {{ form.lesson_type }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">
+                                <strong>Description</strong>
+                            </label>
+                            {{ form.description }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.text_content.id_for_label }}" class="form-label">
+                                <strong>Text Content</strong>
+                            </label>
+                            {{ form.text_content }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.youtube_url.id_for_label }}" class="form-label">
+                                <strong>YouTube URL</strong> (Optional)
+                            </label>
+                            {{ form.youtube_url }}
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="{{ form.order.id_for_label }}" class="form-label">
+                                        <strong>Lesson Order</strong>
+                                    </label>
+                                    {{ form.order }}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{% url 'courses:batch_detail' course.id batch.id %}" 
+                               class="btn btn-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Batch
+                            </a>
+                            
+                            <button type="submit" class="btn btn-success">
+                                <i class="fas fa-save me-2"></i>
+                                {% if lesson %}Update Lesson{% else %}Create Lesson{% endif %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,754 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - LMS Admin{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'webinars:admin_webinar_dashboard' %}">Webinars</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'webinars:admin_manage_webinars' %}">Manage Webinars</a></li>
+        <li class="breadcrumb-item active">{{ title }}</li>
+    </ol>
+</nav>
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-video me-2"></i>{{ title }}
+        </h2>
+        <p class="text-muted mb-0">
+            {% if webinar %}
+                Edit webinar details and settings
+            {% else %}
+                Create a new webinar for your audience
+            {% endif %}
+        </p>
+    </div>
+</div>
+
+<!-- Messages -->
+{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    {% endfor %}
+{% endif %}
+
+<!-- Webinar Form -->
+<div class="row">
+    <div class="col-lg-8">
+        <form method="POST" enctype="multipart/form-data" novalidate>
+            {% csrf_token %}
+            
+            <!-- Basic Information -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>Basic Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Title -->
+                    <div class="mb-3">
+                        <label for="{{ form.title.id_for_label }}" class="form-label">
+                            <i class="fas fa-heading me-2"></i>Webinar Title <span class="text-danger">*</span>
+                        </label>
+                        <input type="text" 
+                               class="form-control {% if form.title.errors %}is-invalid{% endif %}" 
+                               id="{{ form.title.id_for_label }}" 
+                               name="title" 
+                               value="{{ form.title.value|default:'' }}"
+                               placeholder="Enter an engaging webinar title"
+                               required>
+                        {% if form.title.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.title.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            <span class="text-muted">Character count: </span>
+                            <span id="titleCount">{{ form.title.value|length|default:0 }}</span>/100
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-3">
+                        <label for="{{ form.description.id_for_label }}" class="form-label">
+                            <i class="fas fa-align-left me-2"></i>Description <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control {% if form.description.errors %}is-invalid{% endif %}" 
+                                  id="{{ form.description.id_for_label }}" 
+                                  name="description" 
+                                  rows="4"
+                                  placeholder="Describe what participants will learn in this webinar..."
+                                  required>{{ form.description.value|default:'' }}</textarea>
+                        {% if form.description.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.description.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            <span class="text-muted">Character count: </span>
+                            <span id="descCount">{{ form.description.value|length|default:0 }}</span>/500
+                        </div>
+                    </div>
+
+                    <!-- Short Description -->
+                    <div class="mb-3">
+                        <label for="{{ form.short_description.id_for_label }}" class="form-label">
+                            <i class="fas fa-edit me-2"></i>Short Description <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control {% if form.short_description.errors %}is-invalid{% endif %}" 
+                                  id="{{ form.short_description.id_for_label }}" 
+                                  name="short_description" 
+                                  rows="2"
+                                  placeholder="Brief description for cards..."
+                                  required>{{ form.short_description.value|default:'' }}</textarea>
+                        {% if form.short_description.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.short_description.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Used in webinar cards and listings</div>
+                    </div>
+
+                    <!-- Category & Instructor -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.category.id_for_label }}" class="form-label">
+                                    <i class="fas fa-tag me-2"></i>Category <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select {% if form.category.errors %}is-invalid{% endif %}" 
+                                        id="{{ form.category.id_for_label }}" 
+                                        name="category" 
+                                        required>
+                                    <option value="">-- Select Category --</option>
+                                    {% for category in form.category.field.queryset %}
+                                        <option value="{{ category.id }}" 
+                                                {% if form.category.value == category.id|stringformat:"s" %}selected{% endif %}>
+                                            {{ category.name }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                {% if form.category.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.category.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.instructor.id_for_label }}" class="form-label">
+                                    <i class="fas fa-chalkboard-teacher me-2"></i>Instructor <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select {% if form.instructor.errors %}is-invalid{% endif %}" 
+                                        id="{{ form.instructor.id_for_label }}" 
+                                        name="instructor" 
+                                        required>
+                                    <option value="">-- Select Instructor --</option>
+                                    {% for instructor in form.instructor.field.queryset %}
+                                        <option value="{{ instructor.id }}" 
+                                                {% if form.instructor.value == instructor.id|stringformat:"s" %}selected{% endif %}>
+                                            {{ instructor.get_full_name }} ({{ instructor.email }})
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                {% if form.instructor.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.instructor.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Thumbnail -->
+                    <div class="mb-3">
+                        <label for="{{ form.thumbnail.id_for_label }}" class="form-label">
+                            <i class="fas fa-image me-2"></i>Webinar Thumbnail
+                        </label>
+                        {% if webinar and webinar.thumbnail %}
+                            <div class="mb-2">
+                                <img src="{{ webinar.thumbnail.url }}" class="img-thumbnail" style="max-width: 200px; max-height: 120px;">
+                                <div class="form-text">Current thumbnail</div>
+                            </div>
+                        {% endif %}
+                        <input type="file" 
+                               class="form-control {% if form.thumbnail.errors %}is-invalid{% endif %}" 
+                               id="{{ form.thumbnail.id_for_label }}" 
+                               name="thumbnail"
+                               accept="image/*">
+                        {% if form.thumbnail.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.thumbnail.errors.0 }}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Upload an engaging thumbnail image (JPG, PNG - Max 2MB)</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Schedule & Settings -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calendar-alt me-2"></i>Schedule & Settings
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Scheduled Date & Duration -->
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="{{ form.scheduled_date.id_for_label }}" class="form-label">
+                                    <i class="fas fa-clock me-2"></i>Scheduled Date & Time <span class="text-danger">*</span>
+                                </label>
+                                <input type="datetime-local" 
+                                       class="form-control {% if form.scheduled_date.errors %}is-invalid{% endif %}" 
+                                       id="{{ form.scheduled_date.id_for_label }}" 
+                                       name="scheduled_date" 
+                                       value="{% if form.scheduled_date.value %}{{ form.scheduled_date.value|date:'Y-m-d\TH:i' }}{% endif %}"
+                                       required>
+                                {% if form.scheduled_date.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.scheduled_date.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.duration_minutes.id_for_label }}" class="form-label">
+                                    <i class="fas fa-hourglass-half me-2"></i>Duration (minutes) <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select {% if form.duration_minutes.errors %}is-invalid{% endif %}" 
+                                        id="{{ form.duration_minutes.id_for_label }}" 
+                                        name="duration_minutes" 
+                                        required>
+                                    <option value="">-- Select --</option>
+                                    <option value="30" {% if form.duration_minutes.value == '30' %}selected{% endif %}>30 minutes</option>
+                                    <option value="45" {% if form.duration_minutes.value == '45' %}selected{% endif %}>45 minutes</option>
+                                    <option value="60" {% if form.duration_minutes.value == '60' %}selected{% endif %}>1 hour</option>
+                                    <option value="90" {% if form.duration_minutes.value == '90' %}selected{% endif %}>1.5 hours</option>
+                                    <option value="120" {% if form.duration_minutes.value == '120' %}selected{% endif %}>2 hours</option>
+                                    <option value="180" {% if form.duration_minutes.value == '180' %}selected{% endif %}>3 hours</option>
+                                </select>
+                                {% if form.duration_minutes.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.duration_minutes.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Webinar Type & Price -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.webinar_type.id_for_label }}" class="form-label">
+                                    <i class="fas fa-tag me-2"></i>Webinar Type <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select {% if form.webinar_type.errors %}is-invalid{% endif %}" 
+                                        id="{{ form.webinar_type.id_for_label }}" 
+                                        name="webinar_type" 
+                                        required>
+                                    <option value="">-- Select Type --</option>
+                                    <option value="free" {% if form.webinar_type.value == 'free' %}selected{% endif %}>Free</option>
+                                    <option value="paid" {% if form.webinar_type.value == 'paid' %}selected{% endif %}>Paid</option>
+                                </select>
+                                {% if form.webinar_type.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.webinar_type.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3" id="priceField" style="display: none;">
+                                <label for="{{ form.price.id_for_label }}" class="form-label">
+                                    <i class="fas fa-rupee-sign me-2"></i>Price (₹)
+                                </label>
+                                <input type="number" 
+                                       class="form-control {% if form.price.errors %}is-invalid{% endif %}" 
+                                       id="{{ form.price.id_for_label }}" 
+                                       name="price" 
+                                       value="{{ form.price.value|default:'' }}"
+                                       min="0"
+                                       step="0.01"
+                                       placeholder="0.00">
+                                {% if form.price.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.price.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Max Attendees & Webinar Link -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.max_attendees.id_for_label }}" class="form-label">
+                                    <i class="fas fa-users me-2"></i>Max Attendees <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" 
+                                       class="form-control {% if form.max_attendees.errors %}is-invalid{% endif %}" 
+                                       id="{{ form.max_attendees.id_for_label }}" 
+                                       name="max_attendees" 
+                                       value="{{ form.max_attendees.value|default:100 }}"
+                                       min="1"
+                                       required>
+                                {% if form.max_attendees.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.max_attendees.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Maximum number of participants allowed</div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.webinar_link.id_for_label }}" class="form-label">
+                                    <i class="fas fa-link me-2"></i>Webinar Link
+                                </label>
+                                <input type="url" 
+                                       class="form-control {% if form.webinar_link.errors %}is-invalid{% endif %}" 
+                                       id="{{ form.webinar_link.id_for_label }}" 
+                                       name="webinar_link" 
+                                       value="{{ form.webinar_link.value|default:'' }}"
+                                       placeholder="https://zoom.us/j/123456789">
+                                {% if form.webinar_link.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.webinar_link.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Zoom, Google Meet, or other meeting platform link</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Information -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-plus-circle me-2"></i>Additional Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Prerequisites -->
+                    <div class="mb-3">
+                        <label for="{{ form.prerequisites.id_for_label }}" class="form-label">
+                            <i class="fas fa-list-check me-2"></i>Prerequisites
+                        </label>
+                        <textarea class="form-control {% if form.prerequisites.errors %}is-invalid{% endif %}" 
+                                  id="{{ form.prerequisites.id_for_label }}" 
+                                  name="prerequisites" 
+                                  rows="3"
+                                  placeholder="What should participants know or have before joining?">{{ form.prerequisites.value|default:'' }}</textarea>
+                        {% if form.prerequisites.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.prerequisites.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Learning Outcomes -->
+                    <div class="mb-3">
+                        <label for="{{ form.learning_outcomes.id_for_label }}" class="form-label">
+                            <i class="fas fa-graduation-cap me-2"></i>Learning Outcomes <span class="text-danger">*</span>
+                        </label>
+                        <textarea class="form-control {% if form.learning_outcomes.errors %}is-invalid{% endif %}" 
+                                  id="{{ form.learning_outcomes.id_for_label }}" 
+                                  name="learning_outcomes" 
+                                  rows="3"
+                                  placeholder="What will participants learn or achieve?"
+                                  required>{{ form.learning_outcomes.value|default:'' }}</textarea>
+                        {% if form.learning_outcomes.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.learning_outcomes.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Email Reminder Settings -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" 
+                                           type="checkbox" 
+                                           id="{{ form.send_reminder_emails.id_for_label }}" 
+                                           name="send_reminder_emails"
+                                           {% if form.send_reminder_emails.value %}checked{% endif %}>
+                                    <label class="form-check-label" for="{{ form.send_reminder_emails.id_for_label }}">
+                                        <i class="fas fa-envelope me-2"></i>Send Reminder Emails
+                                    </label>
+                                </div>
+                                <div class="form-text">Automatically send reminder emails to participants</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.reminder_hours_before.id_for_label }}" class="form-label">
+                                    <i class="fas fa-clock me-2"></i>Reminder Hours Before <span class="text-danger">*</span>
+                                </label>
+                                <input type="number" 
+                                       class="form-control {% if form.reminder_hours_before.errors %}is-invalid{% endif %}" 
+                                       id="{{ form.reminder_hours_before.id_for_label }}" 
+                                       name="reminder_hours_before" 
+                                       value="{{ form.reminder_hours_before.value|default:24 }}"
+                                       min="1"
+                                       max="168"
+                                       required>
+                                {% if form.reminder_hours_before.errors %}
+                                    <div class="invalid-feedback">
+                                        {{ form.reminder_hours_before.errors.0 }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Send reminder X hours before webinar (1-168)</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="mb-3">
+                        <label for="{{ form.status.id_for_label }}" class="form-label">
+                            <i class="fas fa-toggle-on me-2"></i>Status
+                        </label>
+                        <select class="form-select {% if form.status.errors %}is-invalid{% endif %}" 
+                                id="{{ form.status.id_for_label }}" 
+                                name="status">
+                            <option value="upcoming" {% if form.status.value == 'upcoming' %}selected{% endif %}>Upcoming</option>
+                            <option value="draft" {% if form.status.value == 'draft' %}selected{% endif %}>Draft</option>
+                            <option value="cancelled" {% if form.status.value == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                        </select>
+                        {% if form.status.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.status.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Non-field errors -->
+            {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    {{ form.non_field_errors.0 }}
+                </div>
+            {% endif %}
+
+            <!-- Form Actions -->
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex gap-3">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>
+                            {% if webinar %}Update Webinar{% else %}Create Webinar{% endif %}
+                        </button>
+                        <button type="submit" name="save_draft" value="1" class="btn btn-outline-secondary">
+                            <i class="fas fa-file-alt me-2"></i>Save as Draft
+                        </button>
+                        <a href="{% url 'webinars:admin_manage_webinars' %}" class="btn btn-outline-danger">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Help Sidebar -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>Tips for Success
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6><i class="fas fa-heading text-primary me-2"></i>Title Tips</h6>
+                    <ul class="small">
+                        <li>Keep it clear and compelling</li>
+                        <li>Include key benefits or outcomes</li>
+                        <li>Use action words</li>
+                    </ul>
+                </div>
+                
+                <div class="mb-3">
+                    <h6><i class="fas fa-image text-success me-2"></i>Thumbnail Guide</h6>
+                    <ul class="small">
+                        <li>Use high-quality images</li>
+                        <li>Recommended: 1280x720px</li>
+                        <li>Include text overlay if needed</li>
+                    </ul>
+                </div>
+                
+                <div class="mb-3">
+                    <h6><i class="fas fa-clock text-info me-2"></i>Timing Best Practices</h6>
+                    <ul class="small">
+                        <li>Consider your audience timezone</li>
+                        <li>Popular times: 10 AM - 2 PM</li>
+                        <li>Avoid holidays and weekends</li>
+                    </ul>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Pro Tip:</strong> Save as draft first to review all details before publishing.
+                </div>
+            </div>
+        </div>
+
+        {% if webinar %}
+        <div class="card shadow-sm mt-4">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Webinar Stats
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="border-end">
+                            <h4 class="text-primary mb-0">{{ webinar.total_registrations }}</h4>
+                            <small class="text-muted">Registrations</small>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <h4 class="text-success mb-0">{{ webinar.get_available_spots|default:"∞" }}</h4>
+                        <small class="text-muted">Available Spots</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Character counting
+        const titleInput = document.getElementById('{{ form.title.id_for_label }}');
+        const titleCount = document.getElementById('titleCount');
+        const descInput = document.getElementById('{{ form.description.id_for_label }}');
+        const descCount = document.getElementById('descCount');
+
+        if (titleInput && titleCount) {
+            titleInput.addEventListener('input', function() {
+                titleCount.textContent = this.value.length;
+                if (this.value.length > 100) {
+                    titleCount.classList.add('text-danger');
+                } else {
+                    titleCount.classList.remove('text-danger');
+                }
+            });
+        }
+
+        if (descInput && descCount) {
+            descInput.addEventListener('input', function() {
+                descCount.textContent = this.value.length;
+                if (this.value.length > 500) {
+                    descCount.classList.add('text-danger');
+                } else {
+                    descCount.classList.remove('text-danger');
+                }
+            });
+        }
+
+        // Show/hide price field based on webinar type
+        const typeSelect = document.getElementById('{{ form.webinar_type.id_for_label }}');
+        const priceField = document.getElementById('priceField');
+        const priceInput = document.getElementById('{{ form.price.id_for_label }}');
+
+        function togglePriceField() {
+            if (typeSelect && priceField) {
+                if (typeSelect.value === 'paid') {
+                    priceField.style.display = 'block';
+                    priceInput.required = true;
+                } else {
+                    priceField.style.display = 'none';
+                    priceInput.required = false;
+                    priceInput.value = '';
+                }
+            }
+        }
+
+        if (typeSelect) {
+            typeSelect.addEventListener('change', togglePriceField);
+            // Initialize on page load
+            togglePriceField();
+        }
+
+        // Set minimum date to current datetime
+        const dateInput = document.getElementById('{{ form.scheduled_date.id_for_label }}');
+        if (dateInput) {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            dateInput.min = now.toISOString().slice(0, 16);
+        }
+
+        // Form validation
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function(e) {
+            let isValid = true;
+            const requiredFields = form.querySelectorAll('[required]');
+            
+            requiredFields.forEach(field => {
+                if (!field.value.trim()) {
+                    field.classList.add('is-invalid');
+                    isValid = false;
+                } else {
+                    field.classList.remove('is-invalid');
+                }
+            });
+
+            // Validate scheduled date is in future
+            if (dateInput && dateInput.value) {
+                const selectedDate = new Date(dateInput.value);
+                const now = new Date();
+                
+                if (selectedDate <= now) {
+                    dateInput.classList.add('is-invalid');
+                    isValid = false;
+                    alert('Scheduled date must be in the future.');
+                }
+            }
+
+            if (!isValid) {
+                e.preventDefault();
+                alert('Please fill in all required fields correctly.');
+            }
+        });
+
+        // Remove validation classes on input
+        const inputs = form.querySelectorAll('.form-control, .form-select');
+        inputs.forEach(input => {
+            input.addEventListener('input', function() {
+                if (this.value.trim()) {
+                    this.classList.remove('is-invalid');
+                }
+            });
+        });
+
+        // File upload preview
+        const thumbnailInput = document.getElementById('{{ form.thumbnail.id_for_label }}');
+        if (thumbnailInput) {
+            thumbnailInput.addEventListener('change', function() {
+                const file = this.files[0];
+                if (file) {
+                    // Validate file size (2MB)
+                    if (file.size > 2 * 1024 * 1024) {
+                        alert('File size must be less than 2MB');
+                        this.value = '';
+                        return;
+                    }
+                    
+                    // Show preview
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        let preview = document.getElementById('thumbnailPreview');
+                        if (!preview) {
+                            preview = document.createElement('img');
+                            preview.id = 'thumbnailPreview';
+                            preview.className = 'img-thumbnail mt-2';
+                            preview.style.maxWidth = '200px';
+                            preview.style.maxHeight = '120px';
+                            thumbnailInput.parentNode.appendChild(preview);
+                        }
+                        preview.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
+    });
+</script>
+
+<style>
+    .card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .form-control.is-invalid:focus,
+    .form-select.is-invalid:focus {
+        border-color: #dc3545;
+        box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+        border: none;
+        border-radius: 8px;
+        padding: 10px 25px;
+        font-weight: 600;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #0b5ed7, #0a58ca);
+        transform: translateY(-1px);
+    }
+    
+    .breadcrumb {
+        background: transparent;
+        padding: 0;
+    }
+    
+    .breadcrumb-item a {
+        color: #0d6efd;
+        text-decoration: none;
+    }
+    
+    .breadcrumb-item a:hover {
+        text-decoration: underline;
+    }
+    
+    .card-header h5 {
+        font-weight: 600;
+    }
+    
+    .alert-info {
+        background-color: #f0f9ff;
+        border-color: #bfdbfe;
+        color: #1e40af;
+    }
+    
+    .form-text {
+        font-size: 0.875rem;
+    }
+    
+    @media (max-width: 768px) {
+        .col-lg-4 {
+            margin-top: 2rem;
+        }
+    }
+</style>
+{% endblock %}

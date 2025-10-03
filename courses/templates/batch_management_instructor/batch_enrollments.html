@@ -1,0 +1,401 @@
+<!-- templates/batch_management_instructor/batch_enrollments.html -->
+{% extends 'instructor_base.html' %}
+{% load static %}
+
+{% block title %}Students - {{ batch.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 30px;
+}
+
+.stats-card {
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: transform 0.2s ease;
+}
+
+.stats-card:hover {
+    transform: translateY(-2px);
+}
+
+.student-card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: all 0.3s ease;
+    margin-bottom: 15px;
+}
+
+.student-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+}
+
+.student-avatar {
+    width: 50px;
+    height: 50px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+.status-badge {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.8rem;
+    border-radius: 20px;
+    font-weight: 600;
+}
+
+.quick-enroll-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+}
+
+.action-btn {
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+    transform: translateY(-1px);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-people-fill me-3" style="font-size: 2.5rem;"></i>
+                    <div>
+                        <h2 class="mb-1">Student Management</h2>
+                        <p class="mb-0 opacity-75">{{ batch.name }} - {{ course.title }}</p>
+                    </div>
+                </div>
+                
+                <div class="d-flex flex-wrap gap-3">
+                    <span class="badge bg-light text-dark fs-6">
+                        <i class="bi bi-calendar me-1"></i>
+                        {{ batch.start_date|date:"M d" }} - {{ batch.end_date|date:"M d, Y" }}
+                    </span>
+                    <span class="badge bg-light text-dark fs-6">
+                        <i class="bi bi-hash me-1"></i>{{ batch.code }}
+                    </span>
+                    <span class="badge {% if batch.status == 'active' %}bg-success{% elif batch.status == 'draft' %}bg-warning text-dark{% else %}bg-secondary{% endif %} fs-6">
+                        {{ batch.get_status_display }}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="col-md-4 text-end">
+                <div class="btn-group-vertical d-grid gap-2">
+                    <a href="{% url 'courses:instructor_batch_detail' course.id batch.id %}" class="btn btn-light">
+                        <i class="bi bi-arrow-left me-2"></i>Back to Batch
+                    </a>
+                    <a href="{% url 'courses:instructor_edit_batch' course.id batch.id %}" class="btn btn-outline-light">
+                        <i class="bi bi-pencil me-2"></i>Edit Batch
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'courses:course_dashboard' %}">
+                    <i class="bi bi-house me-1"></i>Dashboard
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'courses:instructor_batch_list' course.id %}">{{ course.title }} Batches</a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'courses:instructor_batch_detail' course.id batch.id %}">{{ batch.name }}</a>
+            </li>
+            <li class="breadcrumb-item active">Students</li>
+        </ol>
+    </nav>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card stats-card text-center h-100">
+                <div class="card-body">
+                    <div class="display-6 text-success mb-2">{{ stats.total_enrolled }}</div>
+                    <h6 class="text-muted">Total Enrolled</h6>
+                    <small class="text-muted">Active students</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card text-center h-100">
+                <div class="card-body">
+                    <div class="display-6 text-primary mb-2">{{ stats.total_completed }}</div>
+                    <h6 class="text-muted">Completed</h6>
+                    <small class="text-muted">Finished course</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card text-center h-100">
+                <div class="card-body">
+                    <div class="display-6 text-warning mb-2">{{ stats.total_dropped }}</div>
+                    <h6 class="text-muted">Dropped</h6>
+                    <small class="text-muted">Left course</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stats-card text-center h-100">
+                <div class="card-body">
+                    <div class="display-6 text-info mb-2">{{ stats.available_seats }}</div>
+                    <h6 class="text-muted">Available Seats</h6>
+                    <small class="text-muted">Remaining capacity</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Student List -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="bi bi-people me-2"></i>Enrolled Students ({{ enrollments.count }})
+                    </h5>
+                    <div class="text-end">
+                        <small>{{ stats.total_enrolled }}/{{ batch.max_students }} capacity</small>
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    {% if enrollments %}
+                        <div class="row">
+                            {% for enrollment in enrollments %}
+                            <div class="col-md-6 mb-3">
+                                <div class="student-card">
+                                    <div class="card-body p-3">
+                                        <div class="d-flex align-items-center">
+                                            <div class="student-avatar me-3">
+                                                {{ enrollment.student.username|first|upper }}
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <h6 class="mb-1">
+                                                    {{ enrollment.student.get_full_name|default:enrollment.student.username }}
+                                                </h6>
+                                                <div class="small text-muted mb-2">
+                                                    <i class="bi bi-envelope me-1"></i>{{ enrollment.student.email }}
+                                                </div>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="status-badge bg-{% if enrollment.status == 'enrolled' %}success{% elif enrollment.status == 'completed' %}primary{% else %}secondary{% endif %}">
+                                                        {{ enrollment.get_status_display }}
+                                                    </span>
+                                                    <span class="badge bg-{% if enrollment.is_active %}success{% else %}danger{% endif %}">
+                                                        {% if enrollment.is_active %}Active{% else %}Inactive{% endif %}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="text-end">
+                                                <div class="dropdown">
+                                                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" 
+                                                            type="button" data-bs-toggle="dropdown">
+                                                        Actions
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        <li>
+                                                            <a class="dropdown-item" 
+                                                               href="{% url 'courses:instructor_batch_enrollment_toggle' course.id batch.id enrollment.id %}">
+                                                                <i class="bi bi-{% if enrollment.is_active %}pause{% else %}play{% endif %} me-2"></i>
+                                                                {% if enrollment.is_active %}Deactivate{% else %}Activate{% endif %}
+                                                            </a>
+                                                        </li>
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li>
+                                                            <a class="dropdown-item text-danger" href="#" 
+                                                               onclick="confirmRemove('{{ enrollment.student.get_full_name|default:enrollment.student.username }}', {{ enrollment.id }})">
+                                                                <i class="bi bi-trash me-2"></i>Remove Student
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mt-3 pt-3 border-top">
+                                            <div class="row text-center">
+                                                <div class="col-6">
+                                                    <small class="text-muted">Enrolled</small>
+                                                    <div class="fw-bold">{{ enrollment.enrolled_at|date:"M d, Y" }}</div>
+                                                </div>
+                                                <div class="col-6">
+                                                    <small class="text-muted">Duration</small>
+                                                    <div class="fw-bold">{{ enrollment.enrolled_at|timesince }}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="bi bi-person-plus text-muted" style="font-size: 4rem;"></i>
+                            <h4 class="text-muted mt-3">No Students Enrolled</h4>
+                            <p class="text-muted">Start by adding students to this batch.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Enroll Sidebar -->
+        <div class="col-lg-4">
+            <!-- Quick Enroll Form -->
+            <div class="card quick-enroll-card mb-4">
+                <div class="card-header border-0">
+                    <h6 class="mb-0">
+                        <i class="bi bi-person-plus me-2"></i>Quick Enroll Student
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="mb-3">
+                            <label class="form-label text-light">Select Student</label>
+                            {{ form.student }}
+                            {% if form.student.errors %}
+                                <div class="text-warning small mt-1">{{ form.student.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-light">
+                                <i class="bi bi-plus-circle me-2"></i>Enroll Student
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Batch Info -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-info-circle me-2"></i>Batch Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <small class="text-muted">Batch Name</small>
+                        <div class="fw-bold">{{ batch.name }}</div>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Course</small>
+                        <div class="fw-bold">{{ course.title }}</div>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Capacity</small>
+                        <div class="fw-bold">{{ stats.total_enrolled }}/{{ batch.max_students }} students</div>
+                        <div class="progress mt-1" style="height: 4px;">
+                            <div class="progress-bar" style="width: {% widthratio stats.total_enrolled batch.max_students 100 %}%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Duration</small>
+                        <div class="fw-bold">{{ batch.start_date|date:"M d" }} - {{ batch.end_date|date:"M d, Y" }}</div>
+                    </div>
+                    <div>
+                        <small class="text-muted">Status</small>
+                        <div>
+                            <span class="badge bg-{% if batch.status == 'active' %}success{% elif batch.status == 'draft' %}warning{% else %}secondary{% endif %}">
+                                {{ batch.get_status_display }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-lightning me-2"></i>Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'courses:instructor_batch_detail' course.id batch.id %}" 
+                           class="btn btn-outline-primary action-btn">
+                            <i class="bi bi-arrow-left me-2"></i>Back to Batch
+                        </a>
+                        
+                        <a href="{% url 'courses:instructor_create_batch_module' course.id batch.id %}" 
+                           class="btn btn-outline-success action-btn">
+                            <i class="bi bi-plus me-2"></i>Add Content
+                        </a>
+                        
+                        <a href="{% url 'courses:instructor_edit_batch' course.id batch.id %}" 
+                           class="btn btn-outline-warning action-btn">
+                            <i class="bi bi-pencil me-2"></i>Edit Batch
+                        </a>
+                        
+                        <hr>
+                        
+                        <button class="btn btn-outline-info action-btn" onclick="exportStudents()">
+                            <i class="bi bi-download me-2"></i>Export List
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function confirmRemove(studentName, enrollmentId) {
+    if (confirm(`Are you sure you want to remove ${studentName} from this batch?`)) {
+        // Add removal logic here
+        window.location.href = `/courses/batch/${enrollmentId}/remove/`;
+    }
+}
+
+function exportStudents() {
+    // Simple CSV export
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Name,Email,Status,Enrolled Date\n";
+    
+    // Add student data (you can enhance this with actual data)
+    {% for enrollment in enrollments %}
+    csvContent += "{{ enrollment.student.get_full_name|default:enrollment.student.username }},{{ enrollment.student.email }},{{ enrollment.status }},{{ enrollment.enrolled_at|date:'Y-m-d' }}\n";
+    {% endfor %}
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "{{ batch.name }}_students.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+</script>
+{% endblock %}

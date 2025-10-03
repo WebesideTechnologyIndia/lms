@@ -1,0 +1,773 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Category - {{ category.name }}{% endblock %}
+
+{% block content %}
+<!-- Warning Header -->
+<div class="welcome-card bg-danger">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1 class="mb-2">
+                <i class="fas fa-exclamation-triangle me-3"></i>
+                Delete Category
+            </h1>
+            <p class="mb-0 opacity-75">Permanently remove this category from the system</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'courses:manage_categories' %}" class="btn btn-light btn-lg">
+                <i class="fas fa-arrow-left me-2"></i>
+                Back to Categories
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation -->
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <!-- Danger Alert -->
+        {% if courses_count > 0 %}
+        <div class="alert alert-danger border-danger mb-4">
+            <div class="d-flex align-items-start">
+                <i class="fas fa-ban text-danger me-3 mt-1" style="font-size: 1.5rem;"></i>
+                <div>
+                    <h5 class="alert-heading text-danger">Cannot Delete Category</h5>
+                    <p class="mb-0">
+                        This category has <strong>{{ courses_count }} course{{ courses_count|pluralize }}</strong> associated with it. 
+                        You must move or delete all courses from this category before it can be deleted.
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="alert alert-warning border-warning mb-4">
+            <div class="d-flex align-items-start">
+                <i class="fas fa-exclamation-triangle text-warning me-3 mt-1" style="font-size: 1.2rem;"></i>
+                <div>
+                    <h6 class="alert-heading">Permanent Deletion Warning</h6>
+                    <p class="mb-0">
+                        This action will permanently delete the category. Unlike courses, categories cannot be archived and 
+                        this action cannot be undone.
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Category Information Card -->
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="mb-0">
+                    <i class="fas fa-tag me-2"></i>
+                    Category to be Deleted
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <div class="category-display">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="category-icon-large me-3">
+                                    <i class="fas fa-tag"></i>
+                                </div>
+                                <div>
+                                    <h3 class="text-primary mb-1">{{ category.name }}</h3>
+                                    {% if category.slug %}
+                                        <small class="text-muted">Slug: {{ category.slug }}</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            {% if category.description %}
+                            <div class="mb-3">
+                                <strong>Description:</strong>
+                                <p class="text-muted mt-2">{{ category.description }}</p>
+                            </div>
+                            {% endif %}
+                            
+                            <div class="category-details">
+                                <div class="detail-row mb-2">
+                                    <strong>Status:</strong> 
+                                    {% if category.is_active %}
+                                        <span class="badge bg-success ms-2">
+                                            <i class="fas fa-check me-1"></i>Active
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-secondary ms-2">
+                                            <i class="fas fa-times me-1"></i>Inactive
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="detail-row mb-2">
+                                    <strong>Created:</strong> 
+                                    <span class="text-muted">{{ category.created_at|date:"M d, Y" }}</span>
+                                </div>
+                                
+                                {% if category.created_by %}
+                                <div class="detail-row mb-2">
+                                    <strong>Created By:</strong> 
+                                    <span class="text-muted">{{ category.created_by.get_full_name|default:category.created_by.username }}</span>
+                                </div>
+                                {% endif %}
+                                
+                                <div class="detail-row mb-2">
+                                    <strong>Last Updated:</strong> 
+                                    <span class="text-muted">{{ category.updated_at|date:"M d, Y" }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="category-stats-card">
+                            <div class="text-center">
+                                <div class="stat-circle {% if courses_count > 0 %}bg-danger{% else %}bg-success{% endif %}">
+                                    <i class="fas fa-book"></i>
+                                    <span class="stat-number">{{ courses_count }}</span>
+                                </div>
+                                <h6 class="mt-3 mb-1">Associated Courses</h6>
+                                <small class="text-muted">
+                                    {% if courses_count > 0 %}
+                                        Must be moved before deletion
+                                    {% else %}
+                                        Safe to delete
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if courses_count > 0 %}
+        <!-- Courses in Category -->
+        <div class="card mb-4">
+            <div class="card-header bg-warning text-dark">
+                <h6 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Courses in this Category ({{ courses_count }})
+                </h6>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">
+                    The following courses are currently assigned to this category. 
+                    You must reassign or delete these courses before the category can be deleted.
+                </p>
+                
+                <div class="courses-list">
+                    {% for course in category.courses.all|slice:":10" %}
+                    <div class="course-item d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-book text-primary me-3"></i>
+                            <div>
+                                <strong>{{ course.title }}</strong>
+                                <br><small class="text-muted">{{ course.course_code }}</small>
+                            </div>
+                        </div>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'courses:edit_course' course.id %}" class="btn btn-outline-primary">
+                                <i class="fas fa-edit me-1"></i>Edit
+                            </a>
+                            <a href="{% url 'courses:course_detail' course.id %}" class="btn btn-outline-info">
+                                <i class="fas fa-eye me-1"></i>View
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                    
+                    {% if category.courses.count > 10 %}
+                    <div class="text-center mt-3">
+                        <small class="text-muted">
+                            ... and {{ category.courses.count|add:"-10" }} more course{{ category.courses.count|add:"-10"|pluralize }}
+                        </small>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <div class="alert alert-info mt-3">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    <strong>Suggestion:</strong> You can bulk reassign courses to another category or 
+                    set them to "Uncategorized" before deleting this category.
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Required Card -->
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="fas fa-tasks me-2"></i>
+                    Action Required
+                </h5>
+            </div>
+            <div class="card-body">
+                <p class="mb-3">Before you can delete this category, please:</p>
+                <ol class="mb-4">
+                    <li class="mb-2">
+                        <strong>Reassign courses</strong> to another category, or
+                    </li>
+                    <li class="mb-2">
+                        <strong>Delete the courses</strong> that are no longer needed, or
+                    </li>
+                    <li class="mb-2">
+                        <strong>Set courses to uncategorized</strong> temporarily
+                    </li>
+                </ol>
+                
+                <div class="d-grid gap-2 d-md-flex">
+                    <a href="{% url 'courses:manage_courses' %}?category={{ category.id }}" class="btn btn-info">
+                        <i class="fas fa-books me-2"></i>
+                        View Category Courses
+                    </a>
+                    <a href="{% url 'courses:bulk_reassign_courses' category.id %}" class="btn btn-warning">
+                        <i class="fas fa-exchange-alt me-2"></i>
+                        Bulk Reassign Courses
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        {% else %}
+        <!-- Deletion Confirmation Form -->
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Confirm Deletion
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-4">
+                    <h6 class="text-danger">What happens when you delete this category?</h6>
+                    <ul class="list-unstyled mt-3">
+                        <li class="mb-2">
+                            <i class="fas fa-times text-danger me-2"></i>
+                            Category will be permanently removed from the system
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-times text-danger me-2"></i>
+                            This action cannot be undone
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-check text-success me-2"></i>
+                            No courses will be affected (category is empty)
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-info-circle text-info me-2"></i>
+                            Category history will be removed from the system
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Confirmation Input -->
+                <div class="mb-4">
+                    <label class="form-label fw-bold text-danger">
+                        Type "DELETE" to confirm this permanent action:
+                    </label>
+                    <input type="text" class="form-control" id="confirmDelete" 
+                           placeholder="Type DELETE to confirm" maxlength="6">
+                    <small class="form-text text-muted">This helps prevent accidental deletions</small>
+                </div>
+
+                <!-- Action Buttons -->
+                <form method="post" id="deleteForm">
+                    {% csrf_token %}
+                    <div class="d-flex justify-content-between align-items-center">
+                        <a href="{% url 'courses:manage_categories' %}" class="btn btn-outline-secondary btn-lg">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        
+                        <div class="text-end">
+                            <button type="submit" class="btn btn-danger btn-lg" id="deleteButton" disabled>
+                                <i class="fas fa-trash me-2"></i>
+                                Delete Category Permanently
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Safety Information -->
+        <div class="card mt-4 border-info">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Safety Information
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-success">
+                            <i class="fas fa-check-circle me-2"></i>Safe to Delete
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-1">
+                                <i class="fas fa-check text-success me-2"></i>
+                                No courses assigned
+                            </li>
+                            <li class="mb-1">
+                                <i class="fas fa-check text-success me-2"></i>
+                                No dependencies found
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-info">
+                            <i class="fas fa-lightbulb me-2"></i>Alternative Actions
+                        </h6>
+                        <ul class="list-unstyled">
+                            <li class="mb-1">
+                                <i class="fas fa-edit text-primary me-2"></i>
+                                <a href="{% url 'courses:edit_category' category.id %}">Edit category instead</a>
+                            </li>
+                            <li class="mb-1">
+                                <i class="fas fa-eye-slash text-warning me-2"></i>
+                                Mark as inactive to hide
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Category Details Modal (for reference) -->
+<div class="modal fade" id="categoryInfoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Category Information
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <td><strong>Name:</strong></td>
+                        <td>{{ category.name }}</td>
+                    </tr>
+                    {% if category.slug %}
+                    <tr>
+                        <td><strong>Slug:</strong></td>
+                        <td><code>{{ category.slug }}</code></td>
+                    </tr>
+                    {% endif %}
+                    <tr>
+                        <td><strong>Status:</strong></td>
+                        <td>
+                            {% if category.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><strong>Courses:</strong></td>
+                        <td>{{ courses_count }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Created:</strong></td>
+                        <td>{{ category.created_at|date:"M d, Y \a\t H:i" }}</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Updated:</strong></td>
+                        <td>{{ category.updated_at|date:"M d, Y \a\t H:i" }}</td>
+                    </tr>
+                    {% if category.created_by %}
+                    <tr>
+                        <td><strong>Created By:</strong></td>
+                        <td>{{ category.created_by.get_full_name|default:category.created_by.username }}</td>
+                    </tr>
+                    {% endif %}
+                </table>
+                
+                {% if category.description %}
+                <div class="mt-3">
+                    <strong>Full Description:</strong>
+                    <div class="mt-2 p-3 bg-light rounded">
+                        {{ category.description|linebreaks }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <a href="{% url 'courses:edit_category' category.id %}" class="btn btn-primary">
+                    <i class="fas fa-edit me-2"></i>Edit Category
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.welcome-card.bg-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%) !important;
+}
+
+.category-icon-large {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 2rem;
+}
+
+.category-display {
+    padding: 1rem;
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    border-left: 4px solid #007bff;
+}
+
+.detail-row {
+    padding: 0.25rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.detail-row:last-child {
+    border-bottom: none;
+}
+
+.stat-circle {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    color: white;
+    font-size: 1.5rem;
+}
+
+.stat-circle .stat-number {
+    font-size: 2rem;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.category-stats-card {
+    background: #f8f9fa;
+    padding: 2rem 1rem;
+    border-radius: 0.5rem;
+    border: 2px dashed #dee2e6;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.course-item {
+    transition: all 0.2s ease;
+}
+
+.course-item:hover {
+    background-color: #f8f9fa !important;
+    transform: translateX(5px);
+}
+
+.alert-danger {
+    animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+}
+
+.btn-danger:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+#confirmDelete:focus {
+    border-color: #dc3545;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+.loading-state {
+    position: relative;
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.loading-state::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid #dee2e6;
+    border-top-color: #dc3545;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .welcome-card {
+        text-align: center;
+    }
+    
+    .category-icon-large {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+    
+    .category-display {
+        text-align: center;
+    }
+    
+    .stat-circle {
+        width: 80px;
+        height: 80px;
+        font-size: 1.2rem;
+    }
+    
+    .stat-circle .stat-number {
+        font-size: 1.5rem;
+    }
+    
+    .d-flex.justify-content-between {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .btn-lg {
+        width: 100%;
+    }
+    
+    .course-item {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+    }
+}
+
+/* Accessibility improvements */
+.btn:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.btn-danger:focus {
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
+}
+
+/* Print styles */
+@media print {
+    .btn, .alert, .floating-actions {
+        display: none !important;
+    }
+    
+    .card {
+        border: 1px solid #000 !important;
+        break-inside: avoid;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmInput = document.getElementById('confirmDelete');
+    const deleteButton = document.getElementById('deleteButton');
+    const deleteForm = document.getElementById('deleteForm');
+    
+    // Enable/disable delete button based on confirmation input
+    if (confirmInput && deleteButton) {
+        confirmInput.addEventListener('input', function() {
+            const isConfirmed = this.value.toUpperCase() === 'DELETE';
+            deleteButton.disabled = !isConfirmed;
+            
+            if (isConfirmed) {
+                deleteButton.classList.remove('btn-outline-danger');
+                deleteButton.classList.add('btn-danger');
+                this.classList.add('border-success');
+                this.classList.remove('border-danger');
+            } else {
+                deleteButton.classList.add('btn-outline-danger');
+                deleteButton.classList.remove('btn-danger');
+                this.classList.remove('border-success');
+                if (this.value.length > 0) {
+                    this.classList.add('border-danger');
+                } else {
+                    this.classList.remove('border-danger');
+                }
+            }
+        });
+        
+        // Auto-focus on confirmation input
+        setTimeout(() => {
+            confirmInput.focus();
+        }, 500);
+    }
+    
+    // Form submission handling
+    if (deleteForm) {
+        deleteForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const coursesCount = {{ courses_count }};
+            
+            // Double check for courses
+            if (coursesCount > 0) {
+                alert('Cannot delete category with associated courses!');
+                return false;
+            }
+            
+            if (!confirmInput || confirmInput.value.toUpperCase() !== 'DELETE') {
+                alert('Please type "DELETE" to confirm the deletion.');
+                if (confirmInput) confirmInput.focus();
+                return false;
+            }
+            
+            // Final confirmation
+            const categoryName = '{{ category.name|escapejs }}';
+            if (confirm(`Are you absolutely sure you want to permanently delete the category "${categoryName}"?\n\nThis action cannot be undone!`)) {
+                // Add loading state
+                deleteButton.classList.add('loading-state');
+                deleteButton.disabled = true;
+                deleteButton.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Deleting...';
+                
+                // Submit form
+                this.submit();
+            }
+        });
+    }
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            window.location.href = '{% url "courses:manage_categories" %}';
+        }
+        
+        // Focus on confirmation input with Ctrl+D
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd' && confirmInput) {
+            e.preventDefault();
+            confirmInput.focus();
+        }
+    });
+    
+    // Warning animation on page load
+    setTimeout(() => {
+        const alerts = document.querySelectorAll('.alert-danger, .alert-warning');
+        alerts.forEach(alert => {
+            alert.style.animation = 'shake 0.5s ease-in-out';
+        });
+    }, 500);
+});
+
+// Show category info modal
+function showCategoryInfo() {
+    const modal = new bootstrap.Modal(document.getElementById('categoryInfoModal'));
+    modal.show();
+}
+
+// Toast notification function
+function showToast(message, type) {
+    const toastHtml = `
+        <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'} border-0" role="alert">
+            <div class="d-flex">
+                <div class="toast-body">
+                    <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'} me-2"></i>
+                    ${message}
+                </div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    `;
+    
+    let toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+        toastContainer.style.zIndex = '1050';
+        document.body.appendChild(toastContainer);
+    }
+    
+    toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+    const toastElement = toastContainer.lastElementChild;
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+    
+    toastElement.addEventListener('hidden.bs.toast', function() {
+        this.remove();
+    });
+}
+
+// Show info modal trigger
+document.addEventListener('DOMContentLoaded', function() {
+    // Add click event to category display for more info
+    const categoryDisplay = document.querySelector('.category-display');
+    if (categoryDisplay) {
+        const infoButton = document.createElement('button');
+        infoButton.className = 'btn btn-sm btn-outline-info mt-3';
+        infoButton.innerHTML = '<i class="fas fa-info-circle me-2"></i>View Full Details';
+        infoButton.onclick = showCategoryInfo;
+        categoryDisplay.appendChild(infoButton);
+    }
+});
+
+// Prevent accidental page leaving
+window.addEventListener('beforeunload', function(e) {
+    const confirmInput = document.getElementById('confirmDelete');
+    if (confirmInput && confirmInput.value.length > 0) {
+        e.preventDefault();
+        e.returnValue = '';
+        return '';
+    }
+});
+
+// Auto-clear confirmation input after 30 seconds of inactivity
+let confirmTimer;
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmInput = document.getElementById('confirmDelete');
+    
+    if (confirmInput) {
+        confirmInput.addEventListener('input', function() {
+            clearTimeout(confirmTimer);
+            
+            if (this.value.length > 0 && this.value.toUpperCase() !== 'DELETE') {
+                confirmTimer = setTimeout(() => {
+                    this.value = '';
+                    this.classList.remove('border-danger', 'border-success');
+                    deleteButton.disabled = true;
+                    deleteButton.classList.add('btn-outline-danger');
+                    deleteButton.classList.remove('btn-danger');
+                    
+                    showToast('Confirmation cleared for safety', 'info');
+                }, 30000); // 30 seconds
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

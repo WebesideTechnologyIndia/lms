@@ -1,0 +1,768 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<!-- Welcome Header -->
+<div class="welcome-card">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1 class="mb-2">
+                <i class="fas fa-plus-circle me-3"></i>
+                {{ title }}
+            </h1>
+            <p class="mb-0 opacity-75">Fill in the details below to create a new course for your students</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'courses:manage_courses' %}" class="btn btn-outline-light btn-lg">
+                <i class="fas fa-arrow-left me-2"></i>
+                Back to Courses
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Course Form -->
+<div class="row">
+    <div class="col-12">
+        <form method="post" enctype="multipart/form-data" id="courseForm">
+            {% csrf_token %}
+            
+            <!-- Basic Information -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Basic Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.course_code.id_for_label }}" class="form-label">
+                                <i class="fas fa-code me-1"></i>Course Code *
+                            </label>
+                            {{ form.course_code }}
+                            {% if form.course_code.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.course_code.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">Unique identifier for the course (e.g., CS101, MATH201)</small>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.title.id_for_label }}" class="form-label">
+                                <i class="fas fa-heading me-1"></i>Course Title *
+                            </label>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.title.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="{{ form.short_description.id_for_label }}" class="form-label">
+                                <i class="fas fa-align-left me-1"></i>Short Description *
+                            </label>
+                            {{ form.short_description }}
+                            {% if form.short_description.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.short_description.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">Brief overview of the course (max 200 characters)</small>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="{{ form.description.id_for_label }}" class="form-label">
+                                <i class="fas fa-file-text me-1"></i>Detailed Description
+                            </label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.description.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">Comprehensive description of the course content and objectives</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Course Settings -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cogs me-2"></i>
+                        Course Settings
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label for="{{ form.category.id_for_label }}" class="form-label">
+                                <i class="fas fa-tag me-1"></i>Category *
+                            </label>
+                            {{ form.category }}
+                            {% if form.category.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.category.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="{{ form.difficulty_level.id_for_label }}" class="form-label">
+                                <i class="fas fa-signal me-1"></i>Difficulty Level *
+                            </label>
+                            {{ form.difficulty_level }}
+                            {% if form.difficulty_level.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.difficulty_level.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="{{ form.course_type.id_for_label }}" class="form-label">
+                                <i class="fas fa-graduation-cap me-1"></i>Course Type *
+                            </label>
+                            {{ form.course_type }}
+                            {% if form.course_type.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.course_type.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        {% if request.user.role == 'superadmin' %}
+                        <div class="col-md-6">
+                            <label for="{{ form.instructor.id_for_label }}" class="form-label">
+                                <i class="fas fa-user-tie me-1"></i>Instructor *
+                            </label>
+                            {{ form.instructor }}
+                            {% if form.instructor.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.instructor.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.co_instructors.id_for_label }}" class="form-label">
+                                <i class="fas fa-users me-1"></i>Co-Instructors
+                            </label>
+                            {{ form.co_instructors }}
+                            {% if form.co_instructors.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.co_instructors.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">Hold Ctrl/Cmd to select multiple</small>
+                        </div>
+                        {% endif %}
+                        
+                        <div class="col-md-4">
+                            <label for="{{ form.duration_weeks.id_for_label }}" class="form-label">
+                                <i class="fas fa-calendar-week me-1"></i>Duration (Weeks) *
+                            </label>
+                            {{ form.duration_weeks }}
+                            {% if form.duration_weeks.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.duration_weeks.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="{{ form.hours_per_week.id_for_label }}" class="form-label">
+                                <i class="fas fa-clock me-1"></i>Hours per Week *
+                            </label>
+                            {{ form.hours_per_week }}
+                            {% if form.hours_per_week.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.hours_per_week.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="{{ form.max_students.id_for_label }}" class="form-label">
+                                <i class="fas fa-users me-1"></i>Maximum Students
+                            </label>
+                            {{ form.max_students }}
+                            {% if form.max_students.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.max_students.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">Leave blank for unlimited</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Course Media -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-image me-2"></i>
+                        Course Media
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.thumbnail.id_for_label }}" class="form-label">
+                                <i class="fas fa-image me-1"></i>Course Thumbnail
+                            </label>
+                            {{ form.thumbnail }}
+                            {% if form.thumbnail.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.thumbnail.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">Upload an attractive thumbnail image for your course</small>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.intro_video.id_for_label }}" class="form-label">
+                                <i class="fas fa-video me-1"></i>Intro Video URL
+                            </label>
+                            {{ form.intro_video }}
+                            {% if form.intro_video.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.intro_video.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">YouTube/Vimeo URL for course intro (optional)</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pricing & Enrollment -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-dollar-sign me-2"></i>
+                        Pricing & Enrollment
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-12 mb-3">
+                            <div class="form-check form-switch">
+                                {{ form.is_free }}
+                                <label class="form-check-label" for="{{ form.is_free.id_for_label }}">
+                                    <i class="fas fa-gift me-1"></i>This is a free course
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4" id="pricingFields">
+                            <label for="{{ form.price.id_for_label }}" class="form-label">
+                                <i class="fas fa-tag me-1"></i>Price ($)
+                            </label>
+                            {{ form.price }}
+                            {% if form.price.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.price.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-4" id="discountFields">
+                            <label for="{{ form.discounted_price.id_for_label }}" class="form-label">
+                                <i class="fas fa-percent me-1"></i>Discounted Price ($)
+                            </label>
+                            {{ form.discounted_price }}
+                            {% if form.discounted_price.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.discounted_price.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">Leave blank if no discount</small>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <label for="{{ form.max_students.id_for_label }}" class="form-label">
+                                <i class="fas fa-users me-1"></i>Maximum Students
+                            </label>
+                            {{ form.max_students }}
+                            {% if form.max_students.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.max_students.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">Leave blank for unlimited</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Duration & Schedule -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-calendar me-2"></i>
+                        Schedule & Dates
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.enrollment_start_date.id_for_label }}" class="form-label">
+                                <i class="fas fa-calendar-plus me-1"></i>Enrollment Start Date
+                            </label>
+                            {{ form.enrollment_start_date }}
+                            {% if form.enrollment_start_date.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.enrollment_start_date.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.enrollment_end_date.id_for_label }}" class="form-label">
+                                <i class="fas fa-calendar-minus me-1"></i>Enrollment End Date
+                            </label>
+                            {{ form.enrollment_end_date }}
+                            {% if form.enrollment_end_date.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.enrollment_end_date.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.course_start_date.id_for_label }}" class="form-label">
+                                <i class="fas fa-play-circle me-1"></i>Course Start Date
+                            </label>
+                            {{ form.course_start_date }}
+                            {% if form.course_start_date.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.course_start_date.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.course_end_date.id_for_label }}" class="form-label">
+                                <i class="fas fa-stop-circle me-1"></i>Course End Date
+                            </label>
+                            {{ form.course_end_date }}
+                            {% if form.course_end_date.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.course_end_date.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Prerequisites & Additional Info -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list-check me-2"></i>
+                        Prerequisites & Additional Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.prerequisites.id_for_label }}" class="form-label">
+                                <i class="fas fa-clipboard-check me-1"></i>Prerequisites
+                            </label>
+                            {{ form.prerequisites }}
+                            {% if form.prerequisites.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.prerequisites.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">List any required knowledge or skills</small>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.learning_outcomes.id_for_label }}" class="form-label">
+                                <i class="fas fa-bullseye me-1"></i>Learning Outcomes *
+                            </label>
+                            {{ form.learning_outcomes }}
+                            {% if form.learning_outcomes.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.learning_outcomes.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">What will students learn from this course?</small>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.course_materials.id_for_label }}" class="form-label">
+                                <i class="fas fa-book me-1"></i>Course Materials
+                            </label>
+                            {{ form.course_materials }}
+                            {% if form.course_materials.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.course_materials.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">Required books, software, materials</small>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label for="{{ form.meta_keywords.id_for_label }}" class="form-label">
+                                <i class="fas fa-tags me-1"></i>SEO Keywords
+                            </label>
+                            {{ form.meta_keywords }}
+                            {% if form.meta_keywords.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.meta_keywords.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">Keywords for search optimization (comma-separated)</small>
+                        </div>
+                        
+                        <div class="col-12">
+                            <label for="{{ form.meta_description.id_for_label }}" class="form-label">
+                                <i class="fas fa-search me-1"></i>SEO Meta Description
+                            </label>
+                            {{ form.meta_description }}
+                            {% if form.meta_description.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.meta_description.errors }}
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">Description for search engines (max 160 characters)</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Course Features -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-star me-2"></i>
+                        Course Features
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <div class="form-check form-switch mb-3">
+                                {{ form.is_featured }}
+                                <label class="form-check-label" for="{{ form.is_featured.id_for_label }}">
+                                    <i class="fas fa-star me-1"></i>Featured Course
+                                </label>
+                                <small class="text-muted d-block">Highlight this course on homepage</small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="form-check form-switch mb-3">
+                                {{ form.allow_enrollment }}
+                                <label class="form-check-label" for="{{ form.allow_enrollment.id_for_label }}">
+                                    <i class="fas fa-user-plus me-1"></i>Allow Enrollment
+                                </label>
+                                <small class="text-muted d-block">Students can enroll in this course</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Course Status -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-toggle-on me-2"></i>
+                        Publication Status
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="{{ form.status.id_for_label }}" class="form-label">
+                                <i class="fas fa-eye me-1"></i>Course Status *
+                            </label>
+                            {{ form.status }}
+                            {% if form.status.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ form.status.errors }}
+                                </div>
+                            {% endif %}
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <strong>Draft:</strong> Course is not visible to students<br>
+                                    <strong>Published:</strong> Course is live and students can enroll<br>
+                                    <strong>Archived:</strong> Course is closed but visible to enrolled students<br>
+                                    <strong>Suspended:</strong> Course is temporarily unavailable
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Publishing Guidelines:</strong>
+                                <ul class="mb-0 mt-2">
+                                    <li>Ensure all required fields are filled</li>
+                                    <li>Add course thumbnail for better visibility</li>
+                                    <li>Set appropriate pricing and capacity</li>
+                                    <li>You can always change status later</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>-2">
+                                    <li>Ensure all required fields are filled</li>
+                                    <li>Add course thumbnail for better visibility</li>
+                                    <li>Set appropriate pricing and capacity</li>
+                                    <li>You can always change status later</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>-2">
+                                    <li>Ensure all required fields are filled</li>
+                                    <li>Add course thumbnail for better visibility</li>
+                                    <li>Set appropriate pricing and capacity</li>
+                                    <li>You can always change status later</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <strong>Note:</strong> After creating the course, you'll be able to add modules, lessons, and content.
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <a href="{% url 'courses:manage_courses' %}" class="btn btn-outline-secondary me-2">
+                                <i class="fas fa-times me-2"></i>Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary btn-lg" id="submitBtn">
+                                <i class="fas fa-save me-2"></i>{{ button_text }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle free course toggle
+    const isFreeCheckbox = document.getElementById('{{ form.is_free.id_for_label }}');
+    const pricingFields = document.getElementById('pricingFields');
+    const discountFields = document.getElementById('discountFields');
+    const priceInput = document.getElementById('{{ form.price.id_for_label }}');
+    const discountInput = document.getElementById('{{ form.discounted_price.id_for_label }}');
+    
+    function togglePricingFields() {
+        if (isFreeCheckbox && isFreeCheckbox.checked) {
+            pricingFields.style.opacity = '0.5';
+            discountFields.style.opacity = '0.5';
+            priceInput.disabled = true;
+            discountInput.disabled = true;
+            priceInput.value = '0.00';
+            discountInput.value = '';
+        } else {
+            pricingFields.style.opacity = '1';
+            discountFields.style.opacity = '1';
+            priceInput.disabled = false;
+            discountInput.disabled = false;
+        }
+    }
+    
+    if (isFreeCheckbox) {
+        isFreeCheckbox.addEventListener('change', togglePricingFields);
+        togglePricingFields(); // Initialize state
+    }
+    
+    // Auto-generate course code suggestion
+    const titleInput = document.getElementById('{{ form.title.id_for_label }}');
+    const codeInput = document.getElementById('{{ form.course_code.id_for_label }}');
+    
+    if (titleInput && codeInput) {
+        titleInput.addEventListener('input', function() {
+            if (!codeInput.value) {
+                const title = this.value.trim();
+                if (title) {
+                    // Generate course code from title
+                    const words = title.split(' ');
+                    let code = '';
+                    if (words.length === 1) {
+                        code = words[0].substring(0, 3).toUpperCase() + '101';
+                    } else {
+                        code = words.slice(0, 2).map(word => word.substring(0, 2)).join('').toUpperCase() + '101';
+                    }
+                    codeInput.setAttribute('placeholder', `Suggested: ${code}`);
+                }
+            }
+        });
+    }
+    
+    // Form validation
+    const form = document.getElementById('courseForm');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    form.addEventListener('submit', function(e) {
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Creating Course...';
+        submitBtn.disabled = true;
+    });
+    
+    // File upload preview
+    const thumbnailInput = document.getElementById('{{ form.thumbnail.id_for_label }}');
+    if (thumbnailInput) {
+        thumbnailInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // Remove existing preview
+                    const existingPreview = document.getElementById('thumbnailPreview');
+                    if (existingPreview) {
+                        existingPreview.remove();
+                    }
+                    
+                    // Create new preview
+                    const preview = document.createElement('div');
+                    preview.id = 'thumbnailPreview';
+                    preview.className = 'mt-2';
+                    preview.innerHTML = `
+                        <img src="${e.target.result}" alt="Thumbnail Preview" class="img-thumbnail" style="max-width: 200px; max-height: 150px;">
+                        <small class="text-muted d-block mt-1">Preview</small>
+                    `;
+                    thumbnailInput.parentElement.appendChild(preview);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    
+    // Character count for short description
+    const shortDescInput = document.getElementById('{{ form.short_description.id_for_label }}');
+    if (shortDescInput) {
+        function updateCharCount() {
+            const maxLength = 200;
+            const currentLength = shortDescInput.value.length;
+            const remaining = maxLength - currentLength;
+            
+            let countElement = document.getElementById('charCount');
+            if (!countElement) {
+                countElement = document.createElement('small');
+                countElement.id = 'charCount';
+                countElement.className = 'text-muted';
+                shortDescInput.parentElement.appendChild(countElement);
+            }
+            
+            countElement.textContent = `${currentLength}/${maxLength} characters`;
+            countElement.className = remaining < 20 ? 'text-warning' : 'text-muted';
+        }
+        
+        shortDescInput.addEventListener('input', updateCharCount);
+        updateCharCount(); // Initialize
+    }
+});
+</script>
+
+<style>
+.form-control:focus, .form-select:focus {
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.form-check-input:checked {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.card {
+    border: none;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border-radius: 0.5rem;
+}
+
+.card-header {
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+    border-radius: 0.5rem 0.5rem 0 0 !important;
+}
+
+.btn-group .btn {
+    border-radius: 0.375rem;
+}
+
+.alert {
+    border: none;
+    border-radius: 0.5rem;
+}
+
+.form-label {
+    font-weight: 500;
+    color: #495057;
+}
+
+.text-muted {
+    font-size: 0.875rem;
+}
+
+/* File input styling */
+.form-control[type="file"] {
+    padding: 0.5rem;
+}
+
+.form-control[type="file"]::-webkit-file-upload-button {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 0.375rem 0.75rem;
+    border-radius: 0.375rem;
+    margin-right: 0.75rem;
+    cursor: pointer;
+}
+
+.form-control[type="file"]::-webkit-file-upload-button:hover {
+    background: #0056b3;
+}
+
+/* Date input styling */
+input[type="date"].form-control {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m1 4 6.5 6.5L14 4'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+}
+
+/* Animation for form submission */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.btn:active {
+    animation: pulse 0.2s ease-in-out;
+}
+</style>
+{% endblock %}

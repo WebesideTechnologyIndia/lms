@@ -1,0 +1,392 @@
+<!-- templates/webinars/registration_success.html -->
+{% extends 'webinars/base.html' %}
+
+{% block title %}Registration Successful - {{ webinar.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Success Header -->
+            <div class="text-center mb-4">
+                {% if registration.payment_status == 'paid' %}
+                    <div class="success-icon">
+                        <i class="fas fa-check-circle text-success"></i>
+                    </div>
+                    <h1 class="text-success">Registration Confirmed!</h1>
+                    <p class="lead text-muted">You're all set for the webinar</p>
+                {% else %}
+                    <div class="success-icon">
+                        <i class="fas fa-clock text-warning"></i>
+                    </div>
+                    <h1 class="text-warning">Registration Created!</h1>
+                    <p class="lead text-muted">Complete payment to confirm your spot</p>
+                {% endif %}
+            </div>
+
+            <!-- Registration Details Card -->
+            <div class="card registration-details-card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-ticket-alt me-2"></i>Registration Details
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Attendee Information</h6>
+                            <div class="info-item">
+                                <strong>Name:</strong> {{ registration.get_full_name }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Email:</strong> {{ registration.email }}
+                            </div>
+                            {% if registration.phone_number %}
+                            <div class="info-item">
+                                <strong>Phone:</strong> {{ registration.phone_number }}
+                            </div>
+                            {% endif %}
+                            {% if registration.company %}
+                            <div class="info-item">
+                                <strong>Company:</strong> {{ registration.company }}
+                            </div>
+                            {% endif %}
+                            {% if registration.designation %}
+                            <div class="info-item">
+                                <strong>Designation:</strong> {{ registration.designation }}
+                            </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="text-muted mb-3">Webinar Information</h6>
+                            <div class="info-item">
+                                <strong>Title:</strong> {{ webinar.title }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Date:</strong> {{ webinar.scheduled_date|date:"F j, Y" }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Time:</strong> {{ webinar.scheduled_date|time:"g:i A" }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Duration:</strong> {{ webinar.duration_minutes }} minutes
+                            </div>
+                            <div class="info-item">
+                                <strong>Instructor:</strong> {{ webinar.instructor.get_full_name }}
+                            </div>
+                            <div class="info-item">
+                                <strong>Type:</strong> 
+                                {% if webinar.webinar_type == 'free' %}
+                                    <span class="badge bg-success">FREE</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">₹{{ webinar.price }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Status Card -->
+            <div class="card payment-status-card mb-4">
+                <div class="card-body">
+                    {% if registration.payment_status == 'paid' %}
+                        <!-- Payment Confirmed -->
+                        <div class="alert alert-success d-flex align-items-center">
+                            <i class="fas fa-check-circle me-3 fs-4"></i>
+                            <div>
+                                <h6 class="alert-heading mb-1">Payment Confirmed</h6>
+                                <small class="mb-0">
+                                    {% if webinar.webinar_type == 'free' %}
+                                        This is a free webinar - no payment required.
+                                    {% else %}
+                                        Payment of ₹{{ registration.amount_paid }} confirmed on {{ registration.payment_date|date:"M j, Y" }}
+                                    {% endif %}
+                                    {% if registration.user.role == 'webinar_user' %}
+                                        <br><strong>Your account has been upgraded to Webinar User!</strong>
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                    {% else %}
+                        <!-- Payment Pending -->
+                        <div class="alert alert-warning d-flex align-items-center">
+                            <i class="fas fa-exclamation-triangle me-3 fs-4"></i>
+                            <div class="flex-grow-1">
+                                <h6 class="alert-heading mb-1">Payment Required</h6>
+                                <small class="mb-0">
+                                    Complete payment of ₹{{ webinar.price }} to confirm your registration.
+                                </small>
+                            </div>
+                        </div>
+                        
+                        <!-- Payment Options -->
+                        <div class="payment-options mt-3">
+                            <h6><i class="fas fa-credit-card me-2"></i>Complete Payment</h6>
+                            <p class="text-muted mb-3">Choose your preferred payment method:</p>
+                            
+                            <div class="d-grid gap-2">
+                                <!-- Self Payment Confirmation -->
+                                <a href="{% url 'webinars:confirm_payment' registration.id %}" 
+                                   class="btn btn-success btn-lg">
+                                    <i class="fas fa-check me-2"></i>I've Made the Payment - Confirm Now
+                                </a>
+                                
+                                <!-- Payment Instructions -->
+                                <div class="payment-instructions mt-3 p-3 bg-light rounded">
+                                    <h6 class="text-primary"><i class="fas fa-info-circle me-2"></i>Payment Instructions</h6>
+                                    <ol class="mb-0">
+                                        <li>Make payment of ₹{{ webinar.price }} using any UPI app</li>
+                                        <li>Use UPI ID: <strong>admin@company.com</strong></li>
+                                        <li>Add note: <strong>{{ registration.id }}-{{ webinar.slug }}</strong></li>
+                                        <li>Click "I've Made the Payment" button above to confirm</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Next Steps Card -->
+            <div class="card next-steps-card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list-check me-2"></i>What's Next?
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="next-steps">
+                        {% if registration.payment_status == 'paid' %}
+                            <div class="step completed">
+                                <i class="fas fa-check-circle text-success"></i>
+                                <div>
+                                    <strong>Registration Confirmed</strong>
+                                    <small>Your spot is secured for this webinar</small>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <i class="fas fa-envelope text-primary"></i>
+                                <div>
+                                    <strong>Check Your Email</strong>
+                                    <small>Login credentials and webinar details have been sent to {{ registration.email }}</small>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <i class="fas fa-bell text-warning"></i>
+                                <div>
+                                    <strong>Reminder Notifications</strong>
+                                    <small>We'll send you reminders before the webinar starts</small>
+                                </div>
+                            </div>
+                            <div class="step">
+                                <i class="fas fa-link text-info"></i>
+                                <div>
+                                    <strong>Webinar Link</strong>
+                                    <small>Join link will be shared 30 minutes before the webinar</small>
+                                </div>
+                            </div>
+                        {% else %}
+                            <div class="step">
+                                <i class="fas fa-credit-card text-warning"></i>
+                                <div>
+                                    <strong>Complete Payment</strong>
+                                    <small>Pay ₹{{ webinar.price }} to confirm your registration</small>
+                                </div>
+                            </div>
+                            <div class="step disabled">
+                                <i class="fas fa-envelope text-muted"></i>
+                                <div>
+                                    <strong>Email Confirmation</strong>
+                                    <small>Will be sent after payment confirmation</small>
+                                </div>
+                            </div>
+                            <div class="step disabled">
+                                <i class="fas fa-link text-muted"></i>
+                                <div>
+                                    <strong>Webinar Access</strong>
+                                    <small>Available after payment completion</small>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="text-center">
+                {% if registration.payment_status == 'paid' %}
+                    <a href="{% url 'webinars:webinar_detail' webinar.slug %}" class="btn btn-primary me-2">
+                        <i class="fas fa-eye me-2"></i>View Webinar Details
+                    </a>
+                    {% if user.is_authenticated %}
+                        <a href="{% url 'webinars:my_webinars' %}" class="btn btn-outline-primary">
+                            <i class="fas fa-list me-2"></i>My Webinars
+                        </a>
+                    {% endif %}
+                {% else %}
+                    <a href="{% url 'webinars:confirm_payment' registration.id %}" class="btn btn-success me-2">
+                        <i class="fas fa-credit-card me-2"></i>Complete Payment
+                    </a>
+                    <a href="{% url 'webinars:webinar_detail' webinar.slug %}" class="btn btn-outline-primary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Webinar
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .success-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+    }
+    
+    .registration-details-card,
+    .payment-status-card,
+    .next-steps-card {
+        border: none;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+    }
+    
+    .card-header {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border-bottom: none;
+    }
+    
+    .info-item {
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #f1f3f4;
+    }
+    
+    .info-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+    
+    .payment-instructions {
+        border-left: 4px solid #667eea;
+    }
+    
+    .next-steps {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .step {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 0.75rem;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+    }
+    
+    .step:not(.disabled):not(.completed) {
+        background: #f8f9fa;
+    }
+    
+    .step.completed {
+        background: #d4edda;
+        border-left: 4px solid #28a745;
+    }
+    
+    .step.disabled {
+        opacity: 0.6;
+    }
+    
+    .step i {
+        font-size: 1.2rem;
+        margin-top: 0.2rem;
+        min-width: 20px;
+    }
+    
+    .step div {
+        flex-grow: 1;
+    }
+    
+    .step strong {
+        display: block;
+        margin-bottom: 0.25rem;
+    }
+    
+    .step small {
+        color: #6c757d;
+        font-size: 0.875rem;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border: none;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #5a6fd8, #6a4190);
+        transform: translateY(-1px);
+    }
+    
+    .alert {
+        border: none;
+        border-radius: 10px;
+    }
+    
+    @media (max-width: 768px) {
+        .success-icon {
+            font-size: 3rem;
+        }
+        
+        .step {
+            flex-direction: column;
+            text-align: center;
+            gap: 0.5rem;
+        }
+        
+        .step i {
+            margin-top: 0;
+        }
+        
+        .btn {
+            width: 100%;
+            margin-bottom: 0.5rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-refresh for pending payments (every 30 seconds)
+        {% if registration.payment_status != 'paid' %}
+        setInterval(function() {
+            // You can add auto-refresh logic here if needed
+            console.log('Checking payment status...');
+        }, 30000);
+        {% endif %}
+        
+        // Copy payment details to clipboard
+        const paymentInstructions = document.querySelector('.payment-instructions');
+        if (paymentInstructions) {
+            paymentInstructions.addEventListener('click', function(e) {
+                if (e.target.tagName === 'STRONG') {
+                    navigator.clipboard.writeText(e.target.textContent);
+                    // Show copied feedback
+                    const original = e.target.textContent;
+                    e.target.textContent = 'Copied!';
+                    setTimeout(() => {
+                        e.target.textContent = original;
+                    }, 1000);
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

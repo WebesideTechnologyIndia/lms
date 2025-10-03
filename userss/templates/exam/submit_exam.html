@@ -1,0 +1,399 @@
+{% extends 'students/student_base.html' %}
+{% load exam_filters %}
+
+{% block title %}Submit {{ attempt.exam.title }} - LMS{% endblock %}
+{% block page_title %}Submit Exam{% endblock %}
+
+{% block extra_css %}
+<style>
+    .submit-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px 0;
+    }
+    
+    .exam-summary-card {
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        color: white;
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .confirmation-card {
+        background-color: white;
+        border-radius: 15px;
+        padding: 30px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        margin-bottom: 25px;
+        text-align: center;
+    }
+    
+    .warning-icon {
+        width: 80px;
+        height: 80px;
+        background: linear-gradient(135deg, #fbbf24, #f59e0b);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        font-size: 2rem;
+        color: white;
+    }
+    
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin: 25px 0;
+    }
+    
+    .stat-item {
+        background-color: #f8f9fa;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        border: 1px solid #e9ecef;
+    }
+    
+    .stat-value {
+        font-size: 2rem;
+        font-weight: bold;
+        color: #4f46e5;
+        margin-bottom: 5px;
+    }
+    
+    .stat-label {
+        color: #6c757d;
+        font-size: 0.9rem;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-top: 30px;
+    }
+    
+    .btn-submit {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        transition: transform 0.2s ease;
+    }
+    
+    .btn-submit:hover {
+        transform: translateY(-2px);
+        color: white;
+    }
+    
+    .btn-back {
+        background: linear-gradient(135deg, #6c757d, #5a6268);
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 1.1rem;
+        transition: transform 0.2s ease;
+    }
+    
+    .btn-back:hover {
+        transform: translateY(-2px);
+        color: white;
+    }
+    
+    .progress-indicator {
+        background-color: #f8f9fa;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 25px;
+    }
+    
+    .progress-bar-custom {
+        height: 8px;
+        border-radius: 4px;
+        background-color: #e9ecef;
+        overflow: hidden;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #10b981, #059669);
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+    
+    .warning-list {
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+    }
+    
+    .warning-list ul {
+        margin: 0;
+        padding-left: 20px;
+    }
+    
+    .warning-list li {
+        margin-bottom: 8px;
+        color: #856404;
+    }
+    
+    @media (max-width: 768px) {
+        .action-buttons {
+            flex-direction: column;
+        }
+        
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="submit-container">
+    <!-- Exam Summary -->
+    <div class="exam-summary-card">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h3 class="mb-2">{{ attempt.exam.title }}</h3>
+                <p class="mb-0 opacity-75">{{ attempt.exam.description }}</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="exam-meta">
+                    <small class="d-block opacity-75">Exam Type: {{ attempt.exam.get_exam_type_display }}</small>
+                    <small class="d-block opacity-75">Attempt: {{ attempt.attempt_number }}</small>
+                    <small class="d-block opacity-75">Started: {{ attempt.started_at|date:"H:i" }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Indicator -->
+    {% if attempt.exam.exam_type == 'mcq' or attempt.exam.exam_type == 'qa' %}
+    <div class="progress-indicator">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h6 class="mb-0">
+                <i class="fas fa-chart-line"></i> Completion Status
+            </h6>
+            <span class="badge bg-primary">{{ completion_percentage|floatformat:0 }}% Complete</span>
+        </div>
+        <div class="progress-bar-custom">
+            <div class="progress-fill" style="width: {{ completion_percentage|floatformat:0 }}%"></div>
+        </div>
+        <small class="text-muted mt-2 d-block">
+            You have answered {{ answered_questions }} out of {{ total_questions }} questions
+        </small>
+    </div>
+    {% endif %}
+
+    <!-- Submission Statistics -->
+    {% if attempt.exam.exam_type == 'mcq' %}
+    <div class="stats-grid">
+        <div class="stat-item">
+            <div class="stat-value">{{ total_questions }}</div>
+            <div class="stat-label">Total Questions</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value text-success">{{ answered_questions }}</div>
+            <div class="stat-label">Answered</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value text-warning">{{ unanswered_questions }}</div>
+            <div class="stat-label">Unanswered</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value text-primary">{{ attempt.exam.total_marks }}</div>
+            <div class="stat-label">Total Marks</div>
+        </div>
+    </div>
+    {% elif attempt.exam.exam_type == 'qa' %}
+    <div class="stats-grid">
+        <div class="stat-item">
+            <div class="stat-value">{{ total_questions }}</div>
+            <div class="stat-label">Total Questions</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value text-success">{{ answered_questions }}</div>
+            <div class="stat-label">Answered</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value text-primary">{{ attempt.exam.total_marks }}</div>
+            <div class="stat-label">Total Marks</div>
+        </div>
+    </div>
+    {% elif attempt.exam.exam_type == 'assignment' %}
+    <div class="stats-grid">
+        <div class="stat-item">
+            <div class="stat-value">{{ files_uploaded|default:0 }}</div>
+            <div class="stat-label">Files Uploaded</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value text-success">{{ has_comments|yesno:"Yes,No" }}</div>
+            <div class="stat-label">Comments Added</div>
+        </div>
+        <div class="stat-item">
+            <div class="stat-value text-primary">{{ attempt.exam.total_marks }}</div>
+            <div class="stat-label">Total Marks</div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Confirmation Card -->
+    <div class="confirmation-card">
+        <div class="warning-icon">
+            <i class="fas fa-exclamation-triangle"></i>
+        </div>
+        
+        <h4 class="text-warning mb-3">Ready to Submit Your Exam?</h4>
+        
+        <p class="text-muted mb-4">
+            Please review your submission carefully. Once submitted, you will not be able to modify your answers.
+        </p>
+
+        <!-- Warning Messages -->
+        {% if unanswered_questions > 0 and attempt.exam.exam_type != 'assignment' %}
+        <div class="warning-list">
+            <h6 class="text-warning mb-2">
+                <i class="fas fa-exclamation-circle"></i> Incomplete Submission Notice
+            </h6>
+            <ul>
+                <li>You have {{ unanswered_questions }} unanswered question{{ unanswered_questions|pluralize }}</li>
+                <li>Unanswered questions will be marked as incorrect</li>
+                <li>Consider reviewing your answers before submitting</li>
+            </ul>
+        </div>
+        {% endif %}
+
+        <!-- Submission Warnings -->
+        <div class="warning-list">
+            <h6 class="text-info mb-2">
+                <i class="fas fa-info-circle"></i> Important Information
+            </h6>
+            <ul>
+                <li>Your exam will be submitted immediately after confirmation</li>
+                {% if attempt.exam.exam_type == 'mcq' and attempt.exam.show_results_immediately %}
+                <li>Results will be available immediately after submission</li>
+                {% else %}
+                <li>Results will be available after manual grading by your instructor</li>
+                {% endif %}
+                {% if attempt.exam.allow_retake and attempt.attempt_number < attempt.exam.max_attempts %}
+                <li>You can retake this exam if needed ({{ attempt.exam.max_attempts|sub:attempt.attempt_number }} attempt{{ attempt.exam.max_attempts|sub:attempt.attempt_number|pluralize }} remaining)</li>
+                {% else %}
+                <li>This is your final attempt for this exam</li>
+                {% endif %}
+                <li>All responses have been automatically saved</li>
+            </ul>
+        </div>
+
+        <!-- Time Information -->
+        {% if time_spent %}
+        <div class="alert alert-light">
+            <i class="fas fa-clock"></i>
+            <strong>Time Spent:</strong> {{ time_spent }} minutes
+            {% if attempt.exam.timing_type != 'no_timing' %}
+                {% if attempt.exam.timing_type == 'total_exam' %}
+                    out of {{ attempt.exam.total_exam_time_minutes }} minutes allowed
+                {% else %}
+                    ({{ attempt.exam.time_per_question_minutes }} minutes per question)
+                {% endif %}
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Action Buttons -->
+        <div class="action-buttons">
+            <a href="{% url 'exam_interface' attempt.id %}" class="btn btn-back">
+                <i class="fas fa-arrow-left"></i> Back to Exam
+            </a>
+            
+            <form method="post" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-submit" id="finalSubmitBtn">
+                    <i class="fas fa-paper-plane"></i> Submit Exam
+                </button>
+            </form>
+        </div>
+
+        <!-- Additional Help -->
+        <div class="mt-4">
+            <small class="text-muted">
+                <i class="fas fa-question-circle"></i>
+                Need help? Contact your instructor or technical support
+            </small>
+        </div>
+    </div>
+</div>
+
+<!-- Loading Modal -->
+<div class="modal fade" id="submissionModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-body text-center py-4">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <h5>Submitting Your Exam...</h5>
+                <p class="text-muted mb-0">Please wait while we process your submission.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // Handle form submission
+    $('#finalSubmitBtn').click(function(e) {
+        e.preventDefault();
+        
+        // Show confirmation dialog
+        if (confirm('Are you absolutely sure you want to submit this exam? This action cannot be undone.')) {
+            // Show loading modal
+            $('#submissionModal').modal('show');
+            
+            // Submit the form after a short delay
+            setTimeout(function() {
+                $(e.target).closest('form')[0].submit();
+            }, 1000);
+        }
+    });
+    
+    // Animate progress bar
+    setTimeout(function() {
+        $('.progress-fill').css('width', '{{ completion_percentage|floatformat:0 }}%');
+    }, 500);
+    
+    // Animate statistics
+    $('.stat-value').each(function() {
+        let $this = $(this);
+        let value = parseInt($this.text());
+        let duration = 1000;
+        
+        $({ counter: 0 }).animate({ counter: value }, {
+            duration: duration,
+            easing: 'swing',
+            step: function() {
+                $this.text(Math.ceil(this.counter));
+            }
+        });
+    });
+});
+
+// Prevent accidental page refresh
+window.addEventListener('beforeunload', function(e) {
+    e.preventDefault();
+    e.returnValue = 'Are you sure you want to leave? Your exam submission is in progress.';
+});
+</script>
+{% endblock %}

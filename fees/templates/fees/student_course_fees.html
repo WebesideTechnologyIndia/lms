@@ -1,0 +1,560 @@
+{% extends 'students/student_base.html' %}
+
+{% block title %}{{ assignment.course.title }} - Fee Details{% endblock %}
+
+{% block page_title %}Course Fee Details{% endblock %}
+
+{% block content %}
+<!-- Course Header -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center">
+                    {% if assignment.course.thumbnail %}
+                        <img src="{{ assignment.course.thumbnail.url }}" 
+                             class="rounded me-3" 
+                             alt="{{ assignment.course.title }}"
+                             style="width: 80px; height: 80px; object-fit: cover;">
+                    {% else %}
+                        <div class="bg-primary rounded me-3 d-flex align-items-center justify-content-center text-white"
+                             style="width: 80px; height: 80px;">
+                            <i class="fas fa-book fa-2x"></i>
+                        </div>
+                    {% endif %}
+                    
+                    <div>
+                        <h4 class="mb-1">{{ assignment.course.title }}</h4>
+                        <p class="text-muted mb-2">{{ assignment.course.course_code }}</p>
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-user me-2"></i>
+                            <span>{{ assignment.course.instructor.get_full_name }}</span>
+                            {% if assignment.is_course_locked %}
+                                <span class="badge bg-danger ms-3">
+                                    <i class="fas fa-lock me-1"></i>Course Locked
+                                </span>
+                            {% else %}
+                                <span class="badge bg-success ms-3">
+                                    <i class="fas fa-unlock me-1"></i>Active Access
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <h5 class="text-muted mb-1">Fee Structure</h5>
+                <h4 class="text-primary mb-0">{{ assignment.fee_structure.name }}</h4>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Fee Summary Cards -->
+<div class="row mb-4">
+    <div class="col-md-3 mb-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-dollar-sign fa-2x mb-2"></i>
+                <h4 class="mb-1">${{ assignment.total_amount }}</h4>
+                <p class="mb-0">Total Fee</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-success text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-check-circle fa-2x mb-2"></i>
+                <h4 class="mb-1">${{ assignment.amount_paid }}</h4>
+                <p class="mb-0">Amount Paid</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card {% if assignment.amount_pending > 0 %}bg-danger{% else %}bg-info{% endif %} text-white">
+            <div class="card-body text-center">
+                <i class="fas {% if assignment.amount_pending > 0 %}fa-exclamation-triangle{% else %}fa-info-circle{% endif %} fa-2x mb-2"></i>
+                <h4 class="mb-1">${{ assignment.amount_pending }}</h4>
+                <p class="mb-0">Pending Amount</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3 mb-3">
+        <div class="card bg-info text-white">
+            <div class="card-body text-center">
+                <i class="fas fa-percentage fa-2x mb-2"></i>
+                <h4 class="mb-1">{{ assignment.get_completion_percentage }}%</h4>
+                <p class="mb-0">Completed</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Progress Bar -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="mb-0">Payment Progress</h5>
+            <span class="badge bg-primary">{{ assignment.get_completion_percentage }}% Complete</span>
+        </div>
+        <div class="progress mb-2" style="height: 20px;">
+            <div class="progress-bar progress-bar-striped {% if assignment.get_completion_percentage == 100 %}bg-success{% elif assignment.get_completion_percentage > 50 %}bg-info{% else %}bg-warning{% endif %}" 
+                 role="progressbar" 
+                 style="width: {{ assignment.get_completion_percentage }}%">
+                {{ assignment.get_completion_percentage }}%
+            </div>
+        </div>
+        <div class="d-flex justify-content-between text-muted">
+            <small>$0</small>
+            <small>${{ assignment.total_amount }}</small>
+        </div>
+    </div>
+</div>
+
+<!-- Course Lock Warning -->
+{% if assignment.is_course_locked %}
+<div class="alert alert-danger mb-4" role="alert">
+    <div class="d-flex align-items-center">
+        <i class="fas fa-lock fa-2x me-3"></i>
+        <div>
+            <h5 class="alert-heading mb-1">Course Access Locked</h5>
+            <p class="mb-2">Your course access has been locked due to overdue payments. Please clear your pending dues to regain access.</p>
+            {% if assignment.unlock_date %}
+            <p class="mb-0"><strong>Auto-unlock date:</strong> {{ assignment.unlock_date|date:"M d, Y" }}</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Quick Payment Options -->
+{% if assignment.amount_pending > 0 %}
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-credit-card me-2"></i>Quick Payment Options
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <div class="card border-primary">
+                    <div class="card-body text-center">
+                        <i class="fas fa-money-bill-wave fa-2x text-primary mb-3"></i>
+                        <h6>Pay Full Amount</h6>
+                        <h4 class="text-primary">${{ assignment.amount_pending }}</h4>
+                        <p class="text-muted small mb-3">Clear all pending dues</p>
+                        <a href="{% url 'fees:make_online_payment' assignment.id %}?type=full" 
+                           class="btn btn-primary w-100">
+                            <i class="fas fa-credit-card me-1"></i>Pay Now
+                        </a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 mb-3">
+                <div class="card border-warning">
+                    <div class="card-body text-center">
+                        <i class="fas fa-calendar-alt fa-2x text-warning mb-3"></i>
+                        <h6>Pay Next EMI</h6>
+                        {% with next_emi=emi_schedules|first %}
+                            {% if next_emi %}
+                                <h4 class="text-warning">${{ next_emi.amount }}</h4>
+                                <p class="text-muted small mb-3">Due: {{ next_emi.due_date|date:"M d" }}</p>
+                                <a href="{% url 'fees:make_online_payment' assignment.id %}?type=current_emi" 
+                                   class="btn btn-warning w-100">
+                                    <i class="fas fa-calendar-check me-1"></i>Pay EMI
+                                </a>
+                            {% else %}
+                                <h4 class="text-muted">N/A</h4>
+                                <p class="text-muted small mb-3">No EMI due</p>
+                                <button class="btn btn-secondary w-100" disabled>No EMI</button>
+                            {% endif %}
+                        {% endwith %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 mb-3">
+                <div class="card border-info">
+                    <div class="card-body text-center">
+                        <i class="fas fa-calculator fa-2x text-info mb-3"></i>
+                        <h6>Custom Amount</h6>
+                        <h4 class="text-info">$???</h4>
+                        <p class="text-muted small mb-3">Choose your amount</p>
+                        <a href="{% url 'fees:make_online_payment' assignment.id %}?type=custom" 
+                           class="btn btn-info w-100">
+                            <i class="fas fa-edit me-1"></i>Custom Pay
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- EMI Schedule -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-list-alt me-2"></i>EMI Schedule
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if emi_schedules %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>EMI #</th>
+                            <th>Amount</th>
+                            <th>Due Date</th>
+                            <th>Status</th>
+                            <th>Days</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for emi in emi_schedules %}
+                        <tr class="{% if emi.status == 'overdue' %}table-danger{% elif emi.status == 'paid' %}table-success{% elif emi.due_date <= today %}table-warning{% endif %}">
+                            <td>
+                                <strong>
+                                    {% if emi.installment_type == 'down_payment' %}
+                                        Down Payment
+                                    {% else %}
+                                        EMI {{ emi.installment_number }}
+                                    {% endif %}
+                                </strong>
+                            </td>
+                            <td>
+                                <strong>${{ emi.amount }}</strong>
+                                {% if emi.late_fee_applied > 0 %}
+                                    <br><small class="text-danger">+ ${{ emi.late_fee_applied }} late fee</small>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ emi.due_date|date:"M d, Y" }}
+                                <br><small class="text-muted">{{ emi.due_date|date:"l" }}</small>
+                            </td>
+                            <td>
+                                {% if emi.status == 'paid' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check me-1"></i>Paid
+                                    </span>
+                                    {% if emi.paid_date %}
+                                        <br><small class="text-muted">{{ emi.paid_date|date:"M d, Y" }}</small>
+                                    {% endif %}
+                                {% elif emi.status == 'overdue' %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>Overdue
+                                    </span>
+                                {% elif emi.status == 'pending' and emi.due_date <= today %}
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-clock me-1"></i>Due Now
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-clock me-1"></i>Pending
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if emi.status == 'paid' %}
+                                    <span class="text-success">✓</span>
+                                {% elif emi.due_date < today %}
+                                    <span class="text-danger">
+                                        {{ emi.due_date|timesince }} overdue
+                                    </span>
+                                {% elif emi.due_date == today %}
+                                    <span class="text-warning">Today</span>
+                                {% else %}
+                                    <span class="text-muted">
+                                        {{ emi.due_date|timeuntil }}
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if emi.status != 'paid' %}
+                                    <a href="{% url 'fees:make_online_payment' assignment.id %}?emi={{ emi.id }}" 
+                                       class="btn btn-primary btn-sm">
+                                        <i class="fas fa-credit-card me-1"></i>Pay
+                                    </a>
+                                {% else %}
+                                    <span class="badge bg-success">Paid</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No EMI Schedule</h5>
+                <p class="text-muted">This course uses a different payment structure.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Payment History -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-history me-2"></i>Payment History
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if payments %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Date</th>
+                            <th>Amount</th>
+                            <th>Method</th>
+                            <th>Transaction ID</th>
+                            <th>Status</th>
+                            <th>Receipt</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for payment in payments %}
+                        <tr>
+                            <td>
+                                {{ payment.payment_date|date:"M d, Y" }}
+                                <br><small class="text-muted">{{ payment.payment_time|time:"g:i A" }}</small>
+                            </td>
+                            <td>
+                                <strong class="text-success">${{ payment.amount }}</strong>
+                            </td>
+                            <td>
+                                <span class="badge bg-secondary">
+                                    {{ payment.get_payment_method_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if payment.transaction_id %}
+                                    <code>{{ payment.transaction_id }}</code>
+                                {% else %}
+                                    <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check me-1"></i>{{ payment.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if payment.receipt_number %}
+                                    <a href="#" class="btn btn-outline-primary btn-sm">
+                                        <i class="fas fa-download me-1"></i>Download
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">N/A</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-receipt fa-3x text-muted mb-3"></i>
+                <h5 class="text-muted">No Payment History</h5>
+                <p class="text-muted">Your payment transactions for this course will appear here.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Fee Structure Details -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-info-circle me-2"></i>Fee Structure Details
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <dl class="row">
+                    <dt class="col-sm-5">Structure Name:</dt>
+                    <dd class="col-sm-7">{{ assignment.fee_structure.name }}</dd>
+                    
+                    <dt class="col-sm-5">Payment Type:</dt>
+                    <dd class="col-sm-7">
+                        <span class="badge bg-info">{{ assignment.fee_structure.get_payment_type_display }}</span>
+                    </dd>
+                    
+                    <dt class="col-sm-5">Total Amount:</dt>
+                    <dd class="col-sm-7"><strong>${{ assignment.fee_structure.total_amount }}</strong></dd>
+                    
+                    {% if assignment.fee_structure.payment_type == 'emi' %}
+                    <dt class="col-sm-5">EMI Duration:</dt>
+                    <dd class="col-sm-7">{{ assignment.fee_structure.emi_duration_months }} months</dd>
+                    
+                    <dt class="col-sm-5">EMI Amount:</dt>
+                    <dd class="col-sm-7">${{ assignment.fee_structure.emi_amount }}</dd>
+                    {% endif %}
+                </dl>
+            </div>
+            <div class="col-md-6">
+                <dl class="row">
+                    <dt class="col-sm-5">Assigned Date:</dt>
+                    <dd class="col-sm-7">{{ assignment.assigned_date|date:"M d, Y" }}</dd>
+                    
+                    <dt class="col-sm-5">Payment Start:</dt>
+                    <dd class="col-sm-7">{{ assignment.payment_start_date|date:"M d, Y" }}</dd>
+                    
+                    {% if assignment.payment_end_date %}
+                    <dt class="col-sm-5">Payment End:</dt>
+                    <dd class="col-sm-7">{{ assignment.payment_end_date|date:"M d, Y" }}</dd>
+                    {% endif %}
+                    
+                    <dt class="col-sm-5">Grace Period:</dt>
+                    <dd class="col-sm-7">{{ assignment.fee_structure.grace_period_days }} days</dd>
+                    
+                    {% if assignment.fee_structure.late_fee_amount > 0 %}
+                    <dt class="col-sm-5">Late Fee:</dt>
+                    <dd class="col-sm-7 text-danger">${{ assignment.fee_structure.late_fee_amount }}</dd>
+                    {% endif %}
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Help & Support -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">
+            <i class="fas fa-question-circle me-2"></i>Need Help?
+        </h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-4 mb-3">
+                <div class="text-center">
+                    <i class="fas fa-phone fa-2x text-primary mb-2"></i>
+                    <h6>Call Support</h6>
+                    <p class="text-muted">Get instant help</p>
+                    <a href="tel:+1234567890" class="btn btn-outline-primary">
+                        <i class="fas fa-phone me-1"></i>Call Now
+                    </a>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="text-center">
+                    <i class="fas fa-envelope fa-2x text-info mb-2"></i>
+                    <h6>Email Support</h6>
+                    <p class="text-muted">Send us your query</p>
+                    <a href="mailto:support@example.com" class="btn btn-outline-info">
+                        <i class="fas fa-envelope me-1"></i>Email
+                    </a>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="text-center">
+                    <i class="fas fa-comments fa-2x text-success mb-2"></i>
+                    <h6>Live Chat</h6>
+                    <p class="text-muted">Chat with our team</p>
+                    <button class="btn btn-outline-success">
+                        <i class="fas fa-comments me-1"></i>Start Chat
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animate progress bar on load
+    const progressBar = document.querySelector('.progress-bar');
+    if (progressBar) {
+        const width = progressBar.style.width;
+        progressBar.style.width = '0%';
+        setTimeout(function() {
+            progressBar.style.transition = 'width 2s ease-in-out';
+            progressBar.style.width = width;
+        }, 500);
+    }
+    
+    // Add hover effects to payment cards
+    const paymentCards = document.querySelectorAll('.card');
+    paymentCards.forEach(function(card) {
+        card.addEventListener('mouseenter', function() {
+            this.style.transform = 'translateY(-2px)';
+            this.style.transition = 'transform 0.2s ease';
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.style.transform = 'translateY(0)';
+        });
+    });
+    
+    // Highlight overdue rows
+    const overdueRows = document.querySelectorAll('.table-danger');
+    overdueRows.forEach(function(row) {
+        row.style.animation = 'pulse 2s infinite';
+    });
+});
+
+// Add pulse animation for overdue items
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+`;
+document.head.appendChild(style);
+</script>
+
+<style>
+.progress {
+    border-radius: 10px;
+    background-color: #f1f3f4;
+    height: 20px;
+}
+
+.progress-bar {
+    border-radius: 10px;
+}
+
+.card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0,123,255,0.1);
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+code {
+    background-color: #f8f9fa;
+    padding: 2px 4px;
+    border-radius: 3px;
+    font-size: 0.875em;
+}
+</style>
+{% endblock %}

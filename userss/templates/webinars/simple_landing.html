@@ -1,0 +1,509 @@
+<!-- webinars/templates/webinars/simple_landing.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webinar Registration Test Page</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .hero-section {
+            padding: 60px 0;
+            color: white;
+            text-align: center;
+        }
+        
+        .hero-section h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .hero-section p {
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+            opacity: 0.9;
+        }
+        
+        .webinar-card {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            overflow: hidden;
+            transition: transform 0.3s ease;
+            margin-bottom: 30px;
+        }
+        
+        .webinar-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .webinar-header {
+            background: linear-gradient(45deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .webinar-type-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .webinar-body {
+            padding: 30px;
+        }
+        
+        .webinar-info {
+            margin-bottom: 20px;
+        }
+        
+        .webinar-info i {
+            color: #667eea;
+            margin-right: 10px;
+            width: 20px;
+        }
+        
+        .registration-form {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        
+        .btn-register {
+            background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-register:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102,126,234,0.4);
+            color: white;
+        }
+        
+        .alert-custom {
+            border-radius: 10px;
+            border: none;
+            padding: 15px 20px;
+        }
+        
+        .loading {
+            display: none;
+        }
+        
+        .loading.show {
+            display: inline-block;
+        }
+        
+        .stats-section {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 30px;
+            margin: 40px 0;
+        }
+        
+        .stat-item {
+            text-align: center;
+            color: white;
+        }
+        
+        .stat-number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        @media (max-width: 768px) {
+            .hero-section h1 {
+                font-size: 2rem;
+            }
+            
+            .webinar-card {
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="container">
+            <h1><i class="fas fa-video me-3"></i>Webinar Registration Portal</h1>
+            <p>Test webinar registration system with automatic LMS account creation</p>
+            
+            <!-- Stats Section -->
+            <div class="stats-section">
+                <div class="row">
+                    <div class="col-md-3 col-6">
+                        <div class="stat-item">
+                            <span class="stat-number">{{ stats.total_webinars|default:0 }}</span>
+                            <span class="stat-label">Total Webinars</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-item">
+                            <span class="stat-number">{{ stats.total_attendees|default:0 }}</span>
+                            <span class="stat-label">Total Attendees</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-item">
+                            <span class="stat-number">{{ stats.upcoming_webinars|default:0 }}</span>
+                            <span class="stat-label">Upcoming</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3 col-6">
+                        <div class="stat-item">
+                            <span class="stat-number">{{ stats.free_webinars|default:0 }}</span>
+                            <span class="stat-label">Free Webinars</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Webinars Section -->
+    <div class="container">
+        <div class="row">
+            {% for webinar in webinars %}
+            <div class="col-md-6 col-lg-4">
+                <div class="webinar-card">
+                    <div class="webinar-header position-relative">
+                        <span class="webinar-type-badge">
+                            {% if webinar.webinar_type == 'free' %}
+                                <i class="fas fa-gift me-1"></i>FREE
+                            {% else %}
+                                <i class="fas fa-dollar-sign me-1"></i>${{ webinar.price }}
+                            {% endif %}
+                        </span>
+                        <h4>{{ webinar.title }}</h4>
+                        <p class="mb-0">{{ webinar.short_description|truncatechars:80 }}</p>
+                    </div>
+                    
+                    <div class="webinar-body">
+                        <div class="webinar-info">
+                            <div class="mb-2">
+                                <i class="fas fa-calendar-alt"></i>
+                                {{ webinar.scheduled_date|date:"M d, Y" }}
+                            </div>
+                            <div class="mb-2">
+                                <i class="fas fa-clock"></i>
+                                {{ webinar.scheduled_date|date:"h:i A" }} ({{ webinar.duration_minutes }} min)
+                            </div>
+                            <div class="mb-2">
+                                <i class="fas fa-user"></i>
+                                {{ webinar.instructor.get_full_name }}
+                            </div>
+                            <div class="mb-2">
+                                <i class="fas fa-users"></i>
+                                {{ webinar.get_available_spots }} spots available
+                            </div>
+                        </div>
+                        
+                        <!-- Registration Form -->
+                        <div class="registration-form">
+                            <h6><i class="fas fa-user-plus me-2"></i>Quick Registration</h6>
+                            <form class="webinar-registration-form" data-webinar-id="{{ webinar.id }}">
+                                <div class="row">
+                                    <div class="col-md-6 mb-2">
+                                        <input type="text" name="first_name" class="form-control form-control-sm" placeholder="First Name" required>
+                                    </div>
+                                    <div class="col-md-6 mb-2">
+                                        <input type="text" name="last_name" class="form-control form-control-sm" placeholder="Last Name" required>
+                                    </div>
+                                </div>
+                                <div class="mb-2">
+                                    <input type="email" name="email" class="form-control form-control-sm" placeholder="Email Address" required>
+                                </div>
+                                <div class="mb-2">
+                                    <input type="tel" name="phone_number" class="form-control form-control-sm" placeholder="Phone (Optional)">
+                                </div>
+                                <div class="mb-3">
+                                    <input type="text" name="company" class="form-control form-control-sm" placeholder="Company (Optional)">
+                                </div>
+                                <button type="submit" class="btn btn-register w-100">
+                                    <span class="btn-text">Register Now</span>
+                                    <span class="loading">
+                                        <i class="fas fa-spinner fa-spin"></i> Registering...
+                                    </span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="alert alert-info alert-custom text-center">
+                    <i class="fas fa-info-circle me-2"></i>
+                    No webinars available at the moment. Please check back later!
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Manual Test Section -->
+        <div class="row mt-5">
+            <div class="col-12">
+                <div class="webinar-card">
+                    <div class="webinar-header">
+                        <h4><i class="fas fa-flask me-2"></i>Manual API Test</h4>
+                        <p class="mb-0">Test the API directly with custom data</p>
+                    </div>
+                    <div class="webinar-body">
+                        <form id="manual-test-form">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Webinar ID</label>
+                                        <select name="webinar_id" class="form-select" required>
+                                            <option value="">Select Webinar</option>
+                                            {% for webinar in webinars %}
+                                            <option value="{{ webinar.id }}">{{ webinar.title }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">First Name</label>
+                                        <input type="text" name="first_name" class="form-control" placeholder="John" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Last Name</label>
+                                        <input type="text" name="last_name" class="form-control" placeholder="Doe" required>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Email</label>
+                                        <input type="email" name="email" class="form-control" placeholder="john.doe@example.com" required>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Phone (Optional)</label>
+                                        <input type="tel" name="phone_number" class="form-control" placeholder="+1234567890">
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label">Company (Optional)</label>
+                                        <input type="text" name="company" class="form-control" placeholder="Company Name">
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-register">
+                                <i class="fas fa-code me-2"></i>Test API Registration
+                            </button>
+                        </form>
+                        
+                        <!-- API Response Display -->
+                        <div id="api-response" class="mt-4" style="display: none;">
+                            <h6>API Response:</h6>
+                            <pre id="response-content" class="bg-dark text-light p-3 rounded"></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Success Modal -->
+    <div class="modal fade" id="successModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-check-circle me-2"></i>Registration Successful!
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="success-message"></div>
+                    <hr>
+                    <h6>Next Steps:</h6>
+                    <ol>
+                        <li>Check your email for login credentials</li>
+                        <li>Login to the LMS using the provided credentials</li>
+                        <li>Access your webinars from the dashboard</li>
+                    </ol>
+                    <div class="text-center mt-3">
+                        <a href="/login/" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt me-2"></i>Login to LMS
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // API Configuration - Update these values
+        const API_CONFIG = {
+            apiKey: 'your-secret-api-key-here',  // Change this
+            clientName: 'external_website_1',    // Change this
+            baseUrl: window.location.origin
+        };
+
+        // Generic registration handler
+        async function registerForWebinar(formData, webinarId) {
+            try {
+const response = await fetch(`${API_CONFIG.baseUrl}/webinars/ajax-register/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-API-Key': API_CONFIG.apiKey,
+                        'X-Client-Name': API_CONFIG.clientName
+                    },
+                    body: JSON.stringify({
+                        webinar_id: webinarId,
+                        first_name: formData.first_name,
+                        last_name: formData.last_name,
+                        email: formData.email,
+                        phone_number: formData.phone_number || '',
+                        company: formData.company || '',
+                        designation: formData.designation || ''
+                    })
+                });
+
+                const data = await response.json();
+                return { success: response.ok, data };
+            } catch (error) {
+                return { success: false, error: error.message };
+            }
+        }
+
+        // Handle webinar card registrations
+        document.querySelectorAll('.webinar-registration-form').forEach(form => {
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const submitBtn = this.querySelector('button[type="submit"]');
+                const btnText = submitBtn.querySelector('.btn-text');
+                const loading = submitBtn.querySelector('.loading');
+                const webinarId = this.dataset.webinarId;
+                
+                // Show loading state
+                btnText.style.display = 'none';
+                loading.classList.add('show');
+                submitBtn.disabled = true;
+                
+                // Get form data
+                const formData = new FormData(this);
+                const data = Object.fromEntries(formData.entries());
+                
+                // Register for webinar
+                const result = await registerForWebinar(data, webinarId);
+                
+                // Hide loading state
+                btnText.style.display = 'inline';
+                loading.classList.remove('show');
+                submitBtn.disabled = false;
+                
+                if (result.success) {
+                    // Show success modal
+                    document.getElementById('success-message').innerHTML = `
+                        <div class="alert alert-success">
+                            <strong>Welcome ${data.first_name}!</strong><br>
+                            You've been successfully registered for this webinar.<br>
+                            <strong>Username:</strong> ${result.data.login_details.username}<br>
+                            <strong>Login URL:</strong> <a href="${result.data.login_details.login_url}" target="_blank">${result.data.login_details.login_url}</a>
+                        </div>
+                    `;
+                    const modal = new bootstrap.Modal(document.getElementById('successModal'));
+                    modal.show();
+                    
+                    // Reset form
+                    this.reset();
+                } else {
+                    // Show error
+                    alert(`Registration failed: ${result.data?.error || result.error || 'Unknown error'}`);
+                }
+            });
+        });
+
+        // Handle manual test form
+        document.getElementById('manual-test-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Testing...';
+            
+            // Get form data
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData.entries());
+            
+            // Register for webinar
+            const result = await registerForWebinar(data, data.webinar_id);
+            
+            // Show API response
+            const responseDiv = document.getElementById('api-response');
+            const responseContent = document.getElementById('response-content');
+            
+            responseContent.textContent = JSON.stringify(result, null, 2);
+            responseDiv.style.display = 'block';
+            
+            // Reset button
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="fas fa-code me-2"></i>Test API Registration';
+            
+            if (result.success) {
+                responseContent.className = 'bg-success text-white p-3 rounded';
+            } else {
+                responseContent.className = 'bg-danger text-white p-3 rounded';
+            }
+        });
+
+        // Auto-populate test data button
+        function populateTestData() {
+            const form = document.getElementById('manual-test-form');
+            const timestamp = Date.now();
+            
+            form.querySelector('[name="first_name"]').value = 'Test';
+            form.querySelector('[name="last_name"]').value = 'User';
+            form.querySelector('[name="email"]').value = `test${timestamp}@example.com`;
+            form.querySelector('[name="phone_number"]').value = '+1234567890';
+            form.querySelector('[name="company"]').value = 'Test Company';
+        }
+
+        // Add test data button
+        document.addEventListener('DOMContentLoaded', function() {
+            const manualForm = document.getElementById('manual-test-form');
+            const testButton = document.createElement('button');
+            testButton.type = 'button';
+            testButton.className = 'btn btn-outline-secondary me-2';
+            testButton.innerHTML = '<i class="fas fa-magic me-1"></i>Fill Test Data';
+            testButton.onclick = populateTestData;
+            
+            manualForm.querySelector('button[type="submit"]').parentNode.insertBefore(testButton, manualForm.querySelector('button[type="submit"]'));
+        });
+    </script>
+</body>
+</html>

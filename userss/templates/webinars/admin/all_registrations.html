@@ -1,0 +1,1034 @@
+{% extends 'base.html' %}
+
+{% block title %}All Registrations - LMS Admin{% endblock %}
+
+{% block content %}
+<!-- CSRF Token for JavaScript -->
+<meta name="csrf-token" content="{{ csrf_token }}">
+
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'webinars:admin_webinar_dashboard' %}">Webinars</a></li>
+        <li class="breadcrumb-item active">All Registrations</li>
+    </ol>
+</nav>
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-users me-2"></i>All Webinar Registrations
+        </h2>
+        <p class="text-muted mb-0">Manage all webinar registrations across the platform</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#exportModal">
+            <i class="fas fa-download me-2"></i>Export All Data
+        </button>
+        <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#statsModal">
+            <i class="fas fa-chart-bar me-2"></i>View Stats
+        </button>
+    </div>
+</div>
+
+<!-- Quick Stats Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stats-card h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-users stats-icon"></i>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <div class="text-white-50 small">Total Registrations</div>
+                    <div class="h4 mb-0 text-white">{{ registrations.paginator.count|default:0 }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stats-card h-100" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+            <div class="card-body d-flex align-items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-check-circle stats-icon"></i>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <div class="text-white-50 small">Paid</div>
+                    <div class="h4 mb-0 text-white">{{ paid_count|default:0 }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stats-card h-100" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
+            <div class="card-body d-flex align-items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-clock stats-icon"></i>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <div class="text-white-50 small">Pending Payment</div>
+                    <div class="h4 mb-0 text-white">{{ pending_payment_count|default:0 }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stats-card h-100" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+            <div class="card-body d-flex align-items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-times-circle stats-icon"></i>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <div class="text-white-50 small">Cancelled</div>
+                    <div class="h4 mb-0 text-white">{{ cancelled_count|default:0 }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Search and Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <!-- Search -->
+            <div class="col-md-3">
+                <label for="search" class="form-label">
+                    <i class="fas fa-search me-1"></i>Search Registrations
+                </label>
+                <input type="text" 
+                       class="form-control" 
+                       id="search" 
+                       name="search" 
+                       placeholder="Search by name, email, webinar..."
+                       value="{{ search }}">
+            </div>
+
+            <!-- Webinar Filter -->
+            <div class="col-md-3">
+                <label for="webinar" class="form-label">
+                    <i class="fas fa-video me-1"></i>Webinar
+                </label>
+                <select class="form-select" id="webinar" name="webinar">
+                    <option value="">All Webinars</option>
+                    {% for webinar in webinars %}
+                        <option value="{{ webinar.id }}" {% if webinar_id == webinar.id|stringformat:"s" %}selected{% endif %}>
+                            {{ webinar.title|truncatechars:40 }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <!-- Status Filter -->
+            <div class="col-md-2">
+                <label for="status" class="form-label">
+                    <i class="fas fa-filter me-1"></i>Status
+                </label>
+                <select class="form-select" id="status" name="status">
+                    <option value="">All Status</option>
+                    <option value="registered" {% if status == 'registered' %}selected{% endif %}>Registered</option>
+                    <option value="attended" {% if status == 'attended' %}selected{% endif %}>Attended</option>
+                    <option value="no_show" {% if status == 'no_show' %}selected{% endif %}>No Show</option>
+                    <option value="cancelled" {% if status == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                </select>
+            </div>
+
+            <!-- Payment Filter -->
+            <div class="col-md-2">
+                <label for="payment_status" class="form-label">
+                    <i class="fas fa-credit-card me-1"></i>Payment
+                </label>
+                <select class="form-select" id="payment_status" name="payment_status">
+                    <option value="">All Payments</option>
+                    <option value="paid" {% if payment_status == 'paid' %}selected{% endif %}>Paid</option>
+                    <option value="pending" {% if payment_status == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="failed" {% if payment_status == 'failed' %}selected{% endif %}>Failed</option>
+                </select>
+            </div>
+
+            <!-- Filter Actions -->
+            <div class="col-md-2">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="fas fa-search me-1"></i>Filter
+                    </button>
+                    <a href="{% url 'webinars:admin_all_registrations' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i>Clear
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Registrations List -->
+<div class="card">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="fas fa-list me-2"></i>All Registrations
+            <span class="badge bg-light text-primary ms-2">{{ registrations.paginator.count }}</span>
+        </h5>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-light btn-sm" id="bulkActionBtn" style="display: none;">
+                <i class="fas fa-tasks me-1"></i>Bulk Actions
+            </button>
+            <div class="dropdown">
+                <button class="btn btn-outline-light btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-cog me-1"></i>Actions
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="#" onclick="bulkUpdateStatus('attended')">
+                        <i class="fas fa-check me-2"></i>Mark Selected as Attended
+                    </a></li>
+                    <li><a class="dropdown-item" href="#" onclick="sendBulkReminders()">
+                        <i class="fas fa-bell me-2"></i>Send Reminders to Selected
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#exportModal">
+                        <i class="fas fa-download me-2"></i>Export All Data
+                    </a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if registrations %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="50">
+                                <input type="checkbox" id="selectAll" class="form-check-input">
+                            </th>
+                            <th>Participant</th>
+                            <th>Webinar</th>
+                            <th>Contact</th>
+                            <th>Company</th>
+                            <th>Registration Date</th>
+                            <th>Status</th>
+                            <th width="120">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for registration in registrations %}
+                        <tr>
+                            <td>
+                                <input type="checkbox" class="form-check-input registration-checkbox" value="{{ registration.id }}">
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                            <i class="fas fa-user text-white"></i>
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <h6 class="mb-0">{{ registration.first_name }} {{ registration.last_name }}</h6>
+                                        <small class="text-muted">{{ registration.email }}</small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-shrink-0">
+                                        {% if registration.webinar.thumbnail %}
+                                            <img src="{{ registration.webinar.thumbnail.url }}" class="rounded" width="40" height="30" style="object-fit: cover;">
+                                        {% else %}
+                                            <div class="bg-info rounded d-flex align-items-center justify-content-center" style="width: 40px; height: 30px;">
+                                                <i class="fas fa-video text-white"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-grow-1 ms-2">
+                                        <h6 class="mb-0">{{ registration.webinar.title|truncatechars:30 }}</h6>
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar me-1"></i>{{ registration.webinar.scheduled_date|date:"M d, Y" }}
+                                            {% if registration.webinar.webinar_type == 'paid' %}
+                                                <span class="badge bg-warning text-dark ms-1">₹{{ registration.webinar.price }}</span>
+                                            {% else %}
+                                                <span class="badge bg-success ms-1">FREE</span>
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    <strong>{{ registration.email }}</strong><br>
+                                    {% if registration.phone_number %}
+                                        <small class="text-muted">
+                                            <i class="fas fa-phone me-1"></i>{{ registration.phone_number }}
+                                        </small>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                {% if registration.company %}
+                                    <div>
+                                        <strong>{{ registration.company }}</strong><br>
+                                        {% if registration.designation %}
+                                            <small class="text-muted">{{ registration.designation }}</small>
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <span class="text-muted">Not provided</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div>
+                                    <strong>{{ registration.registered_at|date:"M d, Y" }}</strong><br>
+                                    <small class="text-muted">{{ registration.registered_at|time:"h:i A" }}</small><br>
+                                    <small class="text-info">{{ registration.registered_at|timesince }} ago</small>
+                                </div>
+                            </td>
+                            <td>
+                                <!-- Registration Status -->
+                                {% if registration.status == 'registered' %}
+                                    <span class="badge bg-primary">
+                                        <i class="fas fa-user-plus me-1"></i>Registered
+                                    </span>
+                                {% elif registration.status == 'attended' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle me-1"></i>Attended
+                                    </span>
+                                {% elif registration.status == 'no_show' %}
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-times-circle me-1"></i>No Show
+                                    </span>
+                                {% elif registration.status == 'cancelled' %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-ban me-1"></i>Cancelled
+                                    </span>
+                                {% endif %}
+                                
+                                <!-- Payment Status for Paid Webinars -->
+                                {% if registration.webinar.webinar_type == 'paid' %}
+                                    <br><small class="text-muted">Payment:</small>
+                                    {% if registration.payment_status == 'paid' %}
+                                        <br><span class="badge bg-success bg-opacity-75">
+                                            <i class="fas fa-check me-1"></i>Paid
+                                        </span>
+                                    {% elif registration.payment_status == 'pending' %}
+                                        <br><span class="badge bg-warning text-dark">
+                                            <i class="fas fa-clock me-1"></i>Pending
+                                        </span>
+                                    {% elif registration.payment_status == 'failed' %}
+                                        <br><span class="badge bg-danger bg-opacity-75">
+                                            <i class="fas fa-times me-1"></i>Failed
+                                        </span>
+                                    {% endif %}
+                                {% else %}
+                                    <br><span class="badge bg-info bg-opacity-50">
+                                        <i class="fas fa-gift me-1"></i>Free
+                                    </span>
+                                {% endif %}
+                            </td>
+                            <td class="position-relative">
+                                <div class="btn-group" role="group">
+                                    <button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle" 
+                                            data-bs-toggle="dropdown" 
+                                            data-bs-auto-close="outside"
+                                            aria-expanded="false">
+                                        <i class="fas fa-cog"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end dropdown-menu-wide"
+                                        <li><h6 class="dropdown-header">Update Status</h6></li>
+                                        <li><a class="dropdown-item" href="#" onclick="updateStatus({{ registration.id }}, 'registered')">
+                                            <i class="fas fa-user-plus text-primary me-2"></i>Mark as Registered
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="updateStatus({{ registration.id }}, 'attended')">
+                                            <i class="fas fa-check-circle text-success me-2"></i>Mark as Attended
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="updateStatus({{ registration.id }}, 'no_show')">
+                                            <i class="fas fa-times-circle text-warning me-2"></i>Mark as No Show
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="updateStatus({{ registration.id }}, 'cancelled')">
+                                            <i class="fas fa-ban text-danger me-2"></i>Mark as Cancelled
+                                        </a></li>
+                                        
+                                        <!-- PAYMENT MANAGEMENT SECTION -->
+                                        {% if registration.webinar.webinar_type == 'paid' %}
+                                            <li><hr class="dropdown-divider"></li>
+                                            <li><h6 class="dropdown-header">Payment Actions</h6></li>
+                                            {% if registration.payment_status == 'pending' %}
+                                                <li><a class="dropdown-item" href="{% url 'webinars:admin_mark_payment' registration.id %}">
+                                                    <i class="fas fa-credit-card text-success me-2"></i>Mark Payment as Paid
+                                                </a></li>
+                                                <li><a class="dropdown-item" href="#" onclick="sendPaymentReminder({{ registration.id }})">
+                                                    <i class="fas fa-envelope text-info me-2"></i>Send Payment Reminder
+                                                </a></li>
+                                            {% elif registration.payment_status == 'paid' %}
+                                                <li><span class="dropdown-item-text text-success">
+                                                    <i class="fas fa-check-circle me-2"></i>Payment Confirmed
+                                                    {% if registration.payment_date %}
+                                                        <br><small class="text-muted">{{ registration.payment_date|date:"M j, Y" }}</small>
+                                                    {% endif %}
+                                                </span></li>
+                                            {% endif %}
+                                        {% endif %}
+                                        
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><h6 class="dropdown-header">Other Actions</h6></li>
+                                        <li><a class="dropdown-item" href="{% url 'webinars:admin_webinar_registrations' registration.webinar.id %}">
+                                            <i class="fas fa-video text-info me-2"></i>View Webinar Details
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="sendIndividualReminder({{ registration.id }})">
+                                            <i class="fas fa-bell text-info me-2"></i>Send Webinar Reminder
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#" onclick="viewUserProfile({{ registration.user.id }})">
+                                            <i class="fas fa-user text-secondary me-2"></i>View User Profile
+                                        </a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="#" onclick="deleteRegistration({{ registration.id }})">
+                                            <i class="fas fa-trash me-2"></i>Delete Registration
+                                        </a></li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if registrations.has_other_pages %}
+            <div class="card-footer">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if registrations.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}{% if webinar_id %}&webinar={{ webinar_id }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if payment_status %}&payment_status={{ payment_status }}{% endif %}">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ registrations.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if webinar_id %}&webinar={{ webinar_id }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if payment_status %}&payment_status={{ payment_status }}{% endif %}">
+                                    <i class="fas fa-angle-left"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        <li class="page-item active">
+                            <span class="page-link">
+                                Page {{ registrations.number }} of {{ registrations.paginator.num_pages }}
+                            </span>
+                        </li>
+
+                        {% if registrations.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ registrations.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if webinar_id %}&webinar={{ webinar_id }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if payment_status %}&payment_status={{ payment_status }}{% endif %}">
+                                    <i class="fas fa-angle-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ registrations.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if webinar_id %}&webinar={{ webinar_id }}{% endif %}{% if status %}&status={{ status }}{% endif %}{% if payment_status %}&payment_status={{ payment_status }}{% endif %}">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-users text-muted mb-3" style="font-size: 4rem;"></i>
+                <h4 class="text-muted">No registrations found</h4>
+                <p class="text-muted mb-4">
+                    {% if search or webinar_id or status or payment_status %}
+                        No registrations match your current filters.
+                    {% else %}
+                        No registrations have been made yet.
+                    {% endif %}
+                </p>
+                {% if search or webinar_id or status or payment_status %}
+                    <a href="{% url 'webinars:admin_all_registrations' %}" class="btn btn-outline-primary">
+                        <i class="fas fa-times me-2"></i>Clear All Filters
+                    </a>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Export Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-download me-2"></i>Export All Registrations
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Choose export format for all registration data:</p>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-success" onclick="exportData('csv')">
+                        <i class="fas fa-file-csv me-2"></i>Export as CSV
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="exportData('excel')">
+                        <i class="fas fa-file-excel me-2"></i>Export as Excel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Modal -->
+<div class="modal fade" id="statsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-chart-bar me-2"></i>Registration Statistics
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Status Distribution</h6>
+                        <canvas id="statusChart" width="200" height="200"></canvas>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Top Webinars by Registration</h6>
+                        <div id="topWebinars">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Select All functionality
+        const selectAllCheckbox = document.getElementById('selectAll');
+        const registrationCheckboxes = document.querySelectorAll('.registration-checkbox');
+        const bulkActionBtn = document.getElementById('bulkActionBtn');
+
+        selectAllCheckbox?.addEventListener('change', function() {
+            registrationCheckboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
+            });
+            toggleBulkActions();
+        });
+
+        registrationCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                toggleBulkActions();
+                
+                const checkedCount = document.querySelectorAll('.registration-checkbox:checked').length;
+                if (selectAllCheckbox) {
+                    selectAllCheckbox.checked = checkedCount === registrationCheckboxes.length;
+                    selectAllCheckbox.indeterminate = checkedCount > 0 && checkedCount < registrationCheckboxes.length;
+                }
+            });
+        });
+
+        function toggleBulkActions() {
+            const checkedCount = document.querySelectorAll('.registration-checkbox:checked').length;
+            if (bulkActionBtn) {
+                bulkActionBtn.style.display = checkedCount > 0 ? 'block' : 'none';
+            }
+        }
+
+        // Auto-submit form on filter change
+        const filterSelects = document.querySelectorAll('#webinar, #status, #payment_status');
+        filterSelects.forEach(select => {
+            select.addEventListener('change', function() {
+                this.form.submit();
+            });
+        });
+    });
+
+    function updateStatus(registrationId, newStatus) {
+        if (!confirm('Are you sure you want to update this registration status?')) {
+            return;
+        }
+
+        fetch(`/webinars/admin/registration/${registrationId}/update-status/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+            },
+            body: JSON.stringify({ status: newStatus })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error updating status: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error updating status. Please try again.');
+            console.error('Error:', error);
+        });
+    }
+
+    function deleteRegistration(registrationId) {
+        if (!confirm('Are you sure you want to delete this registration? This action cannot be undone.')) {
+            return;
+        }
+
+        fetch(`/webinars/admin/registration/${registrationId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error deleting registration: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error deleting registration. Please try again.');
+            console.error('Error:', error);
+        });
+    }
+
+    function sendIndividualReminder(registrationId) {
+        if (!confirm('Send webinar reminder email to this participant?')) {
+            return;
+        }
+
+        fetch(`/webinars/admin/registration/${registrationId}/send-reminder/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Reminder sent successfully!');
+            } else {
+                alert('Error sending reminder: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error sending reminder. Please try again.');
+            console.error('Error:', error);
+        });
+    }
+
+    function deleteRegistration(registrationId) {
+        if (!confirm('Are you sure you want to delete this registration? This action cannot be undone.')) {
+            return;
+        }
+
+        // Get CSRF token properly
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                         document.querySelector('meta[name="csrf-token"]')?.content ||
+                         getCookie('csrftoken');
+
+        fetch(`/webinars/admin/registration/${registrationId}/delete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error deleting registration: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error deleting registration. Please try again.');
+            console.error('Error:', error);
+        });
+    }
+
+    function sendIndividualReminder(registrationId) {
+        if (!confirm('Send webinar reminder email to this participant?')) {
+            return;
+        }
+
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                         document.querySelector('meta[name="csrf-token"]')?.content ||
+                         getCookie('csrftoken');
+
+        fetch(`/webinars/admin/registration/${registrationId}/send-reminder/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Reminder sent successfully!');
+            } else {
+                alert('Error sending reminder: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error sending reminder. Please try again.');
+            console.error('Error:', error);
+        });
+    }
+
+    function sendPaymentReminder(registrationId) {
+        if (!confirm('Send payment reminder email to this participant?')) {
+            return;
+        }
+
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                         document.querySelector('meta[name="csrf-token"]')?.content ||
+                         getCookie('csrftoken');
+
+        fetch(`/webinars/admin/registration/${registrationId}/send-payment-reminder/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken,
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Payment reminder sent successfully!');
+            } else {
+                alert('Error sending payment reminder: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error sending payment reminder. Please try again.');
+            console.error('Error:', error);
+        });
+    }
+
+    function viewUserProfile(userId) {
+        window.open(`/admin/users/${userId}/`, '_blank');
+    }
+
+    function bulkUpdateStatus(newStatus) {
+        const selectedIds = Array.from(document.querySelectorAll('.registration-checkbox:checked')).map(cb => cb.value);
+        
+        if (selectedIds.length === 0) {
+            alert('Please select registrations to update.');
+            return;
+        }
+
+        if (!confirm(`Update ${selectedIds.length} registrations to ${newStatus}?`)) {
+            return;
+        }
+
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                         document.querySelector('meta[name="csrf-token"]')?.content ||
+                         getCookie('csrftoken');
+
+        fetch('/webinars/admin/bulk-update-status/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ 
+                registration_ids: selectedIds,
+                status: newStatus 
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error updating statuses: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error updating statuses. Please try again.');
+            console.error('Error:', error);
+        });
+    }
+
+    function sendBulkReminders() {
+        const selectedIds = Array.from(document.querySelectorAll('.registration-checkbox:checked')).map(cb => cb.value);
+        
+        if (selectedIds.length === 0) {
+            alert('Please select registrations to send reminders to.');
+            return;
+        }
+
+        if (!confirm(`Send reminders to ${selectedIds.length} participants?`)) {
+            return;
+        }
+
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                         document.querySelector('meta[name="csrf-token"]')?.content ||
+                         getCookie('csrftoken');
+
+        fetch('/webinars/admin/bulk-send-reminders/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ registration_ids: selectedIds })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(`Reminders sent to ${data.count} participants!`);
+            } else {
+                alert('Error sending reminders: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error sending reminders. Please try again.');
+            console.error('Error:', error);
+        });
+    }
+
+    function exportData(format) {
+        const url = `/webinars/admin/export-all-registrations/?format=${format}`;
+        window.open(url, '_blank');
+        
+        // Close modal
+        const modal = bootstrap.Modal.getInstance(document.getElementById('exportModal'));
+        modal.hide();
+    }
+
+    // Helper function to get CSRF token from cookies
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+
+<style>
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        color: white;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .stats-icon {
+        font-size: 2.5rem;
+        opacity: 0.8;
+    }
+    
+    .card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .table th {
+        border-top: none;
+        font-weight: 600;
+        color: #495057;
+        font-size: 0.875rem;
+        background-color: #f8f9fa;
+    }
+    
+    .table td {
+        vertical-align: middle;
+        border-color: #f8f9fa;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.375rem 0.75rem;
+    }
+    
+    .btn-group .btn {
+        border-radius: 6px;
+    }
+    
+    /* WIDER DROPDOWN MENU WITH VISIBILITY FIX */
+    .dropdown-menu-wide {
+        min-width: 320px !important;
+        max-height: 450px;
+        overflow-y: auto;
+        border: none;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.2) !important;
+        border-radius: 12px;
+        padding: 0.75rem 0;
+        z-index: 9999 !important;
+        position: absolute !important;
+    }
+    
+    .table-responsive {
+        overflow: visible !important;
+    }
+    
+    .btn-group {
+        position: static;
+    }
+    
+    .position-relative {
+        position: relative !important;
+    }
+    
+    .dropdown-menu-wide .dropdown-item {
+        padding: 0.875rem 1.5rem;
+        transition: all 0.2s ease;
+        font-size: 0.9rem;
+        white-space: nowrap;
+        border: none;
+        background: transparent;
+    }
+    
+    .dropdown-menu-wide .dropdown-item:hover {
+        background-color: #f8f9fa !important;
+        padding-left: 1.75rem;
+        color: #495057;
+    }
+    
+    .dropdown-menu-wide .dropdown-header {
+        padding: 0.5rem 1.5rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #e9ecef;
+        margin-bottom: 0.25rem;
+    }
+    
+    .dropdown-menu-wide .dropdown-divider {
+        margin: 0.75rem 0;
+        border-color: #e9ecef;
+    }
+    
+    .dropdown-menu-wide .dropdown-item-text {
+        padding: 0.875rem 1.5rem;
+        color: #495057;
+        font-size: 0.9rem;
+        background: rgba(40, 167, 69, 0.1);
+        border-left: 3px solid #28a745;
+        margin: 0.25rem 0;
+    }
+    
+    .dropdown-item i {
+        width: 16px;
+        display: inline-block;
+    }
+    
+    .breadcrumb {
+        background: transparent;
+        padding: 0;
+    }
+    
+    .breadcrumb-item a {
+        color: #0d6efd;
+        text-decoration: none;
+    }
+    
+    .breadcrumb-item a:hover {
+        text-decoration: underline;
+    }
+    
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    }
+    
+    .pagination .page-link {
+        border: none;
+        color: #0d6efd;
+        margin: 0 2px;
+        border-radius: 6px;
+    }
+    
+    .pagination .page-item.active .page-link {
+        background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+        border: none;
+    }
+    
+    .pagination .page-link:hover {
+        background-color: #f8f9fa;
+        color: #0a58ca;
+    }
+    
+    @media (max-width: 768px) {
+        .table-responsive {
+            font-size: 0.875rem;
+            overflow-x: auto;
+            overflow-y: visible !important;
+        }
+        
+        .dropdown-menu-wide {
+            min-width: 280px !important;
+            position: fixed !important;
+            transform: translateX(-50%) !important;
+            left: 50% !important;
+            top: auto !important;
+        }
+        
+        .dropdown-menu-wide .dropdown-item {
+            padding: 0.75rem 1.25rem;
+            font-size: 0.85rem;
+        }
+        
+        .btn-group .btn {
+            padding: 0.375rem 0.75rem;
+        }
+        
+        .badge {
+            font-size: 0.7rem;
+            padding: 0.25rem 0.5rem;
+        }
+        
+        .stats-card {
+            margin-bottom: 1rem;
+        }
+        
+        .position-relative {
+            position: static !important;
+        }
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,270 @@
+<!-- courses/templates/courses/batch_enrollments.html -->
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Students - {{ batch.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-user-graduate me-2"></i>Batch Students</h2>
+            <p class="text-muted mb-0">{{ batch.name }} - {{ batch.code }}</p>
+            <small class="text-muted">{{ course.title }}</small>
+        </div>
+        
+        <div>
+            <a href="{% url 'courses:batch_detail' course.id batch.id %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Batch
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Enrollment Stats -->
+        <div class="col-md-3 mb-4">
+            <div class="card bg-primary text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-users fa-2x mb-2"></i>
+                    <h4 class="mb-0">{{ batch.get_enrolled_count }}</h4>
+                    <small>Total Students</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-4">
+            <div class="card bg-success text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-user-check fa-2x mb-2"></i>
+                    <h4 class="mb-0">
+                        {{ enrollments|dictsort:"status"|dictsortreversed:"enrolled"|length }}
+                    </h4>
+                    <small>Active Students</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-4">
+            <div class="card bg-info text-white">
+                <div class="card-body text-center">
+                    <i class="fas fa-chair fa-2x mb-2"></i>
+                    <h4 class="mb-0">{{ batch.get_available_seats }}</h4>
+                    <small>Available Seats</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3 mb-4">
+            <div class="card bg-warning text-dark">
+                <div class="card-body text-center">
+                    <i class="fas fa-percentage fa-2x mb-2"></i>
+                    <h4 class="mb-0">
+                        {% widthratio batch.get_enrolled_count batch.max_students 100 %}%
+                    </h4>
+                    <small>Capacity Used</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Add Student Form -->
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Add New Student</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.student.id_for_label }}" class="form-label">
+                                <strong>Select Student</strong>
+                            </label>
+                            {{ form.student }}
+                            {% if form.student.errors %}
+                                <div class="text-danger small mt-1">{{ form.student.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="fas fa-plus me-2"></i>Enroll Student
+                        </button>
+                    </form>
+                    
+                    <hr>
+                    
+                    <div class="text-center">
+                        <small class="text-muted">
+                            <i class="fas fa-info-circle me-1"></i>
+                            Students must have 'student' role to be enrolled
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Students List -->
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Enrolled Students</h5>
+                        <span class="badge bg-light text-dark">{{ enrollments|length }} students</span>
+                    </div>
+                </div>
+                
+                <div class="card-body p-0">
+                    {% if enrollments %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th><i class="fas fa-user me-1"></i>Student</th>
+                                        <th><i class="fas fa-calendar me-1"></i>Enrolled</th>
+                                        <th><i class="fas fa-flag me-1"></i>Status</th>
+                                        <th><i class="fas fa-cogs me-1"></i>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for enrollment in enrollments %}
+                                        <tr>
+                                            <td>
+                                                <div class="d-flex align-items-center">
+                                                    <div class="me-3">
+                                                        <i class="fas fa-user-circle text-primary fa-lg"></i>
+                                                    </div>
+                                                    <div>
+                                                        <div class="fw-medium">
+                                                            {{ enrollment.student.get_full_name|default:enrollment.student.username }}
+                                                        </div>
+                                                        <small class="text-muted">{{ enrollment.student.email }}</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div>{{ enrollment.enrolled_at|date:"M d, Y" }}</div>
+                                                <small class="text-muted">{{ enrollment.enrolled_at|timesince }} ago</small>
+                                            </td>
+                                            <td>
+                                                <span class="badge bg-{% if enrollment.status == 'enrolled' %}success{% elif enrollment.status == 'completed' %}primary{% elif enrollment.status == 'dropped' %}danger{% else %}secondary{% endif %}">
+                                                    {{ enrollment.get_status_display }}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div class="btn-group btn-group-sm">
+                                                    <button class="btn btn-outline-primary" 
+                                                            data-bs-toggle="dropdown">
+                                                        <i class="fas fa-cog"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu">
+                                                        {% if enrollment.status == 'enrolled' %}
+                                                            <li>
+                                                                <a class="dropdown-item" href="#" 
+                                                                   onclick="changeStatus({{ enrollment.id }}, 'completed')">
+                                                                    <i class="fas fa-check-circle text-success me-2"></i>Mark Completed
+                                                                </a>
+                                                            </li>
+                                                            <li>
+                                                                <a class="dropdown-item" href="#" 
+                                                                   onclick="changeStatus({{ enrollment.id }}, 'dropped')">
+                                                                    <i class="fas fa-times-circle text-danger me-2"></i>Mark Dropped
+                                                                </a>
+                                                            </li>
+                                                        {% elif enrollment.status == 'dropped' %}
+                                                            <li>
+                                                                <a class="dropdown-item" href="#" 
+                                                                   onclick="changeStatus({{ enrollment.id }}, 'enrolled')">
+                                                                    <i class="fas fa-undo text-primary me-2"></i>Re-enroll
+                                                                </a>
+                                                            </li>
+                                                        {% endif %}
+                                                        <li><hr class="dropdown-divider"></li>
+                                                        <li>
+                                                            <a class="dropdown-item text-danger" href="#" 
+                                                               onclick="removeStudent({{ enrollment.id }})">
+                                                                <i class="fas fa-trash me-2"></i>Remove from Batch
+                                                            </a>
+                                                        </li>
+                                                    </ul>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-user-plus text-muted fa-3x mb-3"></i>
+                            <h5 class="text-muted">No Students Enrolled</h5>
+                            <p class="text-muted">Use the form on the left to add your first student to this batch.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function changeStatus(enrollmentId, newStatus) {
+    if (!confirm('Are you sure you want to change this student\'s status?')) {
+        return;
+    }
+    
+    fetch(`/courses/enrollments/${enrollmentId}/change-status/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            status: newStatus
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Something went wrong. Please try again.');
+    });
+}
+
+function removeStudent(enrollmentId) {
+    if (!confirm('Are you sure you want to remove this student from the batch?\n\nThis action cannot be undone.')) {
+        return;
+    }
+    
+    fetch(`/courses/enrollments/${enrollmentId}/remove/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Something went wrong. Please try again.');
+    });
+}
+</script>
+{% endblock %}

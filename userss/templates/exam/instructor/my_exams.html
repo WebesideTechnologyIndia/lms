@@ -1,0 +1,400 @@
+{% extends 'instructor_base.html' %}
+
+{% block title %}My Exams - Instructor Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+    .exam-card {
+        border: none;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        transition: all 0.3s ease;
+        margin-bottom: 1.5rem;
+    }
+    
+    .exam-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    
+    .exam-type-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    
+    .mcq-badge { background: #e3f2fd; color: #1976d2; }
+    .qa-badge { background: #f3e5f5; color: #7b1fa2; }
+    .assignment-badge { background: #e8f5e8; color: #388e3c; }
+    
+    .status-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    
+    .published-badge { background: #e8f5e8; color: #2e7d32; }
+    .draft-badge { background: #fff3e0; color: #f57c00; }
+    .archived-badge { background: #fafafa; color: #616161; }
+    
+    .filter-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .stats-mini {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 1rem;
+        border-radius: 8px;
+        text-align: center;
+        margin-bottom: 1rem;
+    }
+    
+    .stats-mini h5 {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+    
+    .stats-mini small {
+        opacity: 0.9;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">My Exams</h1>
+            <p class="text-muted">Manage all your created exams and assigned exams</p>
+        </div>
+        <div>
+            <a href="{% url 'instructor_create_exam' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-2"></i>Create New Exam
+            </a>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-card">
+        <form method="get" class="row g-3">
+            <div class="col-md-2">
+                <label class="form-label">Search</label>
+                <input type="text" class="form-control" name="search" value="{{ search_query }}" placeholder="Search exams...">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Source</label>
+                <select class="form-select" name="source">
+                    <option value="all" {% if exam_source_filter == 'all' %}selected{% endif %}>All Exams</option>
+                    <option value="created" {% if exam_source_filter == 'created' %}selected{% endif %}>Created by Me</option>
+                    <option value="assigned" {% if exam_source_filter == 'assigned' %}selected{% endif %}>Assigned to Me</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Exam Type</label>
+                <select class="form-select" name="exam_type">
+                    <option value="">All Types</option>
+                    {% for value, label in exam_type_choices %}
+                    <option value="{{ value }}" {% if exam_type_filter == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">Status</label>
+                <select class="form-select" name="status">
+                    <option value="">All Status</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-outline-primary me-2">
+                    <i class="fas fa-search me-1"></i>Filter
+                </button>
+                <a href="{% url 'instructor_my_exams' %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-times me-1"></i>Clear
+                </a>
+            </div>
+        </form>
+    </div>
+
+    {% if exams %}
+    <div class="row">
+        <!-- Exams List -->
+        <div class="col-lg-9">
+            {% for exam_data in exams %}
+            {% with exam=exam_data.exam %}
+            <div class="exam-card card">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="d-flex align-items-start mb-2">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <h5 class="card-title mb-0 me-2">{{ exam.title }}</h5>
+                                        {% if exam_data.is_creator %}
+                                            <span class="badge bg-success">Created by Me</span>
+                                        {% else %}
+                                            <span class="badge bg-info">Assigned to Me</span>
+                                        {% endif %}
+                                    </div>
+                                    <p class="card-text text-muted mb-2">{{ exam.description|truncatechars:150 }}</p>
+                                    
+                                    <!-- Assignment Info for assigned exams -->
+                                    {% if not exam_data.is_creator and exam_data.assignment_info %}
+                                        <div class="alert alert-info alert-sm p-2 mb-2">
+                                            <small><i class="fas fa-info-circle me-1"></i>{{ exam_data.assignment_info }}</small>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex gap-2 mb-3">
+                                <span class="exam-type-badge {{ exam.exam_type }}-badge">
+                                    {{ exam.get_exam_type_display }}
+                                </span>
+                                <span class="status-badge {{ exam.status }}-badge">
+                                    {{ exam.get_status_display }}
+                                </span>
+                                {% if not exam_data.is_creator %}
+                                    <small class="text-muted">by {{ exam.created_by.get_full_name|default:exam.created_by.username }}</small>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="row text-center mb-2">
+                                <div class="col-4">
+                                    <small class="text-muted d-block">Total Questions</small>
+                                    <strong>{{ exam.get_total_questions }}</strong>
+                                </div>
+                                <div class="col-4">
+                                    <small class="text-muted d-block">Total Marks</small>
+                                    <strong>{{ exam.total_marks }}</strong>
+                                </div>
+                                <div class="col-4">
+                                    <small class="text-muted d-block">Attempts</small>
+                                    <strong>{{ exam_data.total_attempts }}</strong>
+                                </div>
+                            </div>
+                            
+                            <small class="text-muted">
+                                <i class="fas fa-calendar me-1"></i>Created {{ exam.created_at|date:"M d, Y" }}
+                                {% if exam.start_datetime %}
+                                    | <i class="fas fa-clock me-1"></i>Starts {{ exam.start_datetime|date:"M d, Y H:i" }}
+                                {% endif %}
+                            </small>
+                        </div>
+                        
+                        <div class="col-md-4">
+                            <div class="d-flex flex-column gap-2">
+                                <!-- View/Edit Button -->
+                                <a href="{% url 'instructor_exam_detail' exam.id %}" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-eye me-1"></i>View Details
+                                </a>
+                                
+                                <!-- Actions based on ownership and status -->
+                                {% if exam_data.is_creator %}
+                                    <!-- Creator actions -->
+                                    {% if exam.status == 'draft' %}
+                                        {% if exam.exam_type == 'mcq' %}
+                                            <a href="{% url 'instructor_add_mcq_questions' exam.id %}" class="btn btn-outline-success btn-sm">
+                                                <i class="fas fa-plus me-1"></i>Add Questions
+                                            </a>
+                                        {% elif exam.exam_type == 'qa' %}
+                                            <a href="{% url 'instructor_add_qa_questions' exam.id %}" class="btn btn-outline-success btn-sm">
+                                                <i class="fas fa-plus me-1"></i>Add Questions
+                                            </a>
+                                        {% elif exam.exam_type == 'assignment' %}
+                                            <a href="{% url 'instructor_setup_assignment' exam.id %}" class="btn btn-outline-success btn-sm">
+                                                <i class="fas fa-cog me-1"></i>Setup Assignment
+                                            </a>
+                                        {% endif %}
+                                    {% elif exam.status == 'published' %}
+                                        <a href="{% url 'instructor_assign_exam' %}?exam={{ exam.id }}" class="btn btn-outline-info btn-sm">
+                                            <i class="fas fa-user-plus me-1"></i>Assign Students
+                                        </a>
+                                    {% endif %}
+                                {% else %}
+                                    <!-- Assigned exam actions -->
+                                    {% if exam.status == 'published' %}
+                                        <a href="{% url 'instructor_exam_submissions' %}?exam={{ exam.id }}" class="btn btn-outline-warning btn-sm">
+                                            <i class="fas fa-clipboard-check me-1"></i>View Submissions
+                                        </a>
+                                        {% if exam_data.pending_grading > 0 %}
+                                            <a href="{% url 'instructor_exam_submissions' %}?exam={{ exam.id }}&grading=ungraded" class="btn btn-outline-danger btn-sm">
+                                                <i class="fas fa-exclamation-triangle me-1"></i>Grade Now ({{ exam_data.pending_grading }})
+                                            </a>
+                                        {% endif %}
+                                    {% endif %}
+                                {% endif %}
+                                
+                                <!-- Common actions for both -->
+                                {% if exam_data.total_attempts > 0 %}
+                                    <a href="{% url 'instructor_exam_submissions' %}?exam={{ exam.id }}" class="btn btn-outline-secondary btn-sm">
+                                        <i class="fas fa-chart-line me-1"></i>View Analytics
+                                    </a>
+                                {% endif %}
+                                
+                                <!-- Pending Grading Alert -->
+                                {% if exam_data.pending_grading > 0 %}
+                                    <div class="alert alert-warning alert-sm p-2 mb-0">
+                                        <small>
+                                            <i class="fas fa-exclamation-triangle me-1"></i>
+                                            {{ exam_data.pending_grading }} pending grading
+                                        </small>
+                                    </div>
+                                {% endif %}
+                                
+                                <!-- Dropdown for more actions (only for created exams) -->
+                                {% if exam_data.is_creator %}
+                                <div class="dropdown">
+                                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-h me-1"></i>More Actions
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#"><i class="fas fa-edit me-2"></i>Edit Exam</a></li>
+                                        <li><a class="dropdown-item" href="#"><i class="fas fa-copy me-2"></i>Duplicate</a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="{% url 'instructor_delete_exam' exam.id %}"><i class="fas fa-trash me-2"></i>Delete</a></li>
+                                    </ul>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endwith %}
+            {% endfor %}
+            
+            <!-- Pagination -->
+            {% if exams.has_other_pages %}
+            <nav aria-label="Exam pagination">
+                <ul class="pagination justify-content-center">
+                    {% if exams.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ exams.previous_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if exam_type_filter %}&exam_type={{ exam_type_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if exam_source_filter %}&source={{ exam_source_filter }}{% endif %}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for page_num in exams.paginator.page_range %}
+                        {% if page_num == exams.number %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ page_num }}</span>
+                            </li>
+                        {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ page_num }}{% if search_query %}&search={{ search_query }}{% endif %}{% if exam_type_filter %}&exam_type={{ exam_type_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if exam_source_filter %}&source={{ exam_source_filter }}{% endif %}">{{ page_num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if exams.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ exams.next_page_number }}{% if search_query %}&search={{ search_query }}{% endif %}{% if exam_type_filter %}&exam_type={{ exam_type_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if exam_source_filter %}&source={{ exam_source_filter }}{% endif %}">Next</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        </div>
+        
+        <!-- Sidebar Stats -->
+        <div class="col-lg-3">
+            <div class="stats-mini">
+                <h5>{{ exams.paginator.count }}</h5>
+                <small>Total Exams</small>
+            </div>
+            
+            <div class="card border-0 shadow-sm mb-3">
+                <div class="card-body p-3">
+                    <h6 class="mb-2">Quick Stats</h6>
+                    <div class="d-flex justify-content-between mb-1">
+                        <small>Created by Me:</small>
+                        <strong>{{ total_created }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-1">
+                        <small>Assigned to Me:</small>
+                        <strong>{{ total_assigned }}</strong>
+                    </div>
+                </div>
+            </div>
+            
+            {% if exam_source_filter != 'all' %}
+            <div class="alert alert-info p-2">
+                <small>
+                    <i class="fas fa-filter me-1"></i>
+                    Filtered by: {{ exam_source_filter|title }}
+                </small>
+            </div>
+            {% endif %}
+            
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'instructor_create_exam' %}" class="btn btn-primary btn-sm">
+                            <i class="fas fa-plus me-2"></i>Create New Exam
+                        </a>
+                        <a href="{% url 'instructor_assign_exam' %}" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-user-plus me-2"></i>Assign Exams
+                        </a>
+                        <a href="{% url 'instructor_exam_submissions' %}" class="btn btn-outline-success btn-sm">
+                            <i class="fas fa-clipboard-check me-2"></i>View All Submissions
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% else %}
+    <!-- Empty State -->
+    <div class="text-center py-5">
+        <i class="fas fa-clipboard-list fa-5x text-muted mb-4"></i>
+        <h3 class="text-muted mb-3">No Exams Found</h3>
+        {% if search_query or exam_type_filter or status_filter or exam_source_filter != 'all' %}
+            <p class="text-muted mb-4">No exams match your current filters. Try adjusting your search criteria.</p>
+            <a href="{% url 'instructor_my_exams' %}" class="btn btn-outline-primary me-2">
+                <i class="fas fa-times me-2"></i>Clear Filters
+            </a>
+        {% elif exam_source_filter == 'assigned' %}
+            <p class="text-muted mb-4">No exams have been assigned to your students, batches, or courses yet.</p>
+        {% else %}
+            <p class="text-muted mb-4">You haven't created any exams yet. Start by creating your first exam.</p>
+        {% endif %}
+        <a href="{% url 'instructor_create_exam' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Create First Exam
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-submit filter form on select change
+    document.querySelectorAll('select[name="exam_type"], select[name="status"], select[name="source"]').forEach(select => {
+        select.addEventListener('change', function() {
+            this.form.submit();
+        });
+    });
+    
+    // Search on Enter key
+    document.querySelector('input[name="search"]').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            this.form.submit();
+        }
+    });
+</script>
+{% endblock %}

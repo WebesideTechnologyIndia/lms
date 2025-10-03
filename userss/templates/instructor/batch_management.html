@@ -1,0 +1,287 @@
+<!-- templates/instructor/batch_management.html -->
+{% extends 'instructor_base.html' %}
+
+{% block title %}Batch Management{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h1 class="h3 mb-0">Batch Management</h1>
+                    <p class="text-muted">Manage your course batches and student enrollments</p>
+                </div>
+                <div>
+                    <!-- FIXED URL - instructor_view_all_batches -->
+                    <a href="{% url 'courses:instructor_view_all_batches' %}" class="btn btn-outline-primary me-2">
+                        <i class="bi bi-list-ul"></i> View All Batches
+                    </a>
+                    <div class="dropdown d-inline">
+                        <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-plus-lg"></i> Create New Batch
+                        </button>
+                        <ul class="dropdown-menu">
+                            {% for course in user.instructor_courses.all %}
+                            <li>
+                                <!-- FIXED URL - instructor_create_batch -->
+                                <a class="dropdown-item" href="{% url 'courses:instructor_create_batch' course.id %}">
+                                    {{ course.title }}
+                                </a>
+                            </li>
+                            {% empty %}
+                            <li><span class="dropdown-item-text text-muted">No courses available</span></li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Active Batches</h6>
+                            <h3 class="mb-0">{{ stats.active_batches|default:0 }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-play-circle fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Total Students</h6>
+                            <h3 class="mb-0">{{ stats.total_students|default:0 }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-people fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Total Batches</h6>
+                            <h3 class="mb-0">{{ stats.total_batches|default:0 }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-collection fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card bg-purple text-white">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Courses</h6>
+                            <h3 class="mb-0">{{ stats.total_courses|default:0 }}</h3>
+                        </div>
+                        <div class="align-self-center">
+                            <i class="bi bi-book fs-1"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Action Cards -->
+    <div class="row mb-4">
+        <!-- Batch Management Card -->
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-collection me-2"></i>Manage Batches
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">View, edit, and organize your course batches. Monitor batch progress and status.</p>
+                    <div class="d-grid gap-2">
+                        <!-- FIXED URL - instructor_view_all_batches -->
+                        <a href="{% url 'courses:instructor_view_all_batches' %}" class="btn btn-outline-primary">
+                            <i class="bi bi-eye me-1"></i>View All Batches
+                        </a>
+                        <!-- FIXED URL - instructor_batch_overview -->
+                        <a href="{% url 'courses:instructor_batch_overview' %}" class="btn btn-primary">
+                            <i class="bi bi-bar-chart me-1"></i>Batch Overview
+                        </a>
+                    </div>
+                </div>
+                <div class="card-footer bg-light text-muted">
+                    <small>{{ stats.total_batches|default:0 }} batches created</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Course Management Card -->
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-book me-2"></i>Course Batches
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Manage batches for specific courses. Create and organize course-specific batches.</p>
+                    <div class="d-grid gap-2">
+                        {% for course in user.instructor_courses.all|slice:":3" %}
+                        <!-- FIXED URL - instructor_batch_list -->
+                        <a href="{% url 'courses:instructor_batch_list' course.id %}" class="btn btn-outline-success btn-sm">
+                            <i class="bi bi-folder me-1"></i>{{ course.title }}
+                        </a>
+                        {% empty %}
+                        <div class="text-muted text-center">
+                            <small>No courses available</small>
+                        </div>
+                        {% endfor %}
+                        {% if user.instructor_courses.count > 3 %}
+                        <a href="{% url 'courses:manage_courses' %}" class="btn btn-success btn-sm">
+                            <i class="bi bi-three-dots me-1"></i>View All Courses
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="card-footer bg-light text-muted">
+                    <small>{{ user.instructor_courses.count }} courses available</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions Card -->
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-header bg-warning text-white">
+                    <h5 class="card-title mb-0">
+                        <i class="bi bi-lightning me-2"></i>Quick Actions
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="card-text">Quick access to common batch management tasks and operations.</p>
+                    <div class="d-grid gap-2">
+                        <!-- FIXED URL with query parameters -->
+                        <a href="{% url 'courses:instructor_view_all_batches' %}?status=active" class="btn btn-outline-warning">
+                            <i class="bi bi-play-circle me-1"></i>Active Batches
+                        </a>
+                        <a href="{% url 'courses:instructor_view_all_batches' %}?status=draft" class="btn btn-outline-warning">
+                            <i class="bi bi-file-earmark me-1"></i>Draft Batches
+                        </a>
+                        <!-- FIXED URL - instructor_batch_overview -->
+                        <a href="{% url 'courses:instructor_batch_overview' %}" class="btn btn-warning">
+                            <i class="bi bi-graph-up me-1"></i>Analytics
+                        </a>
+                    </div>
+                </div>
+                <div class="card-footer bg-light text-muted">
+                    <small>Quick access panel</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Activity Section -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">Recent Batch Activity</h5>
+                    <!-- FIXED URL - instructor_view_all_batches -->
+                    <a href="{% url 'courses:instructor_view_all_batches' %}" class="btn btn-sm btn-outline-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if batches %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Batch Name</th>
+                                    <th>Course</th>
+                                    <th>Students</th>
+                                    <th>Status</th>
+                                    <th>Last Updated</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for batch in batches|slice:":5" %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ batch.name }}</strong>
+                                        <br><small class="text-muted">{{ batch.code }}</small>
+                                    </td>
+                                    <td>{{ batch.course.title }}</td>
+                                    <td>
+                                        <span class="badge bg-info">{{ batch.get_enrolled_count }} students</span>
+                                    </td>
+                                    <td>
+                                        {% if batch.status == 'active' %}
+                                        <span class="badge bg-success">{{ batch.get_status_display }}</span>
+                                        {% elif batch.status == 'draft' %}
+                                        <span class="badge bg-warning">{{ batch.get_status_display }}</span>
+                                        {% else %}
+                                        <span class="badge bg-secondary">{{ batch.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ batch.created_at|timesince }} ago</td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <!-- FIXED URL - instructor_batch_detail -->
+                                            <a href="{% url 'courses:instructor_batch_detail' batch.course.id batch.id %}" class="btn btn-outline-primary">View</a>
+                                            <!-- FIXED URL - instructor_edit_batch -->
+                                            <a href="{% url 'courses:instructor_edit_batch' batch.course.id batch.id %}" class="btn btn-outline-secondary">Edit</a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-4">
+                        <i class="bi bi-collection fs-1 text-muted"></i>
+                        <h5 class="text-muted mt-2">No batches created yet</h5>
+                        <p class="text-muted">Create your first batch to get started</p>
+                        <div class="dropdown">
+                            <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                                <i class="bi bi-plus-lg"></i> Create First Batch
+                            </button>
+                            <ul class="dropdown-menu">
+                                {% for course in user.instructor_courses.all %}
+                                <li>
+                                    <!-- FIXED URL - instructor_create_batch -->
+                                    <a class="dropdown-item" href="{% url 'courses:instructor_create_batch' course.id %}">
+                                        {{ course.title }}
+                                    </a>
+                                </li>
+                                {% empty %}
+                                <li><span class="dropdown-item-text text-muted">Create a course first</span></li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

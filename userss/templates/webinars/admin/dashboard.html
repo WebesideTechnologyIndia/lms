@@ -1,0 +1,344 @@
+{% extends 'base.html' %}
+
+{% block title %}Webinar Dashboard - LMS Admin{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item active">Webinars</li>
+    </ol>
+</nav>
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-video me-2"></i>Webinar Dashboard
+        </h2>
+        <p class="text-muted mb-0">Manage webinars and track performance</p>
+    </div>
+    <div>
+        <a href="{% url 'webinars:admin_create_webinar' %}" class="btn btn-primary">
+            <i class="fas fa-plus me-2"></i>Create Webinar
+        </a>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stats-card h-100">
+            <div class="card-body d-flex align-items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-video stats-icon"></i>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <div class="text-white-50 small">Total Webinars</div>
+                    <div class="h4 mb-0 text-white">{{ total_webinars }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stats-card h-100" style="background: linear-gradient(135deg, #28a745 0%, #20c997 100%);">
+            <div class="card-body d-flex align-items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-calendar-alt stats-icon"></i>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <div class="text-white-50 small">Upcoming</div>
+                    <div class="h4 mb-0 text-white">{{ upcoming_webinars }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stats-card h-100" style="background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);">
+            <div class="card-body d-flex align-items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-users stats-icon"></i>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <div class="text-white-50 small">Total Registrations</div>
+                    <div class="h4 mb-0 text-white">{{ total_registrations }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card stats-card h-100" style="background: linear-gradient(135deg, #17a2b8 0%, #6f42c1 100%);">
+            <div class="card-body d-flex align-items-center">
+                <div class="flex-shrink-0">
+                    <i class="fas fa-check-circle stats-icon"></i>
+                </div>
+                <div class="flex-grow-1 ms-3">
+                    <div class="text-white-50 small">Completed</div>
+                    <div class="h4 mb-0 text-white">{{ completed_webinars }}</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity Row -->
+<div class="row">
+    <!-- Recent Webinars -->
+    <div class="col-lg-8 mb-4">
+        <div class="card recent-card h-100">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-video me-2"></i>Recent Webinars
+                </h5>
+                <a href="{% url 'webinars:admin_manage_webinars' %}" class="btn btn-outline-light btn-sm">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_webinars %}
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Date</th>
+                                    <th>Status</th>
+                                    <th>Registrations</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for webinar in recent_webinars %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="flex-shrink-0">
+                                                {% if webinar.thumbnail %}
+                                                    <img src="{{ webinar.thumbnail.url }}" class="rounded" width="40" height="30" style="object-fit: cover;">
+                                                {% else %}
+                                                    <div class="bg-primary rounded d-flex align-items-center justify-content-center" style="width: 40px; height: 30px;">
+                                                        <i class="fas fa-video text-white"></i>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                            <div class="flex-grow-1 ms-2">
+                                                <h6 class="mb-0">{{ webinar.title|truncatechars:30 }}</h6>
+                                                <small class="text-muted">{{ webinar.instructor.get_full_name }}</small>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <small>{{ webinar.scheduled_date|date:"M d, Y" }}</small><br>
+                                        <small class="text-muted">{{ webinar.scheduled_date|time:"h:i A" }}</small>
+                                    </td>
+                                    <td>
+                                        {% if webinar.status == 'upcoming' %}
+                                            <span class="badge bg-success">{{ webinar.get_status_display }}</span>
+                                        {% elif webinar.status == 'live' %}
+                                            <span class="badge bg-danger">{{ webinar.get_status_display }}</span>
+                                        {% elif webinar.status == 'completed' %}
+                                            <span class="badge bg-info">{{ webinar.get_status_display }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">{{ webinar.get_status_display }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ webinar.total_registrations }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <a href="{% url 'webinars:admin_edit_webinar' webinar.id %}" class="btn btn-outline-primary" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <a href="{% url 'webinars:admin_webinar_registrations' webinar.id %}" class="btn btn-outline-info" title="Registrations">
+                                                <i class="fas fa-users"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-video text-muted mb-3" style="font-size: 3rem;"></i>
+                        <h5 class="text-muted">No webinars created yet</h5>
+                        <p class="text-muted">Create your first webinar to get started</p>
+                        <a href="{% url 'webinars:admin_create_webinar' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Create Webinar
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Registrations -->
+    <div class="col-lg-4 mb-4">
+        <div class="card recent-card h-100">
+            <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-user-plus me-2"></i>Recent Registrations
+                </h5>
+                <a href="{% url 'webinars:admin_all_registrations' %}" class="btn btn-outline-light btn-sm">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_registrations %}
+                    {% for registration in recent_registrations %}
+                    <div class="d-flex align-items-center mb-3 pb-3 {% if not forloop.last %}border-bottom{% endif %}">
+                        <div class="flex-shrink-0">
+                            <div class="bg-success rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                <i class="fas fa-user text-white"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-0">{{ registration.user.get_full_name }}</h6>
+                            <small class="text-muted">{{ registration.webinar.title|truncatechars:25 }}</small><br>
+                            <small class="text-success">
+                                <i class="fas fa-clock me-1"></i>
+                                {{ registration.registered_at|timesince }} ago
+                            </small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-user-plus text-muted mb-3" style="font-size: 2rem;"></i>
+                        <h6 class="text-muted">No registrations yet</h6>
+                        <small class="text-muted">Recent registrations will appear here</small>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Auto-refresh stats every 5 minutes
+        setInterval(function() {
+            // You can implement AJAX refresh here if needed
+            console.log('Auto-refreshing dashboard stats...');
+        }, 300000);
+
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+    });
+</script>
+
+<style>
+    .stats-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 15px;
+        color: white;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .stats-icon {
+        font-size: 2.5rem;
+        opacity: 0.8;
+    }
+    
+    .recent-card {
+        border: none;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        border-radius: 12px;
+        transition: box-shadow 0.3s ease;
+    }
+    
+    .recent-card:hover {
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .table th {
+        border-top: none;
+        font-weight: 600;
+        color: #495057;
+        font-size: 0.875rem;
+    }
+    
+    .table td {
+        vertical-align: middle;
+        border-color: #f8f9fa;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .btn-group-sm .btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+    
+    .badge {
+        font-size: 0.75rem;
+        padding: 0.375rem 0.75rem;
+    }
+    
+    .breadcrumb {
+        background: transparent;
+        padding: 0;
+    }
+    
+    .breadcrumb-item a {
+        color: #0d6efd;
+        text-decoration: none;
+    }
+    
+    .breadcrumb-item a:hover {
+        text-decoration: underline;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #0d6efd, #0b5ed7);
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #0b5ed7, #0a58ca);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(13, 110, 253, 0.3);
+    }
+    
+    .card-header h5 {
+        font-weight: 600;
+    }
+    
+    @media (max-width: 768px) {
+        .stats-card {
+            margin-bottom: 1rem;
+        }
+        
+        .table-responsive {
+            font-size: 0.875rem;
+        }
+        
+        .btn-group-sm .btn {
+            padding: 0.2rem 0.4rem;
+        }
+    }
+</style>
+{% endblock %}

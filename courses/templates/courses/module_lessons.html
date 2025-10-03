@@ -1,0 +1,373 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ module.title }} - Lessons{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="welcome-card">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb" class="mb-2">
+                <ol class="breadcrumb text-white-50">
+                    <li class="breadcrumb-item"><a href="{% url 'courses:course_dashboard' %}" class="text-white-50">Courses</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'courses:course_detail' course.id %}" class="text-white-50">{{ course.course_code }}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'courses:course_modules' course.id %}" class="text-white-50">Modules</a></li>
+                    <li class="breadcrumb-item active text-white">{{ module.title }}</li>
+                </ol>
+            </nav>
+            <h1 class="mb-2">
+                <i class="fas fa-file-alt me-3"></i>
+                Module Lessons
+            </h1>
+            <p class="mb-0 opacity-75">{{ module.title }} - Manage lesson content</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'courses:create_lesson' course.id module.id %}" class="btn btn-light btn-lg">
+                <i class="fas fa-plus me-2"></i>
+                Add Lesson
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Module Info -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-number text-primary">{{ lessons.count }}</div>
+                    <div class="stats-label">Total Lessons</div>
+                </div>
+                <div class="text-primary" style="font-size: 2.5rem; opacity: 0.3;">
+                    <i class="fas fa-file-alt"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-number text-success">{{ module.order }}</div>
+                    <div class="stats-label">Module Order</div>
+                </div>
+                <div class="text-success" style="font-size: 2.5rem; opacity: 0.3;">
+                    <i class="fas fa-sort-numeric-up"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-number text-info">{% if module.is_active %}Active{% else %}Draft{% endif %}</div>
+                    <div class="stats-label">Status</div>
+                </div>
+                <div class="text-info" style="font-size: 2.5rem; opacity: 0.3;">
+                    <i class="fas fa-{% if module.is_active %}check-circle{% else %}clock{% endif %}"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="stats-number text-warning">{{ course.get_enrolled_count }}</div>
+                    <div class="stats-label">Students</div>
+                </div>
+                <div class="text-warning" style="font-size: 2.5rem; opacity: 0.3;">
+                    <i class="fas fa-users"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Module Description -->
+{% if module.description %}
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h6 class="alert-heading">
+                <i class="fas fa-info-circle me-2"></i>
+                Module Description
+            </h6>
+            <p class="mb-0">{{ module.description }}</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Lessons List -->
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">
+                    <i class="fas fa-list-ol me-2"></i>
+                    Lessons in this Module
+                </h5>
+                <div class="d-flex gap-2">
+                    <a href="{% url 'courses:course_modules' course.id %}" class="btn btn-sm btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Modules
+                    </a>
+                    <a href="{% url 'courses:edit_module' course.id module.id %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-edit me-1"></i>Edit Module
+                    </a>
+                    <a href="{% url 'courses:create_lesson' course.id module.id %}" class="btn btn-sm btn-primary">
+                        <i class="fas fa-plus me-1"></i>Add Lesson
+                    </a>
+                </div>
+            </div>
+            <div class="card-body">
+                {% if lessons %}
+                    <div class="row">
+                        {% for lesson in lessons %}
+                        <div class="col-12 mb-3">
+                            <div class="card border-start border-{% if lesson.is_active %}success{% else %}secondary{% endif %} border-3">
+                                <div class="card-body">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-8">
+                                            <div class="d-flex align-items-center">
+                                                <div class="rounded-circle bg-{% if lesson.is_active %}success{% else %}secondary{% endif %} text-white d-flex align-items-center justify-content-center me-3" style="width: 35px; height: 35px; font-size: 14px;">
+                                                    {{ lesson.order }}
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <div class="d-flex align-items-center mb-1">
+                                                        <h6 class="mb-0 me-2">{{ lesson.title }}</h6>
+                                                        <span class="badge bg-{% if lesson.lesson_type == 'video' %}primary{% elif lesson.lesson_type == 'quiz' %}warning{% elif lesson.lesson_type == 'assignment' %}info{% elif lesson.lesson_type == 'live_session' %}danger{% else %}secondary{% endif %}">
+                                                            <i class="fas fa-{% if lesson.lesson_type == 'video' %}play{% elif lesson.lesson_type == 'quiz' %}question-circle{% elif lesson.lesson_type == 'assignment' %}file-text{% elif lesson.lesson_type == 'live_session' %}video{% else %}file-alt{% endif %} me-1"></i>
+                                                            {{ lesson.get_lesson_type_display }}
+                                                        </span>
+                                                        {% if lesson.is_free_preview %}
+                                                            <span class="badge bg-success ms-1">
+                                                                <i class="fas fa-unlock me-1"></i>Free Preview
+                                                            </span>
+                                                        {% endif %}
+                                                    </div>
+                                                    {% if lesson.description %}
+                                                        <p class="text-muted mb-1 small">{{ lesson.description|truncatechars:80 }}</p>
+                                                    {% endif %}
+                                                    <div class="d-flex align-items-center text-muted small">
+                                                        {% if lesson.duration_minutes %}
+                                                            <i class="fas fa-clock me-1"></i>
+                                                            <span class="me-3">{{ lesson.duration_minutes }} mins</span>
+                                                        {% endif %}
+                                                        {% if lesson.video_url %}
+                                                            <i class="fas fa-video me-1"></i>
+                                                            <span class="me-3">Has Video</span>
+                                                        {% endif %}
+                                                        <i class="fas fa-{% if lesson.is_active %}eye{% else %}eye-slash{% endif %} me-1"></i>
+                                                        <span>{% if lesson.is_active %}Visible{% else %}Hidden{% endif %}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="d-flex justify-content-end align-items-center">
+                                                <div class="btn-group">
+                                                    <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#lessonPreview{{ lesson.id }}" title="Quick Preview">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                    <a href="{% url 'courses:edit_lesson' course.id module.id lesson.id %}" class="btn btn-sm btn-outline-primary" title="Edit Lesson">
+                                                        <i class="fas fa-edit"></i>
+                                                    </a>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveLesson({{ lesson.id }}, 'up')" title="Move Up" {% if lesson.order == 1 %}disabled{% endif %}>
+                                                        <i class="fas fa-arrow-up"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="moveLesson({{ lesson.id }}, 'down')" title="Move Down">
+                                                        <i class="fas fa-arrow-down"></i>
+                                                    </button>
+                                                    <a href="{% url 'courses:delete_lesson' course.id module.id lesson.id %}" class="btn btn-sm btn-outline-danger" title="Delete Lesson">
+                                                        <i class="fas fa-trash"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Lesson Preview Modal -->
+                        <div class="modal fade" id="lessonPreview{{ lesson.id }}" tabindex="-1">
+                            <div class="modal-dialog modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title">
+                                            <i class="fas fa-{% if lesson.lesson_type == 'video' %}play{% elif lesson.lesson_type == 'quiz' %}question-circle{% elif lesson.lesson_type == 'assignment' %}file-text{% else %}file-alt{% endif %} me-2"></i>
+                                            {{ lesson.title }}
+                                        </h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        {% if lesson.description %}
+                                            <h6>Description:</h6>
+                                            <p>{{ lesson.description }}</p>
+                                            <hr>
+                                        {% endif %}
+                                        
+                                        {% if lesson.video_url %}
+                                            <h6>Video URL:</h6>
+                                            <p><a href="{{ lesson.video_url }}" target="_blank" class="text-primary">{{ lesson.video_url }}</a></p>
+                                            <hr>
+                                        {% endif %}
+                                        
+                                        {% if lesson.content %}
+                                            <h6>Content Preview:</h6>
+                                            <div class="bg-light p-3 rounded">
+                                                {{ lesson.content|truncatechars:200|linebreaks }}
+                                            </div>
+                                        {% endif %}
+                                        
+                                        <div class="row mt-3">
+                                            <div class="col-md-6">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-clock me-1"></i>
+                                                    Duration: {{ lesson.duration_minutes|default:"Not set" }} minutes
+                                                </small>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-sort me-1"></i>
+                                                    Order: {{ lesson.order }}
+                                                </small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                        <a href="{% url 'courses:edit_lesson' course.id module.id lesson.id %}" class="btn btn-primary">Edit Lesson</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Lesson Organization Tips -->
+                    <div class="alert alert-light mt-4">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            Organization Tips
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <ul class="list-unstyled mb-0">
+                                    <li><i class="fas fa-arrow-up text-success me-2"></i>Use arrow buttons to reorder lessons</li>
+                                    <li><i class="fas fa-unlock text-warning me-2"></i>Mark important lessons as "Free Preview"</li>
+                                </ul>
+                            </div>
+                            <div class="col-md-6">
+                                <ul class="list-unstyled mb-0">
+                                    <li><i class="fas fa-eye text-info me-2"></i>Use preview to check lesson content</li>
+                                    <li><i class="fas fa-clock text-primary me-2"></i>Set duration for better course planning</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-file-alt fa-4x text-muted mb-4"></i>
+                        <h4 class="text-muted mb-3">No lessons found</h4>
+                        <p class="text-muted mb-4">Start building your module by creating your first lesson.</p>
+                        <a href="{% url 'courses:create_lesson' course.id module.id %}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-plus me-2"></i>
+                            Create First Lesson
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lesson Types Guide (if no lessons) -->
+{% if not lessons %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-graduation-cap me-2"></i>
+                    Lesson Types You Can Create
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-2 text-center mb-3">
+                        <div class="bg-primary text-white rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <i class="fas fa-play"></i>
+                        </div>
+                        <h6>Video Lesson</h6>
+                        <p class="small text-muted">YouTube, Vimeo or direct video links</p>
+                    </div>
+                    <div class="col-md-2 text-center mb-3">
+                        <div class="bg-secondary text-white rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <h6>Text/Reading</h6>
+                        <p class="small text-muted">Written content, articles, guides</p>
+                    </div>
+                    <div class="col-md-2 text-center mb-3">
+                        <div class="bg-warning text-white rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <i class="fas fa-question-circle"></i>
+                        </div>
+                        <h6>Quiz</h6>
+                        <p class="small text-muted">Test student knowledge</p>
+                    </div>
+                    <div class="col-md-2 text-center mb-3">
+                        <div class="bg-info text-white rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <i class="fas fa-file-text"></i>
+                        </div>
+                        <h6>Assignment</h6>
+                        <p class="small text-muted">Homework, projects, tasks</p>
+                    </div>
+                    <div class="col-md-2 text-center mb-3">
+                        <div class="bg-danger text-white rounded-circle mx-auto mb-2 d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                            <i class="fas fa-video"></i>
+                        </div>
+                        <h6>Live Session</h6>
+                        <p class="small text-muted">Scheduled live classes</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function moveLesson(lessonId, direction) {
+    if (confirm('Are you sure you want to reorder this lesson?')) {
+        // This would make an AJAX call to reorder lessons
+        fetch(`/courses/lessons/${lessonId}/move/${direction}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while reordering lessons.');
+        });
+    }
+}
+</script>
+{% endblock %}

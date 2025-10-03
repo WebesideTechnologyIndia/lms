@@ -1,0 +1,735 @@
+{% extends 'students/student_base.html' %}
+
+{% block title %}{{ exam.title }} - Assignment - LMS{% endblock %}
+{% block page_title %}{{ exam.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .assignment-container {
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+    
+    .assignment-header {
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        color: white;
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+    
+    .assignment-content {
+        background-color: white;
+        border-radius: 15px;
+        padding: 30px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        margin-bottom: 25px;
+    }
+    
+    .file-upload-zone {
+        border: 3px dashed #dee2e6;
+        border-radius: 12px;
+        padding: 40px;
+        text-align: center;
+        background-color: #f8f9fa;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .file-upload-zone:hover {
+        border-color: #4f46e5;
+        background-color: #f0f0ff;
+    }
+    
+    .file-upload-zone.dragover {
+        border-color: #28a745;
+        background-color: #f0fff4;
+    }
+    
+    .uploaded-file {
+        background-color: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: all 0.3s ease;
+    }
+    
+    .uploaded-file:hover {
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .file-info {
+        display: flex;
+        align-items: center;
+    }
+    
+    .file-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+        font-size: 18px;
+    }
+    
+    .timer-card {
+        background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+        color: white;
+        border-radius: 12px;
+        padding: 20px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    
+    .timer-display {
+        font-size: 2rem;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+    
+    .guidelines-card {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    
+    .submit-section {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border-radius: 12px;
+        padding: 25px;
+        text-align: center;
+    }
+    
+    .submission-textarea {
+        min-height: 150px;
+        border-radius: 8px;
+        border: 2px solid #dee2e6;
+        padding: 15px;
+        font-size: 16px;
+        line-height: 1.6;
+        transition: border-color 0.3s ease;
+    }
+    
+    .submission-textarea:focus {
+        border-color: #4f46e5;
+        box-shadow: 0 0 0 0.2rem rgba(79, 70, 229, 0.25);
+    }
+    
+    .auto-save-indicator {
+        position: fixed;
+        top: 50%;
+        right: 20px;
+        transform: translateY(-50%);
+        background-color: #28a745;
+        color: white;
+        padding: 8px 15px;
+        border-radius: 20px;
+        font-size: 0.875rem;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        z-index: 1000;
+    }
+    
+    .auto-save-indicator.show {
+        opacity: 1;
+    }
+    
+    .file-restrictions {
+        background-color: #fff3cd;
+        border: 1px solid #ffeaa7;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="assignment-container">
+    <!-- Auto-save indicator -->
+    <div class="auto-save-indicator" id="autoSaveIndicator">
+        <i class="fas fa-check"></i> Saved
+    </div>
+
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <!-- Assignment Header -->
+            <div class="assignment-header">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h3 class="mb-2">{{ exam.title }}</h3>
+                        <p class="mb-0">{{ exam.description }}</p>
+                    </div>
+                    <div class="col-md-4 text-md-end">
+                        <div class="assignment-info">
+                            <div class="badge bg-light text-dark mb-2">Assignment</div>
+                            <div class="text-light">
+                                <small class="d-block">Total Marks: {{ exam.total_marks }}</small>
+                                <small class="d-block">Attempt: {{ attempt.attempt_number }}</small>
+                                {% if exam.end_datetime %}
+                                <small class="d-block">Due: {{ exam.end_datetime|date:"M d, Y H:i" }}</small>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Assignment Description -->
+            <div class="assignment-content">
+                <h5 class="text-primary mb-3">
+                    <i class="fas fa-clipboard-list"></i> Assignment Description
+                </h5>
+                <div class="assignment-description">
+                    {{ assignment_details.assignment_description|linebreaks }}
+                </div>
+            </div>
+
+            <!-- Submission Guidelines -->
+            {% if assignment_details.submission_guidelines %}
+            <div class="guidelines-card">
+                <h6 class="text-success mb-3">
+                    <i class="fas fa-list-check"></i> Submission Guidelines
+                </h6>
+                <div class="guidelines-content">
+                    {{ assignment_details.submission_guidelines|linebreaks }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- File Restrictions -->
+            <div class="file-restrictions">
+                <h6 class="text-warning mb-2">
+                    <i class="fas fa-exclamation-triangle"></i> File Upload Requirements
+                </h6>
+                <div class="row">
+                    <div class="col-md-4">
+                        <small><strong>Allowed Types:</strong><br>
+                        {% for ext in assignment_details.get_allowed_extensions %}
+                            <span class="badge bg-secondary me-1">{{ ext|upper }}</span>
+                        {% endfor %}
+                        </small>
+                    </div>
+                    <div class="col-md-4">
+                        <small><strong>Max File Size:</strong><br>
+                        <span class="text-info">{{ assignment_details.max_file_size_mb }} MB</span>
+                        </small>
+                    </div>
+                    <div class="col-md-4">
+                        <small><strong>Max Files:</strong><br>
+                        <span class="text-info">{{ assignment_details.max_files_allowed }} file{{ assignment_details.max_files_allowed|pluralize }}</span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- File Upload Section -->
+            <div class="assignment-content">
+                <h5 class="text-primary mb-3">
+                    <i class="fas fa-cloud-upload-alt"></i> Upload Assignment Files
+                </h5>
+                
+                <div class="file-upload-zone" id="fileUploadZone">
+                    <div class="upload-content">
+                        <i class="fas fa-cloud-upload-alt fa-3x text-muted mb-3"></i>
+                        <h6 class="text-muted">Drag and drop files here or click to browse</h6>
+                        <p class="text-muted small">
+                            Support for {{ assignment_details.get_allowed_extensions|join:", "|upper }} files up to {{ assignment_details.max_file_size_mb }}MB each
+                        </p>
+                        <input type="file" 
+                               id="fileInput" 
+                               multiple 
+                               accept=".{{ assignment_details.get_allowed_extensions|join:",." }}"
+                               style="display: none;">
+                        <button type="button" class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                            <i class="fas fa-folder-open"></i> Choose Files
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Uploaded Files Display -->
+                <div id="uploadedFiles" class="mt-4">
+                    {% if submission and submission.uploaded_files %}
+                        {% for file in submission.uploaded_files %}
+                        <div class="uploaded-file">
+                            <div class="file-info">
+                                <div class="file-icon bg-primary text-white">
+                                    <i class="fas fa-file"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold">{{ file.name }}</div>
+                                    <small class="text-muted">{{ file.size|filesizeformat }}</small>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeFile('{{ file.id }}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Additional Comments -->
+            <div class="assignment-content">
+                <h5 class="text-primary mb-3">
+                    <i class="fas fa-comment"></i> Additional Comments (Optional)
+                </h5>
+                <textarea class="form-control submission-textarea" 
+                         id="submissionText"
+                         name="submission_text"
+                         placeholder="Add any additional comments, explanations, or notes about your submission here...">{{ submission.submission_text|default:"" }}</textarea>
+                <div class="text-muted mt-2">
+                    <small><i class="fas fa-info-circle"></i> Use this space to provide context, explain your approach, or add any relevant information about your submission.</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Timer -->
+            {% if exam.timing_type != 'no_timing' %}
+            <div class="timer-card">
+                <h6><i class="fas fa-clock"></i> Time Remaining</h6>
+                <div class="timer-display" id="timer">
+                    <span id="hours">00</span>:<span id="minutes">00</span>:<span id="seconds">00</span>
+                </div>
+                <small>Auto-submit when time expires</small>
+            </div>
+            {% endif %}
+
+            <!-- Assignment Status -->
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0"><i class="fas fa-info-circle"></i> Assignment Status</h6>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Files Uploaded:</small>
+                        <strong id="fileCount">0</strong> / {{ assignment_details.max_files_allowed }}
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Total Size:</small>
+                        <strong id="totalSize">0 MB</strong> / {{ assignment_details.max_file_size_mb }} MB per file
+                    </div>
+                    <div class="progress mb-2">
+                        <div class="progress-bar" role="progressbar" id="progressBar" style="width: 0%"></div>
+                    </div>
+                    <small class="text-muted">Upload Progress</small>
+                </div>
+            </div>
+
+            <!-- Evaluation Criteria -->
+            {% if assignment_details.evaluation_criteria %}
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0"><i class="fas fa-star"></i> Evaluation Criteria</h6>
+                </div>
+                <div class="card-body">
+                    <div class="small">
+                        {{ assignment_details.evaluation_criteria|linebreaks }}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Help & Tips -->
+            <div class="card mb-4">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="fas fa-lightbulb"></i> Submission Tips</h6>
+                </div>
+                <div class="card-body">
+                    <ul class="small mb-0">
+                        <li>Double-check file formats and sizes</li>
+                        <li>Name your files descriptively</li>
+                        <li>Test file uploads before the deadline</li>
+                        <li>Save your work frequently</li>
+                        <li>Submit well before the due date</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Submit Section -->
+            <div class="submit-section">
+                <h6><i class="fas fa-paper-plane"></i> Submit Assignment</h6>
+                <p class="small mb-3">Review your files and comments before submitting.</p>
+                <button type="button" class="btn btn-light btn-lg w-100" id="submitAssignmentBtn">
+                    <i class="fas fa-check"></i> Submit Assignment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Submit Confirmation Modal -->
+<div class="modal fade" id="submitModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirm Assignment Submission</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <i class="fas fa-clipboard-check fa-3x text-success"></i>
+                </div>
+                <h6 class="text-center">Ready to submit your assignment?</h6>
+                <div class="submission-summary bg-light p-3 rounded">
+                    <div class="row">
+                        <div class="col-6">
+                            <small class="text-muted">Files Uploaded:</small><br>
+                            <strong id="modal-file-count">0</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted">Comments Added:</small><br>
+                            <strong id="modal-comments-status">No</strong>
+                        </div>
+                    </div>
+                </div>
+                <div class="alert alert-warning mt-3">
+                    <small>
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Once submitted, you cannot modify your assignment files or comments.
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <a href="{% url 'submit_exam' attempt.id %}" class="btn btn-success">
+                    <i class="fas fa-check"></i> Submit Assignment
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    let uploadedFiles = [];
+    let maxFiles = {{ assignment_details.max_files_allowed }};
+    let maxSizeMB = {{ assignment_details.max_file_size_mb }};
+    let allowedExtensions = [{% for ext in assignment_details.get_allowed_extensions %}'{{ ext }}'{% if not forloop.last %},{% endif %}{% endfor %}];
+    let autoSaveTimeout;
+    
+    // Initialize existing files if any
+    {% if submission and submission.uploaded_files %}
+        uploadedFiles = {{ submission.uploaded_files|safe }};
+        updateFileDisplay();
+    {% endif %}
+    
+    // File upload zone click
+    $('#fileUploadZone').click(function() {
+        $('#fileInput').click();
+    });
+    
+    // File input change
+    $('#fileInput').change(function() {
+        handleFileSelect(this.files);
+    });
+    
+    // Drag and drop functionality
+    $('#fileUploadZone').on('dragover dragenter', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        $(this).addClass('dragover');
+    });
+    
+    $('#fileUploadZone').on('dragleave', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        $(this).removeClass('dragover');
+    });
+    
+    $('#fileUploadZone').on('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        $(this).removeClass('dragover');
+        
+        let files = e.originalEvent.dataTransfer.files;
+        handleFileSelect(files);
+    });
+    
+    // Submission text auto-save
+    $('#submissionText').on('input', function() {
+        clearTimeout(autoSaveTimeout);
+        autoSaveTimeout = setTimeout(function() {
+            autoSaveSubmission();
+        }, 2000);
+    });
+    
+    // Submit button
+    $('#submitAssignmentBtn').click(function() {
+        $('#modal-file-count').text(uploadedFiles.length);
+        $('#modal-comments-status').text($('#submissionText').val().trim() ? 'Yes' : 'No');
+        $('#submitModal').modal('show');
+    });
+    
+    // Timer functionality
+    {% if exam.timing_type != 'no_timing' %}
+    let timeRemaining = calculateTimeRemaining();
+    if (timeRemaining > 0) {
+        startTimer(timeRemaining);
+    }
+    {% endif %}
+    
+    function handleFileSelect(files) {
+        if (uploadedFiles.length >= maxFiles) {
+            alert(`You can only upload a maximum of ${maxFiles} files.`);
+            return;
+        }
+        
+        for (let file of files) {
+            if (uploadedFiles.length >= maxFiles) {
+                alert(`Maximum file limit (${maxFiles}) reached.`);
+                break;
+            }
+            
+            // Check file extension
+            let extension = file.name.split('.').pop().toLowerCase();
+            if (!allowedExtensions.includes(extension)) {
+                alert(`File type .${extension} is not allowed. Allowed types: ${allowedExtensions.join(', ')}`);
+                continue;
+            }
+            
+            // Check file size
+            let fileSizeMB = file.size / (1024 * 1024);
+            if (fileSizeMB > maxSizeMB) {
+                alert(`File ${file.name} is too large. Maximum size: ${maxSizeMB}MB`);
+                continue;
+            }
+            
+            // Add file to upload queue
+            uploadFile(file);
+        }
+    }
+    
+    function uploadFile(file) {
+        let formData = new FormData();
+        formData.append('file', file);
+        formData.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').val());
+        
+        // Add file to display immediately
+        let fileObj = {
+            name: file.name,
+            size: file.size,
+            id: 'temp_' + Date.now(),
+            uploading: true
+        };
+        uploadedFiles.push(fileObj);
+        updateFileDisplay();
+        
+        $.ajax({
+            url: '{% url "save_assignment_submission" attempt.id %}',
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            xhr: function() {
+                let xhr = new window.XMLHttpRequest();
+                xhr.upload.addEventListener('progress', function(e) {
+                    if (e.lengthComputable) {
+                        let percent = (e.loaded / e.total) * 100;
+                        updateProgressBar(percent);
+                    }
+                });
+                return xhr;
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Update file with server response
+                    let index = uploadedFiles.findIndex(f => f.id === fileObj.id);
+                    if (index !== -1) {
+                        uploadedFiles[index] = response.file;
+                        updateFileDisplay();
+                        showAutoSaveIndicator();
+                    }
+                } else {
+                    // Remove failed file
+                    uploadedFiles = uploadedFiles.filter(f => f.id !== fileObj.id);
+                    updateFileDisplay();
+                    alert('Upload failed: ' + response.message);
+                }
+            },
+            error: function() {
+                // Remove failed file
+                uploadedFiles = uploadedFiles.filter(f => f.id !== fileObj.id);
+                updateFileDisplay();
+                alert('Upload failed. Please try again.');
+            }
+        });
+    }
+    
+    function updateFileDisplay() {
+        let container = $('#uploadedFiles');
+        container.empty();
+        
+        uploadedFiles.forEach(function(file) {
+            let fileElement = $(`
+                <div class="uploaded-file">
+                    <div class="file-info">
+                        <div class="file-icon bg-primary text-white">
+                            <i class="fas fa-file"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold">${file.name}</div>
+                            <small class="text-muted">${formatFileSize(file.size)}</small>
+                            ${file.uploading ? '<small class="text-info">Uploading...</small>' : ''}
+                        </div>
+                    </div>
+                    ${!file.uploading ? `<button type="button" class="btn btn-outline-danger btn-sm" onclick="removeFile('${file.id}')"><i class="fas fa-trash"></i></button>` : ''}
+                </div>
+            `);
+            container.append(fileElement);
+        });
+        
+        // Update status
+        $('#fileCount').text(uploadedFiles.filter(f => !f.uploading).length);
+        updateProgressBar(0);
+    }
+    
+    function removeFile(fileId) {
+        if (confirm('Are you sure you want to remove this file?')) {
+            uploadedFiles = uploadedFiles.filter(f => f.id !== fileId);
+            updateFileDisplay();
+            // Here you would also make an AJAX call to remove from server
+        }
+    }
+    
+    function formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        let k = 1024;
+        let sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        let i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+    
+    function updateProgressBar(percent) {
+        $('#progressBar').css('width', percent + '%');
+    }
+    
+    function autoSaveSubmission() {
+        let submissionText = $('#submissionText').val();
+        
+        $.ajax({
+            url: '{% url "save_assignment_submission" attempt.id %}',
+            type: 'POST',
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            data: {
+                'submission_text': submissionText
+            },
+            success: function(response) {
+                if (response.success) {
+                    showAutoSaveIndicator();
+                }
+            }
+        });
+    }
+    
+    function showAutoSaveIndicator() {
+        $('#autoSaveIndicator').addClass('show');
+        setTimeout(function() {
+            $('#autoSaveIndicator').removeClass('show');
+        }, 2000);
+    }
+    
+    {% if exam.timing_type != 'no_timing' %}
+    function calculateTimeRemaining() {
+        {% if exam.timing_type == 'total_exam' %}
+            let totalMinutes = {{ exam.total_exam_time_minutes }};
+        {% else %}
+            let totalMinutes = 60; // Default for assignments
+        {% endif %}
+        
+        let startTime = new Date('{{ attempt.started_at|date:"c" }}');
+        let currentTime = new Date();
+        let elapsedMinutes = (currentTime - startTime) / (1000 * 60);
+        let remainingMinutes = totalMinutes - elapsedMinutes;
+        
+        return Math.max(0, remainingMinutes * 60);
+    }
+    
+    function startTimer(seconds) {
+        let timer = seconds;
+        
+        let interval = setInterval(function() {
+            let hours = Math.floor(timer / 3600);
+            let minutes = Math.floor((timer % 3600) / 60);
+            let secs = Math.floor(timer % 60);
+            
+            $('#hours').text(hours.toString().padStart(2, '0'));
+            $('#minutes').text(minutes.toString().padStart(2, '0'));
+            $('#seconds').text(secs.toString().padStart(2, '0'));
+            
+            if (timer <= 300) {
+                $('.timer-card').css('background', 'linear-gradient(135deg, #f39c12, #e67e22)');
+            }
+            if (timer <= 60) {
+                $('.timer-card').css('background', 'linear-gradient(135deg, #e74c3c, #c0392b)');
+            }
+            
+            if (timer <= 0) {
+                clearInterval(interval);
+                autoSubmitAssignment();
+            }
+            
+            timer--;
+        }, 1000);
+    }
+    
+    function autoSubmitAssignment() {
+        alert('Time is up! The assignment will be submitted automatically.');
+        window.location.href = '{% url "submit_exam" attempt.id %}';
+    }
+    {% endif %}
+    
+    // Prevent accidental page refresh
+    window.addEventListener('beforeunload', function(e) {
+        autoSaveSubmission();
+        e.preventDefault();
+        e.returnValue = 'Are you sure you want to leave? Your progress will be saved.';
+    });
+});
+
+// Global function for removing files (called from dynamic HTML)
+function removeFile(fileId) {
+    if (confirm('Are you sure you want to remove this file?')) {
+        // Remove from frontend
+        uploadedFiles = uploadedFiles.filter(f => f.id !== fileId);
+        updateFileDisplay();
+        
+        // Remove from server
+        $.ajax({
+            url: '{% url "remove_assignment_file" attempt.id %}',
+            type: 'POST',
+            headers: {
+                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            data: {
+                'file_id': fileId
+            },
+            success: function(response) {
+                if (response.success) {
+                    console.log('File removed successfully');
+                }
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,686 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Session Management - Zoom LMS{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/session-list.css' %}" rel="stylesheet">
+<link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    
+    .session-status {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .status-scheduled { 
+        background: #e3f2fd; 
+        color: #1976d2; 
+        border: 1px solid #90caf9;
+    }
+    
+    .status-live { 
+        background: #e8f5e8; 
+        color: #2e7d32; 
+        animation: pulse 2s infinite;
+        border: 1px solid #81c784;
+        box-shadow: 0 0 10px rgba(76, 175, 80, 0.3);
+    }
+    
+    .status-completed { 
+        background: #f3e5f5; 
+        color: #7b1fa2; 
+        border: 1px solid #ce93d8;
+    }
+    
+    .status-cancelled { 
+        background: #ffebee; 
+        color: #c62828; 
+        border: 1px solid #ef9a9a;
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+    
+    .card {
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+        border-radius: 10px;
+        border: none;
+    }
+    
+    .card-header {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-bottom: 2px solid #dee2e6;
+        border-radius: 10px 10px 0 0 !important;
+    }
+    
+    .filters-card {
+        background: #f8f9fb;
+        border: 1px solid #e3e6f0;
+    }
+    
+    .table th {
+        border-top: none;
+        font-weight: 600;
+        color: #5a5c69;
+        background: #f8f9fc;
+        padding: 1rem 0.75rem;
+    }
+    
+    .table td {
+        padding: 1rem 0.75rem;
+        vertical-align: middle;
+    }
+    
+    .table tbody tr {
+        transition: all 0.3s ease;
+    }
+    
+    .table tbody tr:hover {
+        background-color: #f8f9fc;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .session-title {
+        color: #3b82f6;
+        font-weight: 600;
+        text-decoration: none;
+        transition: color 0.3s ease;
+    }
+    
+    .session-title:hover {
+        color: #1e40af;
+        text-decoration: underline;
+    }
+    
+    .batch-badge {
+        background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
+        color: white;
+        padding: 4px 10px;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    .duration-badge {
+        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+        color: white;
+        padding: 4px 10px;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    .zoom-status {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .zoom-connected {
+        color: #28a745;
+        font-size: 1.2rem;
+    }
+    
+    .zoom-disconnected {
+        color: #ffc107;
+        font-size: 1.2rem;
+    }
+    
+    .recording-count {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        min-width: 24px;
+        display: inline-block;
+        text-align: center;
+    }
+    
+    .btn-group-action {
+        gap: 2px;
+    }
+    
+    .btn-action {
+        padding: 6px 10px;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-action:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #6c757d;
+    }
+    
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    .filter-form {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 8px;
+        border: 1px solid #e3e6f0;
+    }
+    
+    .form-label {
+        font-weight: 600;
+        color: #5a5c69;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-select, .form-control {
+        border-radius: 6px;
+        border: 1px solid #d1d3e2;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .form-select:focus, .form-control:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 0.2rem rgba(59, 130, 246, 0.25);
+    }
+    
+    .btn-filter {
+        background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+        border: none;
+        padding: 0.5rem 1.5rem;
+        border-radius: 6px;
+        font-weight: 600;
+    }
+    
+    .btn-clear {
+        background: white;
+        border: 2px solid #6c757d;
+        padding: 0.5rem 1.5rem;
+        border-radius: 6px;
+        color: #6c757d;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-clear:hover {
+        background: #6c757d;
+        color: white;
+    }
+    
+    .live-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: #28a745;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+        margin-right: 0.5rem;
+    }
+    
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+        border-radius: 6px;
+        margin: 0 2px;
+    }
+    
+    .dataTables_wrapper .dataTables_paginate .paginate_button.current {
+        background: #3b82f6 !important;
+        color: white !important;
+        border: 1px solid #3b82f6 !important;
+    }
+    
+    .dropdown-menu {
+        border-radius: 8px;
+        border: 1px solid #e3e6f0;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    }
+    
+    .dropdown-item {
+        padding: 0.5rem 1rem;
+        transition: all 0.3s ease;
+    }
+    
+    .dropdown-item:hover {
+        background: #f8f9fc;
+        color: #3b82f6;
+    }
+    
+    .dropdown-item.text-danger:hover {
+        background: #f8d7da;
+        color: #721c24;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="h2 mb-2">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    Session Management
+                </h1>
+                <p class="mb-0">Manage all your Zoom sessions, track attendance, and access recordings</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="btn-group">
+                    <a href="{% url 'zoom:dashboard' %}" class="btn btn-outline-light">
+                        <i class="fas fa-arrow-left me-2"></i>Dashboard
+                    </a>
+                    <a href="{% url 'zoom:create_session' %}" class="btn btn-light">
+                        <i class="fas fa-plus me-2"></i>New Session
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card filters-card mb-4">
+        <div class="card-body">
+            <form method="get" class="filter-form">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-3">
+                        <label for="batch" class="form-label">
+                            <i class="fas fa-users me-1"></i>Filter by Batch
+                        </label>
+                        <select name="batch" id="batch" class="form-select">
+                            <option value="">All Batches</option>
+                            {% for batch in batches %}
+                                <option value="{{ batch.id }}" {% if selected_batch == batch.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ batch.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="status" class="form-label">
+                            <i class="fas fa-flag me-1"></i>Filter by Status
+                        </label>
+                        <select name="status" id="status" class="form-select">
+                            <option value="">All Status</option>
+                            <option value="scheduled" {% if selected_status == "scheduled" %}selected{% endif %}>Scheduled</option>
+                            <option value="live" {% if selected_status == "live" %}selected{% endif %}>Live</option>
+                            <option value="completed" {% if selected_status == "completed" %}selected{% endif %}>Completed</option>
+                            <option value="cancelled" {% if selected_status == "cancelled" %}selected{% endif %}>Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label for="date_from" class="form-label">
+                            <i class="fas fa-calendar me-1"></i>Date From
+                        </label>
+                        <input type="date" name="date_from" id="date_from" class="form-control" 
+                               value="{{ request.GET.date_from }}">
+                    </div>
+                    <div class="col-md-3">
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-filter">
+                                <i class="fas fa-search me-2"></i>Filter
+                            </button>
+                            <a href="{% url 'zoom:session_list' %}" class="btn btn-clear">
+                                <i class="fas fa-times me-2"></i>Clear
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Sessions Table -->
+    <div class="card">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>
+                        All Sessions 
+                        <span class="badge bg-primary ms-2">{{ sessions.count }}</span>
+                    </h5>
+                </div>
+                <div class="col-auto">
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-outline-secondary" onclick="refreshTable()">
+                            <i class="fas fa-sync-alt"></i> Refresh
+                        </button>
+                        <button class="btn btn-outline-success" onclick="exportToCSV()">
+                            <i class="fas fa-download"></i> Export
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {% if sessions %}
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0" id="sessionsTable">
+                        <thead>
+                            <tr>
+                                <th><i class="fas fa-book me-1"></i>Session</th>
+                                <th><i class="fas fa-users me-1"></i>Batch</th>
+                                <th><i class="fas fa-calendar-alt me-1"></i>Date & Time</th>
+                                <th><i class="fas fa-clock me-1"></i>Duration</th>
+                                <th><i class="fas fa-flag me-1"></i>Status</th>
+                                <th><i class="fas fa-video me-1"></i>Zoom</th>
+                                <th><i class="fas fa-play-circle me-1"></i>Recordings</th>
+                                <th><i class="fas fa-cog me-1"></i>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for session in sessions %}
+                                <tr data-session-id="{{ session.id }}">
+                                    <td>
+                                        <div>
+                                            <h6 class="mb-1">
+                                                <a href="{% url 'zoom:session_detail' session.id %}" class="session-title">
+                                                    {{ session.title }}
+                                                </a>
+                                            </h6>
+                                            <small class="text-muted">
+                                                <i class="fas fa-tag me-1"></i>{{ session.get_session_type_display }}
+                                            </small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="batch-badge">{{ session.batch.name }}</span>
+                                        <small class="text-muted d-block mt-1">{{ session.batch.course.name }}</small>
+                                    </td>
+                                    <td>
+                                        <div>
+                                            <strong class="text-dark">{{ session.scheduled_date|date:"M d, Y" }}</strong>
+                                            <br>
+                                            <small class="text-muted">
+                                                <i class="fas fa-clock me-1"></i>
+                                                {{ session.start_time|time:"H:i" }} - {{ session.end_time|time:"H:i" }}
+                                            </small>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="duration-badge">
+                                            <i class="fas fa-stopwatch me-1"></i>{{ session.duration_minutes }} min
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="session-status status-{{ session.status }}">
+                                            {% if session.status == 'live' %}
+                                                <span class="live-indicator"></span>
+                                            {% endif %}
+                                            {{ session.get_status_display }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <div class="zoom-status">
+                                            {% if session.zoom_meeting_id %}
+                                                <i class="fas fa-video zoom-connected" title="Zoom Meeting Created"></i>
+                                                <small class="text-muted">ID: {{ session.zoom_meeting_id }}</small>
+                                            {% else %}
+                                                <i class="fas fa-exclamation-triangle zoom-disconnected" title="No Zoom Meeting"></i>
+                                                <small class="text-warning">Not Created</small>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        {% if session.recordings.exists %}
+                                            <span class="recording-count">
+                                                {{ session.recordings.count }}
+                                            </span>
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-action btn-group-sm">
+                                            <a href="{% url 'zoom:session_detail' session.id %}" 
+                                               class="btn btn-outline-primary btn-action" 
+                                               title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            
+                                            {% if session.status == 'scheduled' and session.can_start_meeting %}
+                                                {% if session.zoom_start_url %}
+                                                    <a href="{% url 'zoom:start_meeting' session.id %}" 
+                                                       class="btn btn-success btn-action" 
+                                                       title="Start Meeting">
+                                                        <i class="fas fa-play"></i>
+                                                    </a>
+                                                {% endif %}
+                                            {% endif %}
+                                            
+                                            {% if session.status == 'live' %}
+                                                {% if session.zoom_join_url %}
+                                                    <a href="{% url 'zoom:join_meeting' session.id %}" 
+                                                       class="btn btn-warning btn-action" 
+                                                       title="Join Meeting">
+                                                        <i class="fas fa-sign-in-alt"></i>
+                                                    </a>
+                                                {% endif %}
+                                            {% endif %}
+                                            
+                                            <div class="btn-group">
+                                                <button class="btn btn-outline-secondary btn-action dropdown-toggle" 
+                                                        data-bs-toggle="dropdown" 
+                                                        title="More Options">
+                                                    <i class="fas fa-ellipsis-v"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+    <li>
+        <a class="dropdown-item" href="#">
+            <i class="fas fa-edit me-2"></i>Edit Session
+        </a>
+    </li>
+    <li>
+        <a class="dropdown-item" href="#">
+            <i class="fas fa-users me-2"></i>Attendance Report
+        </a>
+    </li>
+    
+    {% if session.status == 'live' or session.status == 'scheduled' %}
+    <li>
+        <a class="dropdown-item text-warning" 
+           href="{% url 'zoom:end_session' session.id %}">
+            <i class="fas fa-stop-circle me-2"></i>End & Complete Session
+        </a>
+    </li>
+    {% endif %}
+    
+    <li>
+        <a class="dropdown-item" href="#">
+            <i class="fas fa-copy me-2"></i>Duplicate Session
+        </a>
+    </li>
+    {% if session.recordings.exists %}
+        <li>
+            <a class="dropdown-item" href="{% url 'zoom:recording_list' %}?session={{ session.id }}">
+                <i class="fas fa-play-circle me-2"></i>View Recordings
+            </a>
+        </li>
+    {% endif %}
+    <li><hr class="dropdown-divider"></li>
+    <li>
+        <a class="dropdown-item text-danger" href="#" 
+           onclick="confirmCancel({{ session.id }})">
+            <i class="fas fa-times me-2"></i>Cancel Session
+        </a>
+    </li>
+</ul>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="empty-state">
+                    <i class="fas fa-calendar-times"></i>
+                    <h4>No sessions found</h4>
+                    <p class="text-muted mb-3">No sessions match your current filters or none have been created yet.</p>
+                    <a href="{% url 'zoom:create_session' %}" class="btn btn-primary">
+                        <i class="fas fa-plus me-2"></i>Create Your First Session
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    let table;
+    
+    $(document).ready(function() {
+        // Initialize DataTable
+        table = $('#sessionsTable').DataTable({
+            "pageLength": 25,
+            "order": [[ 2, "desc" ]], // Sort by date
+            "columnDefs": [
+                { "orderable": false, "targets": [5, 6, 7] }
+            ],
+            "responsive": true,
+            "language": {
+                "search": "Search sessions:",
+                "lengthMenu": "Show _MENU_ sessions per page",
+                "info": "Showing _START_ to _END_ of _TOTAL_ sessions",
+                "infoEmpty": "No sessions available",
+                "infoFiltered": "(filtered from _MAX_ total sessions)",
+                "zeroRecords": "No matching sessions found",
+                "emptyTable": "No sessions available"
+            },
+            "dom": '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        });
+        
+        // Auto-refresh for live sessions every 30 seconds
+        setInterval(function() {
+            refreshLiveStatus();
+        }, 30000);
+    });
+    
+    function refreshTable() {
+        if (table) {
+            table.ajax.reload(null, false);
+        } else {
+            location.reload();
+        }
+    }
+    
+    function refreshLiveStatus() {
+        // Update live sessions status without full page reload
+        $.ajax({
+            url: '{% url "zoom:session_list" %}',
+            method: 'GET',
+            data: { 'ajax': 'live_status' },
+            success: function(data) {
+                if (data.live_sessions) {
+                    data.live_sessions.forEach(function(session) {
+                        const row = $(`tr[data-session-id="${session.id}"]`);
+                        if (row.length) {
+                            const statusCell = row.find('.session-status');
+                            if (!statusCell.hasClass('status-live')) {
+                                statusCell.removeClass('status-scheduled status-completed status-cancelled')
+                                          .addClass('status-live')
+                                          .html('<span class="live-indicator"></span>Live');
+                            }
+                        }
+                    });
+                }
+            }
+        });
+    }
+    
+    function confirmCancel(sessionId) {
+        if (confirm('Are you sure you want to cancel this session? This action cannot be undone.')) {
+            // Show loading state
+            const button = event.target.closest('a');
+            const originalContent = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Cancelling...';
+            button.style.pointerEvents = 'none';
+            
+            // Redirect to cancel endpoint
+            window.location.href = '/zoom/cancel-session/' + sessionId + '/';
+        }
+    }
+    
+    function exportToCSV() {
+        // Create CSV export
+        const rows = [];
+        const headers = ['Session Title', 'Batch', 'Date', 'Time', 'Duration', 'Status', 'Zoom ID', 'Recordings'];
+        rows.push(headers);
+        
+        $('#sessionsTable tbody tr').each(function() {
+            const row = [];
+            $(this).find('td').each(function(index) {
+                if (index < 7) { // Exclude actions column
+                    let text = $(this).text().trim().replace(/\s+/g, ' ');
+                    row.push(text);
+                }
+            });
+            if (row.length > 0) {
+                rows.push(row);
+            }
+        });
+        
+        // Download CSV
+        const csvContent = rows.map(row => row.join(',')).join('\n');
+        const blob = new Blob([csvContent], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'zoom_sessions_' + new Date().toISOString().split('T')[0] + '.csv';
+        a.click();
+        window.URL.revokeObjectURL(url);
+    }
+    
+    // Filter form enhancements
+    $('#batch, #status').change(function() {
+        $(this).closest('form').submit();
+    });
+    
+    // Keyboard shortcuts
+    $(document).keydown(function(e) {
+        // Ctrl+N for new session
+        if (e.ctrlKey && e.keyCode === 78) {
+            e.preventDefault();
+            window.location.href = '{% url "zoom:create_session" %}';
+        }
+        // Ctrl+R for refresh
+        if (e.ctrlKey && e.keyCode === 82) {
+            e.preventDefault();
+            refreshTable();
+        }
+    });
+    
+    // Tooltips initialization
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,180 @@
+<!-- templates/instructor/all_batches.html -->
+{% extends 'instructor_base.html' %}
+{% load static %}
+
+{% block title %}All Batches - Instructor Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+}
+.batch-row:hover {
+    background-color: #f8f9fa;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="mb-1">All My Batches</h2>
+                <p class="mb-0 opacity-75">Manage all your course batches</p>
+            </div>
+            <div class="dropdown">
+                <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="bi bi-plus-lg me-2"></i>Create New Batch
+                </button>
+                <ul class="dropdown-menu">
+                    {% for course in courses %}
+                    <li>
+                        <a class="dropdown-item" href="{% url 'courses:instructor_create_batch' course.id %}">
+                            <i class="bi bi-book me-2"></i>{{ course.title }}
+                        </a>
+                    </li>
+                    {% empty %}
+                    <li><span class="dropdown-item-text text-muted">No courses available</span></li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Batches Table -->
+    {% if batches %}
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Batch Name</th>
+                            <th>Course</th>
+                            <th>Students</th>
+                            <th>Status</th>
+                            <th>Duration</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for batch in batches %}
+                        <tr class="batch-row">
+                            <td>
+                                <div>
+                                    <strong>{{ batch.name }}</strong>
+                                    <br>
+                                    <small class="text-muted">{{ batch.code }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <div>
+                                    {{ batch.course.title }}
+                                    <br>
+                                    <small class="text-muted">{{ batch.course.course_code }}</small>
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ batch.get_enrolled_count }}/{{ batch.max_students }}</span>
+                            </td>
+                            <td>
+                                <span class="badge {% if batch.status == 'active' %}bg-success{% elif batch.status == 'draft' %}bg-warning{% else %}bg-secondary{% endif %}">
+                                    {{ batch.get_status_display }}
+                                </span>
+                            </td>
+                            <td>
+                                <small class="text-muted">
+                                    {{ batch.start_date|date:"M d" }} - {{ batch.end_date|date:"M d, Y" }}
+                                </small>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{% url 'courses:instructor_batch_detail' batch.course.id batch.id %}" 
+                                       class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-eye"></i> View
+                                    </a>
+                                    <a href="{% url 'courses:instructor_edit_batch' batch.course.id batch.id %}" 
+                                       class="btn btn-outline-secondary btn-sm">
+                                        <i class="bi bi-pencil"></i> Edit
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <nav aria-label="Batch pagination">
+                <ul class="pagination justify-content-center">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1">&laquo; First</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">{{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+                    </li>
+                    
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="text-center py-5">
+                <div class="mb-4">
+                    <i class="bi bi-collection text-muted" style="font-size: 4rem;"></i>
+                </div>
+                <h4 class="text-muted">No Batches Found</h4>
+                <p class="text-muted">Create your first batch to start managing student groups.</p>
+                <div class="dropdown">
+                    <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-plus-lg me-2"></i>Create New Batch
+                    </button>
+                    <ul class="dropdown-menu">
+                        {% for course in courses %}
+                        <li>
+                            <a class="dropdown-item" href="{% url 'courses:instructor_create_batch' course.id %}">
+                                {{ course.title }}
+                            </a>
+                        </li>
+                        {% empty %}
+                        <li><span class="dropdown-item-text text-muted">No courses available</span></li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

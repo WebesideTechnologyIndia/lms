@@ -1,0 +1,456 @@
+{% extends 'instructor_base.html' %}
+
+{% block title %}Add Q&A Questions - {{ exam.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .question-form-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .exam-header {
+        background: linear-gradient(135deg, #7b1fa2 0%, #e1bee7 100%);
+        color: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .question-card {
+        border: none;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .question-card:hover {
+        box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+    
+    .question-number {
+        background: #7b1fa2;
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+    }
+    
+    .progress-bar {
+        height: 8px;
+        border-radius: 4px;
+        background: #e9ecef;
+        margin-bottom: 1rem;
+    }
+    
+    .progress-fill {
+        height: 100%;
+        background: #7b1fa2;
+        border-radius: 4px;
+        transition: width 0.3s ease;
+    }
+    
+    .qa-form {
+        background: #f3e5f5;
+        border-radius: 8px;
+        padding: 1.5rem;
+        border: 2px dashed #dee2e6;
+        transition: all 0.3s ease;
+    }
+    
+    .qa-form:hover {
+        border-color: #7b1fa2;
+        background: #fce4ec;
+    }
+    
+    .btn-finish {
+        background: linear-gradient(135deg, #7b1fa2, #4a148c);
+        border: none;
+        padding: 0.75rem 2rem;
+        border-radius: 8px;
+        font-weight: 600;
+        color: white;
+        transition: all 0.3s ease;
+    }
+    
+    .btn-finish:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(123, 31, 162, 0.4);
+        color: white;
+    }
+    
+    .model-answer-section {
+        background: #e8f5e8;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .keywords-section {
+        background: #fff3e0;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+    
+    .marks-input {
+        width: 100px;
+        display: inline-block;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Exam Header -->
+    <div class="exam-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h2 class="mb-1">{{ exam.title }}</h2>
+                <p class="mb-0 opacity-90">Add Question & Answer Type Questions</p>
+            </div>
+            <div class="text-end">
+                <div class="mb-2">
+                    <span class="badge bg-white text-dark">{{ exam.get_exam_type_display }}</span>
+                    <span class="badge bg-white text-dark ms-2">{{ total_questions }} Questions</span>
+                </div>
+                <a href="{% url 'instructor_exam_detail' exam.id %}" class="btn btn-light btn-sm">
+                    <i class="fas fa-arrow-left me-1"></i>Back to Exam
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress-bar">
+        <div class="progress-fill" style="width: {% if total_questions > 0 %}75{% else %}25{% endif %}%"></div>
+    </div>
+    <div class="d-flex justify-content-between text-muted small mb-4">
+        <span>Exam Created</span>
+        <span>Adding Questions</span>
+        <span>Ready to Publish</span>
+    </div>
+
+    <div class="row">
+        <!-- Question Form -->
+        <div class="col-lg-8">
+            <!-- Add Question Form -->
+            <div class="question-form-card">
+                <h4 class="mb-3">
+                    <i class="fas fa-edit me-2"></i>Add New Q&A Question
+                </h4>
+                
+                <form method="post" enctype="multipart/form-data" class="qa-form">
+                    {% csrf_token %}
+                    <input type="hidden" name="add_question" value="1">
+                    
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Question Text *</label>
+                        {{ form.question_text }}
+                        {% if form.question_text.errors %}
+                            <div class="text-danger small mt-1">{{ form.question_text.errors.0 }}</div>
+                        {% endif %}
+                        <small class="form-text text-muted">Write a clear and detailed question</small>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Question Image (Optional)</label>
+                                {{ form.question_image }}
+                                {% if form.question_image.errors %}
+                                    <div class="text-danger small mt-1">{{ form.question_image.errors.0 }}</div>
+                                {% endif %}
+                                <small class="form-text text-muted">Upload an image if needed</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Marks</label>
+                                {{ form.marks }}
+                                {% if form.marks.errors %}
+                                    <div class="text-danger small mt-1">{{ form.marks.errors.0 }}</div>
+                                {% endif %}
+                                <small class="form-text text-muted">Points for this question</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Model Answer Section -->
+                    <div class="model-answer-section">
+                        <h6 class="mb-3">
+                            <i class="fas fa-check-circle me-2"></i>Model Answer (Optional)
+                        </h6>
+                        <div class="mb-3">
+                            <label class="form-label">Reference Answer</label>
+                            {{ form.model_answer }}
+                            {% if form.model_answer.errors %}
+                                <div class="text-danger small mt-1">{{ form.model_answer.errors.0 }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">Provide a sample answer for reference during grading</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Keywords Section -->
+                    <div class="keywords-section">
+                        <h6 class="mb-3">
+                            <i class="fas fa-key me-2"></i>Key Points (Optional)
+                        </h6>
+                        <div class="mb-3">
+                            <label class="form-label">Important Keywords/Points</label>
+                            {{ form.keywords }}
+                            {% if form.keywords.errors %}
+                                <div class="text-danger small mt-1">{{ form.keywords.errors.0 }}</div>
+                            {% endif %}
+                            <small class="form-text text-muted">List key points to look for in student answers</small>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mt-4">
+                        <button type="button" class="btn btn-outline-secondary" onclick="clearForm()">
+                            <i class="fas fa-eraser me-1"></i>Clear Form
+                        </button>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-plus me-1"></i>Add Question
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Progress Card -->
+            <div class="question-form-card">
+                <h5 class="mb-3">
+                    <i class="fas fa-chart-pie me-2"></i>Progress
+                </h5>
+                
+                <div class="text-center mb-3">
+                    <div class="question-number mx-auto mb-2">{{ total_questions }}</div>
+                    <p class="mb-1">Questions Added</p>
+                    <small class="text-muted">Minimum 1 question required</small>
+                </div>
+                
+                {% if total_questions > 0 %}
+                <div class="d-grid gap-2">
+                    <button type="button" class="btn btn-outline-info" onclick="previewExam()">
+                        <i class="fas fa-eye me-1"></i>Preview Exam
+                    </button>
+                    
+                    <form method="post" style="display: inline;">
+                        {% csrf_token %}
+                        <input type="hidden" name="finish_exam" value="1">
+                        <button type="submit" class="btn-finish w-100">
+                            <i class="fas fa-check me-1"></i>Finish & Publish Exam
+                        </button>
+                    </form>
+                </div>
+                {% else %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Add at least one question to publish the exam
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Q&A Tips Card -->
+            <div class="question-form-card">
+                <h6 class="mb-3">
+                    <i class="fas fa-lightbulb me-2"></i>Tips for Q&A Questions
+                </h6>
+                <ul class="list-unstyled small">
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Ask open-ended questions
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Be specific about what you want
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Provide clear model answers
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        List key points for grading
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        Set appropriate marks per question
+                    </li>
+                </ul>
+            </div>
+            
+            <!-- Grading Info -->
+            <div class="question-form-card">
+                <h6 class="mb-3">
+                    <i class="fas fa-info-circle me-2"></i>Grading Information
+                </h6>
+                <div class="alert alert-info">
+                    <small>
+                        Q&A questions require manual grading. You'll review and grade each student's answer based on the model answer and key points you provide.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Existing Questions -->
+    {% if questions %}
+    <div class="question-form-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="mb-0">
+                <i class="fas fa-list me-2"></i>Added Questions ({{ total_questions }})
+            </h4>
+            <button class="btn btn-outline-secondary btn-sm" onclick="toggleQuestions()">
+                <i class="fas fa-eye me-1"></i>Toggle View
+            </button>
+        </div>
+        
+        <div id="questions-list">
+            {% for question in questions %}
+            <div class="question-card card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <h6 class="card-title d-flex align-items-center">
+                            <span class="question-number me-3">{{ question.order }}</span>
+                            <span>{{ question.question_text }}</span>
+                        </h6>
+                        <div>
+                            <span class="badge bg-secondary">{{ question.marks }} marks</span>
+                            <div class="dropdown d-inline-block ms-2">
+                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="#"><i class="fas fa-edit me-2"></i>Edit</a></li>
+                                    <li><a class="dropdown-item text-danger" href="#"><i class="fas fa-trash me-2"></i>Delete</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if question.question_image %}
+                        <div class="mb-3">
+                            <img src="{{ question.question_image.url }}" alt="Question Image" class="img-fluid rounded" style="max-height: 200px;">
+                        </div>
+                    {% endif %}
+                    
+                    {% if question.model_answer %}
+                        <div class="model-answer-section">
+                            <h6 class="text-success mb-2">
+                                <i class="fas fa-check-circle me-1"></i>Model Answer:
+                            </h6>
+                            <p class="mb-0">{{ question.model_answer|linebreaks }}</p>
+                        </div>
+                    {% endif %}
+                    
+                    {% if question.keywords %}
+                        <div class="keywords-section">
+                            <h6 class="text-warning mb-2">
+                                <i class="fas fa-key me-1"></i>Key Points:
+                            </h6>
+                            <p class="mb-0">{{ question.keywords|linebreaks }}</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Clear form function
+    window.clearForm = function() {
+        document.querySelector('form').reset();
+    };
+    
+    // Toggle questions visibility
+    window.toggleQuestions = function() {
+        const questionsList = document.getElementById('questions-list');
+        if (questionsList.style.display === 'none') {
+            questionsList.style.display = 'block';
+        } else {
+            questionsList.style.display = 'none';
+        }
+    };
+    
+    // Preview exam function
+    window.previewExam = function() {
+        alert('Exam preview feature coming soon!');
+    };
+    
+    // Auto-resize textareas
+    const textareas = document.querySelectorAll('textarea');
+    textareas.forEach(textarea => {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
+    });
+    
+    // Character counter for question text
+    const questionTextArea = document.querySelector('textarea[name="question_text"]');
+    if (questionTextArea) {
+        const counter = document.createElement('small');
+        counter.className = 'text-muted';
+        questionTextArea.parentNode.appendChild(counter);
+        
+        function updateCounter() {
+            const length = questionTextArea.value.length;
+            counter.textContent = `${length} characters`;
+            
+            if (length < 10) {
+                counter.className = 'text-danger';
+            } else if (length > 500) {
+                counter.className = 'text-warning';
+            } else {
+                counter.className = 'text-muted';
+            }
+        }
+        
+        questionTextArea.addEventListener('input', updateCounter);
+        updateCounter();
+    }
+    
+    // Form validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        const questionText = document.querySelector('textarea[name="question_text"]').value.trim();
+        const marks = document.querySelector('input[name="marks"]').value;
+        
+        if (!questionText) {
+            e.preventDefault();
+            alert('Please enter the question text');
+            return false;
+        }
+        
+        if (questionText.length < 10) {
+            e.preventDefault();
+            alert('Question text should be at least 10 characters long');
+            return false;
+        }
+        
+        if (!marks || marks < 1) {
+            e.preventDefault();
+            alert('Please enter valid marks (minimum 1)');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

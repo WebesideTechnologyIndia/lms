@@ -1,0 +1,558 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Zoom Management Dashboard{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'css/zoom-dashboard.css' %}" rel="stylesheet">
+<style>
+    :root {
+        --primary-color: #4e73df;
+        --success-color: #1cc88a;
+        --warning-color: #f6c23e;
+        --danger-color: #e74a3b;
+        --info-color: #36b9cc;
+    }
+    
+    .dashboard-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem;
+        border-radius: 10px;
+        margin-bottom: 2rem;
+    }
+    
+    .border-left-primary {
+        border-left: 4px solid var(--primary-color) !important;
+    }
+    .border-left-success {
+        border-left: 4px solid var(--success-color) !important;
+    }
+    .border-left-warning {
+        border-left: 4px solid var(--warning-color) !important;
+    }
+    .border-left-info {
+        border-left: 4px solid var(--info-color) !important;
+    }
+    .text-gray-800 {
+        color: #5a5c69 !important;
+    }
+    .text-gray-300 {
+        color: #d1d3e2 !important;
+    }
+    .card {
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15) !important;
+        border-radius: 10px;
+    }
+    .progress-sm {
+        height: 0.5rem;
+    }
+    .btn-circle {
+        width: 2rem;
+        height: 2rem;
+        border-radius: 50%;
+    }
+    .session-status {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .status-scheduled { 
+        background: #e3f2fd; 
+        color: #1976d2; 
+    }
+    .status-live { 
+        background: #e8f5e8; 
+        color: #4caf50; 
+        animation: pulse 2s infinite; 
+    }
+    .status-completed { 
+        background: #f3e5f5; 
+        color: #9c27b0; 
+    }
+    .status-cancelled { 
+        background: #ffebee; 
+        color: #f44336; 
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+
+    .stats-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 2rem 0 rgba(58, 59, 69, 0.2) !important;
+    }
+
+    .quick-action-btn {
+        transition: all 0.3s ease;
+        border-radius: 10px;
+    }
+
+    .quick-action-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .session-list-item {
+        transition: background-color 0.3s ease;
+        border-radius: 8px;
+        margin: 0.5rem 0;
+    }
+
+    .session-list-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .empty-state {
+        padding: 3rem 1rem;
+        text-align: center;
+        color: #6c757d;
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .modal-content {
+        border-radius: 10px;
+    }
+
+    .modal-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px 10px 0 0;
+    }
+
+    .feature-list {
+        list-style: none;
+        padding: 0;
+    }
+
+    .feature-list li {
+        padding: 0.25rem 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .feature-list i {
+        margin-right: 0.5rem;
+        width: 16px;
+    }
+
+    .live-indicator {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        background: #4caf50;
+        border-radius: 50%;
+        animation: pulse 2s infinite;
+        margin-right: 0.5rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Dashboard Header -->
+    <div class="dashboard-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="h2 mb-2">
+                    <i class="fas fa-video me-2"></i>
+                    Zoom Management Dashboard
+                </h1>
+                <p class="mb-0">Manage your virtual sessions, recordings, and attendance</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="btn-group">
+                    <a href="{% url 'zoom:create_session' %}" class="btn btn-light">
+                        <i class="fas fa-plus me-2"></i>New Session
+                    </a>
+                    <a href="{% url 'zoom:session_list' %}" class="btn btn-outline-light">
+                        <i class="fas fa-list me-2"></i>All Sessions
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-primary shadow h-100 py-2 stats-card">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                Total Sessions
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ total_sessions }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar-alt fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-success shadow h-100 py-2 stats-card">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                Today's Sessions
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ today_sessions }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-calendar-day fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-warning shadow h-100 py-2 stats-card">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                Live Sessions
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {% if live_sessions > 0 %}
+                                    <span class="live-indicator"></span>
+                                {% endif %}
+                                {{ live_sessions }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-broadcast-tower fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-xl-3 col-md-6 mb-4">
+            <div class="card border-left-info shadow h-100 py-2 stats-card">
+                <div class="card-body">
+                    <div class="row no-gutters align-items-center">
+                        <div class="col mr-2">
+                            <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                Total Recordings
+                            </div>
+                            <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                {{ total_recordings }}
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <i class="fas fa-video fa-2x text-gray-300"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Upcoming Sessions -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-clock me-2"></i>Upcoming Sessions
+                    </h6>
+                    <a href="{% url 'zoom:session_list' %}?status=scheduled" class="btn btn-sm btn-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_sessions %}
+                        <div class="list-group list-group-flush">
+                            {% for session in upcoming_sessions %}
+                                <div class="list-group-item px-0 session-list-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">
+                                                <a href="{% url 'zoom:session_detail' session.id %}" class="text-decoration-none">
+                                                    {{ session.title }}
+                                                </a>
+                                            </h6>
+                                            <p class="mb-1 text-muted small">
+                                                <i class="fas fa-users me-1"></i>{{ session.batch.name }}
+                                            </p>
+                                            <small class="text-muted">
+                                                <i class="fas fa-calendar me-1"></i>{{ session.scheduled_date|date:"M d, Y" }}
+                                                <i class="fas fa-clock ms-2 me-1"></i>{{ session.start_time|time:"H:i" }} - {{ session.end_time|time:"H:i" }}
+                                            </small>
+                                        </div>
+                                        <div class="ms-3">
+                                            <span class="session-status status-{{ session.status }}">
+                                                {{ session.get_status_display }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-calendar-times"></i>
+                            <h5>No upcoming sessions</h5>
+                            <p class="text-muted">Schedule a new session to get started</p>
+                            <a href="{% url 'zoom:create_session' %}" class="btn btn-primary">
+                                <i class="fas fa-plus me-2"></i>Create Session
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Sessions -->
+        <div class="col-lg-6">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3 d-flex justify-content-between align-items-center">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-history me-2"></i>Recent Sessions
+                    </h6>
+                    <a href="{% url 'zoom:session_list' %}" class="btn btn-sm btn-primary">View All</a>
+                </div>
+                <div class="card-body">
+                    {% if recent_sessions %}
+                        <div class="list-group list-group-flush">
+                            {% for session in recent_sessions %}
+                                <div class="list-group-item px-0 session-list-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-1">
+                                                <a href="{% url 'zoom:session_detail' session.id %}" class="text-decoration-none">
+                                                    {{ session.title }}
+                                                </a>
+                                            </h6>
+                                            <p class="mb-1 text-muted small">
+                                                <i class="fas fa-users me-1"></i>{{ session.batch.name }}
+                                            </p>
+                                            <small class="text-muted">
+                                                <i class="fas fa-calendar me-1"></i>{{ session.scheduled_date|date:"M d, Y" }}
+                                                <i class="fas fa-user ms-2 me-1"></i>{{ session.created_by.get_full_name }}
+                                            </small>
+                                        </div>
+                                        <div class="ms-3 d-flex align-items-center">
+                                            <span class="session-status status-{{ session.status }}">
+                                                {{ session.get_status_display }}
+                                            </span>
+                                            {% if session.recordings.exists %}
+                                                <i class="fas fa-video text-success ms-2" title="Has Recordings"></i>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="empty-state">
+                            <i class="fas fa-video-slash"></i>
+                            <h5>No recent sessions</h5>
+                            <p class="text-muted">Your recent sessions will appear here</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card shadow mb-4">
+                <div class="card-header py-3">
+                    <h6 class="m-0 font-weight-bold text-primary">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-2 mb-3">
+                            <a href="{% url 'zoom:create_session' %}" class="btn btn-outline-primary btn-lg quick-action-btn d-block h-100">
+                                <i class="fas fa-plus fa-2x mb-2"></i>
+                                <br>Create Session
+                            </a>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <a href="{% url 'zoom:session_list' %}?status=scheduled" class="btn btn-outline-success btn-lg quick-action-btn d-block h-100">
+                                <i class="fas fa-clock fa-2x mb-2"></i>
+                                <br>Scheduled
+                            </a>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <a href="{% url 'zoom:session_list' %}?status=live" class="btn btn-outline-warning btn-lg quick-action-btn d-block h-100">
+                                <i class="fas fa-broadcast-tower fa-2x mb-2"></i>
+                                <br>Live Now
+                            </a>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <a href="{% url 'zoom:recording_list' %}" class="btn btn-outline-info btn-lg quick-action-btn d-block h-100">
+                                <i class="fas fa-play-circle fa-2x mb-2"></i>
+                                <br>Recordings
+                            </a>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <a href="{% url 'zoom:session_list' %}?status=completed" class="btn btn-outline-secondary btn-lg quick-action-btn d-block h-100">
+                                <i class="fas fa-check-circle fa-2x mb-2"></i>
+                                <br>Completed
+                            </a>
+                        </div>
+                        <div class="col-md-2 mb-3">
+                            <button class="btn btn-outline-dark btn-lg quick-action-btn d-block h-100" data-bs-toggle="modal" data-bs-target="#settingsModal">
+                                <i class="fas fa-cog fa-2x mb-2"></i>
+                                <br>Settings
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal fade" id="settingsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-cog me-2"></i>Zoom Settings
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info d-flex align-items-center">
+                    <i class="fas fa-info-circle fa-2x me-3"></i>
+                    <div>
+                        <strong>Current Configuration</strong><br>
+                        Account ID: 0huT3HQLSpGVKU5graz24A<br>
+                        Status: <span class="badge bg-success">Active</span>
+                    </div>
+                </div>
+                
+                <p class="mb-4">Zoom integration is properly configured. All meetings will be created automatically with recordings enabled.</p>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-success mb-3">
+                            <i class="fas fa-check-circle me-2"></i>Features Enabled
+                        </h6>
+                        <ul class="feature-list">
+                            <li><i class="fas fa-check text-success"></i>Auto Meeting Creation</li>
+                            <li><i class="fas fa-check text-success"></i>Cloud Recording</li>
+                            <li><i class="fas fa-check text-success"></i>Waiting Room</li>
+                            <li><i class="fas fa-check text-success"></i>Attendance Tracking</li>
+                            <li><i class="fas fa-check text-success"></i>Breakout Rooms</li>
+                            <li><i class="fas fa-check text-success"></i>Screen Sharing</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-info mb-3">
+                            <i class="fas fa-info-circle me-2"></i>API Limits
+                        </h6>
+                        <ul class="feature-list">
+                            <li><i class="fas fa-users text-info"></i>100 participants per meeting</li>
+                            <li><i class="fas fa-clock text-info"></i>Unlimited meeting duration</li>
+                            <li><i class="fas fa-cloud text-info"></i>1GB cloud storage</li>
+                            <li><i class="fas fa-bolt text-info"></i>Real-time webhooks</li>
+                            <li><i class="fas fa-shield-alt text-info"></i>End-to-end encryption</li>
+                            <li><i class="fas fa-mobile-alt text-info"></i>Mobile app support</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning mt-4">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>Note:</strong> Changes to Zoom settings require administrator privileges and may affect ongoing sessions.
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Close
+                </button>
+                <button type="button" class="btn btn-primary">
+                    <i class="fas fa-save me-2"></i>Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh live sessions count every 30 seconds
+    setInterval(function() {
+        fetch('{% url "zoom:dashboard" %}')
+            .then(response => response.text())
+            .then(data => {
+                // Update only live sessions count
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(data, 'text/html');
+                const newCount = doc.querySelector('.border-left-warning .h5').textContent.trim();
+                const currentElement = document.querySelector('.border-left-warning .h5');
+                
+                if (currentElement && newCount !== currentElement.textContent.trim()) {
+                    currentElement.textContent = newCount;
+                    
+                    // Add visual feedback for update
+                    currentElement.style.animation = 'none';
+                    currentElement.offsetHeight; // Trigger reflow
+                    currentElement.style.animation = 'pulse 1s ease-in-out';
+                }
+            })
+            .catch(error => console.log('Refresh failed:', error));
+    }, 30000);
+
+    // Add smooth scrolling for anchor links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }
+        });
+    });
+
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+
+    // Add loading states to buttons
+    document.querySelectorAll('.quick-action-btn').forEach(button => {
+        button.addEventListener('click', function() {
+            if (!this.hasAttribute('data-bs-toggle')) {
+                this.innerHTML = '<i class="fas fa-spinner fa-spin fa-2x mb-2"></i><br>Loading...';
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,508 @@
+{% extends 'instructor_base.html' %}
+
+{% block title %}Assign Exams - Instructor Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+    .assignment-card {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        padding: 2rem;
+        margin-bottom: 2rem;
+    }
+    
+    .step-indicator {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 2rem;
+    }
+    
+    .step {
+        display: flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        background: #f8f9fa;
+        color: #6c757d;
+        margin: 0 0.5rem;
+        font-weight: 500;
+    }
+    
+    .step.active {
+        background: #10b981;
+        color: white;
+    }
+    
+    .exam-selection {
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .exam-selection:hover {
+        border-color: #10b981;
+        background: #f0fdf4;
+    }
+    
+    .exam-selection.selected {
+        border-color: #10b981;
+        background: #f0fdf4;
+        box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+    }
+    
+    .student-card, .batch-card, .course-card {
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 0.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .student-card:hover, .batch-card:hover, .course-card:hover {
+        border-color: #10b981;
+        background: #f0fdf4;
+    }
+    
+    .assignment-type-section {
+        display: none;
+    }
+    
+    .assignment-type-section.active {
+        display: block;
+    }
+    
+    .recent-assignments {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-top: 2rem;
+    }
+    
+    .assignment-item {
+        display: flex;
+        justify-content: between;
+        align-items: center;
+        padding: 0.75rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .assignment-item:last-child {
+        border-bottom: none;
+    }
+    
+    .exam-type-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    
+    .mcq-badge { background: #e3f2fd; color: #1976d2; }
+    .qa-badge { background: #f3e5f5; color: #7b1fa2; }
+    .assignment-badge { background: #e8f5e8; color: #388e3c; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 mb-0">Assign Exams</h1>
+            <p class="text-muted">Assign your exams to students, batches, or courses</p>
+        </div>
+        <div>
+            <a href="{% url 'instructor_exam_dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- Assignment Form -->
+    <div class="assignment-card">
+        <form method="post" id="assignmentForm">
+            {% csrf_token %}
+            
+            <!-- Step Indicator -->
+            <div class="step-indicator">
+                <div class="step active" id="step1">
+                    <i class="fas fa-clipboard-list me-2"></i>1. Select Exam
+                </div>
+                <div class="step" id="step2">
+                    <i class="fas fa-users me-2"></i>2. Choose Recipients
+                </div>
+                <div class="step" id="step3">
+                    <i class="fas fa-calendar me-2"></i>3. Set Schedule
+                </div>
+            </div>
+
+            <!-- Step 1: Exam Selection -->
+            <div class="step-content" id="step1-content">
+                <h4 class="mb-3">Select an Exam to Assign</h4>
+                
+                {% if exams %}
+                    <div class="row">
+                        {% for exam in exams %}
+                        <div class="col-md-6">
+                            <div class="exam-selection" data-exam-id="{{ exam.id }}">
+                                <input type="radio" name="exam_id" value="{{ exam.id }}" id="exam_{{ exam.id }}" class="d-none">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="mb-2">{{ exam.title }}</h6>
+                                        <p class="text-muted small mb-2">{{ exam.description|truncatechars:80 }}</p>
+                                        <div class="d-flex gap-2 mb-2">
+                                            <span class="exam-type-badge {{ exam.exam_type }}-badge">
+                                                {{ exam.get_exam_type_display }}
+                                            </span>
+                                        </div>
+                                        <small class="text-muted">
+                                            <i class="fas fa-trophy me-1"></i>{{ exam.total_marks }} marks
+                                            <i class="fas fa-clock ms-2 me-1"></i>{{ exam.get_total_questions }} questions
+                                        </small>
+                                    </div>
+                                    <div class="text-end">
+                                        <i class="fas fa-circle-check text-success" style="display: none;"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <div class="text-end mt-3">
+                        <button type="button" class="btn btn-primary" id="nextToStep2" disabled>
+                            Next: Choose Recipients <i class="fas fa-arrow-right ms-2"></i>
+                        </button>
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No Published Exams Available</h5>
+                        <p class="text-muted">You need to create and publish exams before you can assign them.</p>
+                        <a href="{% url 'instructor_create_exam' %}" class="btn btn-primary">
+                            <i class="fas fa-plus me-2"></i>Create New Exam
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- Step 2: Assignment Type and Recipients -->
+            <div class="step-content" id="step2-content" style="display: none;">
+                <h4 class="mb-3">Choose Assignment Type and Recipients</h4>
+                
+                <!-- Assignment Type Selection -->
+                <div class="mb-4">
+                    <label class="form-label">Assignment Type</label>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="assignment_type" value="individual" id="type_individual">
+                                <label class="form-check-label" for="type_individual">
+                                    <i class="fas fa-user me-2"></i>Individual Students
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="assignment_type" value="batch" id="type_batch">
+                                <label class="form-check-label" for="type_batch">
+                                    <i class="fas fa-layer-group me-2"></i>Entire Batch
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input class="form-check-input" type="radio" name="assignment_type" value="course" id="type_course">
+                                <label class="form-check-label" for="type_course">
+                                    <i class="fas fa-book me-2"></i>Entire Course
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Individual Students Section -->
+                <div class="assignment-type-section" id="individual-section">
+                    <h5 class="mb-3">Select Students</h5>
+                    {% if students %}
+                        <div class="row">
+                            {% for student in students %}
+                            <div class="col-md-6">
+                                <div class="student-card">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="selected_students" value="{{ student.id }}" id="student_{{ student.id }}">
+                                        <label class="form-check-label w-100" for="student_{{ student.id }}">
+                                            <div class="d-flex align-items-center">
+                                                <div class="me-3">
+                                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                        <i class="fas fa-user"></i>
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <h6 class="mb-1">{{ student.get_full_name|default:student.username }}</h6>
+                                                    <small class="text-muted">{{ student.email }}</small>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No students found in your assigned batches or courses.
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Batch Section -->
+                <div class="assignment-type-section" id="batch-section">
+                    <h5 class="mb-3">Select Batches</h5>
+                    {% if batches %}
+                        <div class="row">
+                            {% for batch in batches %}
+                            <div class="col-md-6">
+                                <div class="batch-card">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="selected_batches" value="{{ batch.id }}" id="batch_{{ batch.id }}">
+                                        <label class="form-check-label w-100" for="batch_{{ batch.id }}">
+                                            <h6 class="mb-1">{{ batch.name }}</h6>
+                                            <small class="text-muted">{{ batch.course.title }}</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No batches assigned to you.
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Course Section -->
+                <div class="assignment-type-section" id="course-section">
+                    <h5 class="mb-3">Select Courses</h5>
+                    {% if courses %}
+                        <div class="row">
+                            {% for course in courses %}
+                            <div class="col-md-6">
+                                <div class="course-card">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="selected_courses" value="{{ course.id }}" id="course_{{ course.id }}">
+                                        <label class="form-check-label w-100" for="course_{{ course.id }}">
+                                            <h6 class="mb-1">{{ course.title }}</h6>
+                                            <small class="text-muted">{{ course.description|truncatechars:50 }}</small>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            No courses assigned to you.
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline-secondary" id="backToStep1">
+                        <i class="fas fa-arrow-left me-2"></i>Back
+                    </button>
+                    <button type="button" class="btn btn-primary" id="nextToStep3" disabled>
+                        Next: Set Schedule <i class="fas fa-arrow-right ms-2"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Step 3: Schedule -->
+            <div class="step-content" id="step3-content" style="display: none;">
+                <h4 class="mb-3">Set Custom Schedule (Optional)</h4>
+                
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Leave blank to use the exam's default schedule. Custom schedules will override the exam's original timing.
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="custom_start_datetime" class="form-label">Custom Start Date & Time</label>
+                            <input type="datetime-local" class="form-control" name="custom_start_datetime" id="custom_start_datetime">
+                            <div class="form-text">When students can start taking this exam</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="custom_end_datetime" class="form-label">Custom End Date & Time</label>
+                            <input type="datetime-local" class="form-control" name="custom_end_datetime" id="custom_end_datetime">
+                            <div class="form-text">When the exam will no longer be available</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between mt-4">
+                    <button type="button" class="btn btn-outline-secondary" id="backToStep2">
+                        <i class="fas fa-arrow-left me-2"></i>Back
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-check me-2"></i>Assign Exam
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Recent Assignments -->
+    {% if recent_assignments %}
+    <div class="recent-assignments">
+        <h5 class="mb-3">Recent Assignments</h5>
+        {% for assignment in recent_assignments %}
+        <div class="assignment-item">
+            <div class="flex-grow-1">
+                <h6 class="mb-1">{{ assignment.exam.title }}</h6>
+                <small class="text-muted">
+                    Assigned to:
+                    {% if assignment.assignment_type == 'individual' %}
+                        {{ assignment.student.get_full_name|default:assignment.student.username }}
+                    {% elif assignment.assignment_type == 'batch' %}
+                        Batch: {{ assignment.batch.name }}
+                    {% else %}
+                        Course: {{ assignment.course.title }}
+                    {% endif %}
+                    <span class="ms-2">{{ assignment.assigned_at|timesince }} ago</span>
+                </small>
+            </div>
+            <div>
+                <span class="badge bg-primary">{{ assignment.get_assignment_type_display }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const examSelections = document.querySelectorAll('.exam-selection');
+    const assignmentTypeRadios = document.querySelectorAll('input[name="assignment_type"]');
+    const nextToStep2Btn = document.getElementById('nextToStep2');
+    const nextToStep3Btn = document.getElementById('nextToStep3');
+    const backToStep1Btn = document.getElementById('backToStep1');
+    const backToStep2Btn = document.getElementById('backToStep2');
+    
+    // Step navigation
+    function showStep(stepNumber) {
+        // Hide all step contents
+        document.querySelectorAll('.step-content').forEach(content => {
+            content.style.display = 'none';
+        });
+        
+        // Remove active class from all steps
+        document.querySelectorAll('.step').forEach(step => {
+            step.classList.remove('active');
+        });
+        
+        // Show current step
+        document.getElementById(`step${stepNumber}-content`).style.display = 'block';
+        document.getElementById(`step${stepNumber}`).classList.add('active');
+    }
+    
+    // Exam selection
+    examSelections.forEach(selection => {
+        selection.addEventListener('click', function() {
+            // Remove selection from all
+            examSelections.forEach(s => {
+                s.classList.remove('selected');
+                s.querySelector('i.fa-circle-check').style.display = 'none';
+            });
+            
+            // Add selection to clicked
+            this.classList.add('selected');
+            this.querySelector('i.fa-circle-check').style.display = 'block';
+            this.querySelector('input[type="radio"]').checked = true;
+            
+            // Enable next button
+            nextToStep2Btn.disabled = false;
+        });
+    });
+    
+    // Assignment type change
+    assignmentTypeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            // Hide all sections
+            document.querySelectorAll('.assignment-type-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            
+            // Show selected section
+            const selectedSection = document.getElementById(`${this.value}-section`);
+            if (selectedSection) {
+                selectedSection.classList.add('active');
+            }
+            
+            // Check if any recipients are selected
+            checkRecipientsSelected();
+        });
+    });
+    
+    // Check if recipients are selected
+    function checkRecipientsSelected() {
+        const assignmentType = document.querySelector('input[name="assignment_type"]:checked');
+        if (!assignmentType) {
+            nextToStep3Btn.disabled = true;
+            return;
+        }
+        
+        let hasSelection = false;
+        
+        if (assignmentType.value === 'individual') {
+            hasSelection = document.querySelectorAll('input[name="selected_students"]:checked').length > 0;
+        } else if (assignmentType.value === 'batch') {
+            hasSelection = document.querySelectorAll('input[name="selected_batches"]:checked').length > 0;
+        } else if (assignmentType.value === 'course') {
+            hasSelection = document.querySelectorAll('input[name="selected_courses"]:checked').length > 0;
+        }
+        
+        nextToStep3Btn.disabled = !hasSelection;
+    }
+    
+    // Listen for recipient checkbox changes
+    document.addEventListener('change', function(e) {
+        if (e.target.matches('input[name="selected_students"], input[name="selected_batches"], input[name="selected_courses"]')) {
+            checkRecipientsSelected();
+        }
+    });
+    
+    // Navigation buttons
+    nextToStep2Btn.addEventListener('click', () => showStep(2));
+    nextToStep3Btn.addEventListener('click', () => showStep(3));
+    backToStep1Btn.addEventListener('click', () => showStep(1));
+    backToStep2Btn.addEventListener('click', () => showStep(2));
+    
+    // Form validation
+    document.getElementById('assignmentForm').addEventListener('submit', function(e) {
+        const startDate = document.getElementById('custom_start_datetime').value;
+        const endDate = document.getElementById('custom_end_datetime').value;
+        
+        if (startDate && endDate && new Date(startDate) >= new Date(endDate)) {
+            e.preventDefault();
+            alert('End date must be after start date');
+            return false;
+        }
+    });
+});
+</script>
+{% endblock %}

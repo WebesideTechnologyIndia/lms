@@ -1,0 +1,316 @@
+<!-- templates/batch_management_instructor/batch_list.html -->
+{% extends 'instructor_base.html' %}
+{% load static %}
+
+{% block title %}Course Batches - {{ course.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.batch-card {
+    transition: all 0.3s ease;
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.batch-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.batch-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+    color: white;
+}
+
+.batch-status {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-active { background: rgba(40, 167, 69, 0.9); }
+.status-draft { background: rgba(255, 193, 7, 0.9); color: #000; }
+.status-completed { background: rgba(108, 117, 125, 0.9); }
+
+.progress-ring {
+    width: 60px;
+    height: 60px;
+    position: relative;
+}
+
+.course-header {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    color: white;
+    padding: 25px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+}
+
+.quick-stats {
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 15px;
+    backdrop-filter: blur(10px);
+}
+
+.action-btn {
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.action-btn:hover {
+    transform: translateY(-1px);
+}
+
+.empty-state {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 15px;
+    padding: 60px 40px;
+    text-align: center;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    
+    <!-- Course Header -->
+    <div class="course-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="bi bi-book-fill me-3" style="font-size: 2rem;"></i>
+                    <div>
+                        <h2 class="mb-1">{{ course.title }}</h2>
+                        <p class="mb-0 opacity-75">{{ course.course_code }} • Course Batches Management</p>
+                    </div>
+                </div>
+                
+                <div class="quick-stats">
+                    <div class="row text-center">
+                        <div class="col-3">
+                            <div class="h4 mb-0">{{ course_stats.total_batches|default:batches.count }}</div>
+                            <small>Total Batches</small>
+                        </div>
+                        <div class="col-3">
+                            <div class="h4 mb-0">{{ course_stats.active_batches|default:"0" }}</div>
+                            <small>Active Batches</small>
+                        </div>
+                        <div class="col-3">
+                            <div class="h4 mb-0">{{ course_stats.total_students|default:course.get_enrolled_count }}</div>
+                            <small>Course Students</small>
+                        </div>
+                        <div class="col-3">
+                            <div class="h4 mb-0">{{ course_stats.total_modules|default:course.modules.count }}</div>
+                            <small>Course Modules</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-4 text-end">
+                <div class="btn-group-vertical d-grid gap-2">
+                    <a href="{% url 'courses:instructor_create_batch' course.id %}" class="btn btn-light btn-lg">
+                        <i class="bi bi-plus-circle me-2"></i>Create New Batch
+                    </a>
+                    
+                    <a href="{% url 'courses:instructor_view_all_batches' %}" class="btn btn-outline-light">
+                        <i class="bi bi-collection me-2"></i>All My Batches
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'courses:course_dashboard' %}">
+                    <i class="bi bi-house me-1"></i>Dashboard
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'courses:manage_courses' %}">My Courses</a>
+            </li>
+            <li class="breadcrumb-item active">{{ course.title }} Batches</li>
+        </ol>
+    </nav>
+
+    <!-- Batches Grid -->
+    {% if batches %}
+        <div class="row">
+            {% for batch in batches %}
+            <div class="col-xl-4 col-lg-6 col-md-6 mb-4">
+                <div class="card batch-card h-100">
+                    <div class="batch-header position-relative">
+                        <span class="batch-status status-{{ batch.status }}">
+                            {{ batch.get_status_display }}
+                        </span>
+                        
+                        <div class="d-flex align-items-center mb-3">
+                            <div class="me-3">
+                                <i class="bi bi-people-fill" style="font-size: 2rem; opacity: 0.8;"></i>
+                            </div>
+                            <div>
+                                <h5 class="mb-1">{{ batch.name }}</h5>
+                                <small class="opacity-75">{{ batch.code }}</small>
+                            </div>
+                        </div>
+                        
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <div class="h5 mb-0">{{ batch.get_enrolled_count }}</div>
+                                <small>Enrolled</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="h5 mb-0">{{ batch.batch_modules.count }}</div>
+                                <small>Modules</small>
+                            </div>
+                            <div class="col-4">
+                                <div class="h5 mb-0">{{ batch.get_available_seats }}</div>
+                                <small>Available</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card-body">
+                        <!-- Enrollment Progress -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1">
+                                <small class="text-muted">Enrollment Progress</small>
+                                <small class="text-muted">{{ batch.get_enrolled_count }}/{{ batch.max_students }}</small>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar bg-success progress-bar-striped" 
+                                     style="width: {% widthratio batch.get_enrolled_count batch.max_students 100 %}%"
+                                     data-bs-toggle="tooltip" 
+                                     title="{{ batch.get_enrolled_count }} out of {{ batch.max_students }} students">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Batch Details -->
+                        <div class="row g-2 mb-3">
+                            <div class="col-12">
+                                <div class="d-flex align-items-center text-muted">
+                                    <i class="bi bi-calendar-range me-2"></i>
+                                    <small>{{ batch.start_date|date:"M d" }} - {{ batch.end_date|date:"M d, Y" }}</small>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="d-flex align-items-center text-muted">
+                                    <i class="bi bi-person me-2"></i>
+                                    <small>{{ batch.instructor.get_full_name|default:batch.instructor.username }}</small>
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="d-flex align-items-center text-muted">
+                                    {% if batch.content_type == 'fresh' %}
+                                        <i class="bi bi-plus-circle text-success me-2"></i>
+                                        <small>Fresh Content</small>
+                                    {% else %}
+                                        <i class="bi bi-files text-info me-2"></i>
+                                        <small>Copied from Course</small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="d-flex align-items-center text-muted">
+                                    <i class="bi bi-clock me-2"></i>
+                                    <small>Created {{ batch.created_at|timesince }} ago</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Action Buttons -->
+                    <div class="card-footer bg-light border-0">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <a href="{% url 'courses:instructor_batch_detail' course.id batch.id %}" 
+                                   class="btn btn-outline-primary btn-sm w-100">
+                                    <i class="bi bi-eye me-1"></i>View & Add
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{% url 'courses:instructor_edit_batch' course.id batch.id %}" 
+                                   class="btn btn-outline-secondary btn-sm w-100">
+                                    <i class="bi bi-pencil me-1"></i>Edit
+                                </a>
+                            </div>
+                            <div class="col-6">
+                                <a href="{% url 'courses:instructor_batch_enrollments' course.id batch.id %}" 
+                                   class="btn btn-outline-info btn-sm w-100">
+                                    <i class="bi bi-people me-1"></i>Students
+                                </a>
+                            </div>
+                            
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        
+  
+        
+    {% else %}
+        <!-- Empty State -->
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="empty-state">
+                    <div class="mb-4">
+                        <i class="bi bi-collection" style="font-size: 4rem; opacity: 0.6;"></i>
+                    </div>
+                    <h3 class="mb-3">No Batches Created Yet</h3>
+                    <p class="mb-4 opacity-75">
+                        Start organizing your students into batches. Each batch can have its own schedule, 
+                        content, and student groups for better management.
+                    </p>
+                    
+                    <div class="d-flex flex-column flex-md-row gap-3 justify-content-center">
+                        <a href="{% url 'courses:instructor_create_batch' course.id %}" class="btn btn-light btn-lg">
+                            <i class="bi bi-plus-circle me-2"></i>Create Your First Batch
+                        </a>
+                        <a href="{% url 'courses:instructor_course_detail' course.id %}" class="btn btn-outline-light">
+                            <i class="bi bi-arrow-left me-2"></i>Back to Course
+                        </a>
+                    </div>
+                    
+                    <div class="mt-4 p-3 bg-white bg-opacity-10 rounded">
+                        <h6 class="mb-2">Why Create Batches?</h6>
+                        <ul class="list-unstyled small">
+                            <li><i class="bi bi-check-circle me-2"></i>Organize students by schedule or skill level</li>
+                            <li><i class="bi bi-check-circle me-2"></i>Customize content for different groups</li>
+                            <li><i class="bi bi-check-circle me-2"></i>Track progress independently</li>
+                            <li><i class="bi bi-check-circle me-2"></i>Manage enrollments efficiently</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+// Initialize tooltips
+document.addEventListener('DOMContentLoaded', function() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}

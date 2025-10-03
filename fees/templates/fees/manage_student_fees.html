@@ -1,0 +1,606 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Student Fees - LMS Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .table-hover tbody tr:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .student-info {
+        min-width: 200px;
+    }
+    
+    .course-info {
+        min-width: 180px;
+    }
+    
+    .fee-structure-info {
+        min-width: 140px;
+    }
+    
+    .amount-column {
+        min-width: 100px;
+        text-align: right;
+    }
+    
+    .status-column {
+        min-width: 100px;
+    }
+    
+    .actions-column {
+        min-width: 120px;
+    }
+    
+    .table-responsive {
+        overflow: visible !important;
+    }
+    
+    .dropdown-menu {
+        min-width: 200px;
+        z-index: 1050 !important;
+        border: 1px solid #dee2e6;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+        background-color: #ffffff !important;
+        position: absolute !important;
+        transform: translateY(-100%) !important;
+        top: 0 !important;
+    }
+    
+    .dropdown {
+        position: static !important;
+    }
+    
+    tbody tr {
+        position: relative;
+    }
+    
+    .dropdown-item {
+        padding: 10px 16px;
+        font-size: 14px;
+        color: #333 !important;
+        display: flex;
+        align-items: center;
+        text-decoration: none;
+    }
+    
+    .dropdown-item:hover {
+        background-color: #f8f9fa !important;
+        color: #333 !important;
+    }
+    
+    .dropdown-item i {
+        width: 16px;
+        text-align: center;
+    }
+    
+    .dropdown-toggle::after {
+        margin-left: 8px;
+    }
+    
+    .table-danger {
+        background-color: #f8d7da !important;
+    }
+    
+    .badge {
+        font-size: 11px;
+        padding: 4px 8px;
+    }
+    
+    .student-avatar {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        font-weight: bold;
+        color: white;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .amount-pending {
+        color: #dc3545;
+        font-weight: 600;
+    }
+    
+    .amount-paid {
+        color: #28a745;
+        font-weight: 600;
+    }
+    
+    .overdue-indicator {
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { opacity: 1; }
+        50% { opacity: 0.7; }
+        100% { opacity: 1; }
+    }
+    
+    .action-btn {
+        padding: 6px 12px;
+        font-size: 13px;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+    }
+    
+    .action-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fees:admin_fees_dashboard' %}">Fees</a></li>
+        <li class="breadcrumb-item active">Manage Student Fees</li>
+    </ol>
+</nav>
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-users me-2 text-primary"></i>Manage Student Fees
+        </h2>
+        <p class="text-muted mb-0">Track and manage student fee assignments and payments</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{% url 'fees:assign_fee_to_student' %}" class="btn btn-primary action-btn">
+            <i class="fas fa-plus me-2"></i>Assign Fee
+        </a>
+        <a href="{% url 'fees:record_payment' %}" class="btn btn-success action-btn">
+            <i class="fas fa-credit-card me-2"></i>Record Payment
+        </a>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4 shadow-sm">
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label for="search" class="form-label fw-semibold">Search</label>
+                <input type="text" class="form-control" name="search" value="{{ request.GET.search }}" placeholder="Search students, courses...">
+            </div>
+            <div class="col-md-2">
+                <label for="course" class="form-label fw-semibold">Course</label>
+                <select name="course" class="form-select">
+                    <option value="">All Courses</option>
+                    {% for course in courses %}
+                    <option value="{{ course.id }}" {% if request.GET.course == course.id|stringformat:"s" %}selected{% endif %}>
+                        {{ course.title }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="status" class="form-label fw-semibold">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="active" {% if request.GET.status == 'active' %}selected{% endif %}>Active</option>
+                    <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="suspended" {% if request.GET.status == 'suspended' %}selected{% endif %}>Suspended</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="payment_status" class="form-label fw-semibold">Payment Status</label>
+                <select name="payment_status" class="form-select">
+                    <option value="">All Payment Status</option>
+                    <option value="paid" {% if request.GET.payment_status == 'paid' %}selected{% endif %}>Fully Paid</option>
+                    <option value="partial" {% if request.GET.payment_status == 'partial' %}selected{% endif %}>Partially Paid</option>
+                    <option value="pending" {% if request.GET.payment_status == 'pending' %}selected{% endif %}>Pending</option>
+                    <option value="overdue" {% if request.GET.payment_status == 'overdue' %}selected{% endif %}>Overdue</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-outline-primary action-btn">
+                        <i class="fas fa-search me-1"></i>Search
+                    </button>
+                    <a href="{% url 'fees:manage_student_fees' %}" class="btn btn-outline-secondary action-btn">
+                        <i class="fas fa-times me-1"></i>Clear
+                    </a>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Student Fees List -->
+<div class="card shadow-sm">
+    <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="fas fa-list me-2"></i>Student Fee Assignments
+            <span class="badge bg-light text-primary ms-2">{{ assignments.paginator.count }}</span>
+        </h5>
+        <div class="d-flex gap-2">
+            <a href="{% url 'fees:export_payment_report' %}" class="btn btn-sm btn-light action-btn">
+                <i class="fas fa-download me-1"></i>Export
+            </a>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        {% if assignments %}
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="student-info fw-semibold">Student</th>
+                            <th class="course-info fw-semibold">Course</th>
+                            <th class="fee-structure-info fw-semibold">Fee Structure</th>
+                            <th class="amount-column fw-semibold">Total Amount</th>
+                            <th class="amount-column fw-semibold">Paid</th>
+                            <th class="amount-column fw-semibold">Pending</th>
+                            <th class="status-column fw-semibold">Status</th>
+                            <th class="actions-column fw-semibold">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for assignment in assignments %}
+                        <tr class="{% if assignment.is_course_locked %}table-danger{% endif %}">
+                            <td class="student-info">
+                                <div class="d-flex align-items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="student-avatar">
+                                            {{ assignment.student.first_name.0|upper }}{{ assignment.student.last_name.0|upper }}
+                                        </div>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <h6 class="mb-1 fw-semibold">{{ assignment.student.get_full_name }}</h6>
+                                        <small class="text-muted">{{ assignment.student.email }}</small>
+                                        {% if assignment.is_course_locked %}
+                                            <br><small class="text-danger fw-semibold overdue-indicator">
+                                                <i class="fas fa-lock me-1"></i>Course Locked
+                                            </small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="course-info">
+                                <div>
+                                    <strong class="text-dark">{{ assignment.course.title }}</strong><br>
+                                    <small class="text-muted fw-medium">{{ assignment.course.course_code }}</small>
+                                </div>
+                            </td>
+                            <td class="fee-structure-info">
+                                <span class="badge bg-info text-white mb-1">{{ assignment.fee_structure.name }}</span><br>
+                                <small class="text-muted">{{ assignment.fee_structure.get_payment_type_display }}</small>
+                            </td>
+                            <td class="amount-column">
+                                <strong class="text-primary fs-6">${{ assignment.total_amount|floatformat:2 }}</strong>
+                            </td>
+                            <td class="amount-column">
+                                <strong class="amount-paid">${{ assignment.amount_paid|floatformat:2 }}</strong>
+                                {% if assignment.amount_paid > 0 %}
+                                    <br><small class="text-success fw-semibold">{{ assignment.get_completion_percentage }}% paid</small>
+                                {% endif %}
+                            </td>
+                            <td class="amount-column">
+                                <strong class="amount-pending">${{ assignment.amount_pending|floatformat:2 }}</strong>
+                                {% if assignment.is_payment_due %}
+                                    <br><small class="text-danger fw-semibold overdue-indicator">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>Overdue
+                                    </small>
+                                {% endif %}
+                            </td>
+                            <td class="status-column">
+                                {% if assignment.status == 'active' %}
+                                    <span class="badge bg-success fs-6">Active</span>
+                                {% elif assignment.status == 'completed' %}
+                                    <span class="badge bg-primary fs-6">Completed</span>
+                                {% elif assignment.status == 'suspended' %}
+                                    <span class="badge bg-warning fs-6">Suspended</span>
+                                {% else %}
+                                    <span class="badge bg-secondary fs-6">{{ assignment.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="actions-column">
+                                <div class="dropdown">
+                                    <button type="button" class="btn btn-outline-primary btn-sm dropdown-toggle action-btn" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-cog me-1"></i> Actions
+                                    </button>
+                                    <ul class="dropdown-menu shadow">
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'fees:student_fee_detail' assignment.id %}">
+                                                <i class="fas fa-eye me-2 text-info"></i>View Details
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a class="dropdown-item" href="{% url 'fees:quick_payment' assignment.id %}">
+                                                <i class="fas fa-credit-card me-2 text-success"></i>Record Payment
+                                            </a>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        
+                                        {% if assignment.is_course_locked %}
+                                        <li>
+                                            <button class="dropdown-item text-success" onclick="unlockCourse({{ assignment.id }})">
+                                                <i class="fas fa-unlock me-2"></i>Unlock Course
+                                            </button>
+                                        </li>
+                                        {% else %}
+                                        <li>
+                                            <button class="dropdown-item text-warning" onclick="lockCourse({{ assignment.id }})">
+                                                <i class="fas fa-lock me-2"></i>Lock Course
+                                            </button>
+                                        </li>
+                                        {% endif %}
+                                        
+                                        <li>
+                                            <button class="dropdown-item text-primary" onclick="sendReminder({{ assignment.id }})">
+                                                <i class="fas fa-envelope me-2"></i>Send Reminder
+                                            </button>
+                                        </li>
+                                        
+
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            {% if assignments.has_other_pages %}
+            <div class="card-footer bg-light">
+                <nav aria-label="Page navigation">
+                    <ul class="pagination justify-content-center mb-0">
+                        {% if assignments.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="fas fa-angle-double-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ assignments.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="fas fa-angle-left"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+
+                        <li class="page-item active">
+                            <span class="page-link">
+                                Page {{ assignments.number }} of {{ assignments.paginator.num_pages }}
+                            </span>
+                        </li>
+
+                        {% if assignments.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ assignments.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="fas fa-angle-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ assignments.paginator.num_pages }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                                    <i class="fas fa-angle-double-right"></i>
+                                </a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-users text-muted mb-3" style="font-size: 4rem;"></i>
+                <h4 class="text-muted">No fee assignments found</h4>
+                <p class="text-muted mb-4">
+                    {% if request.GET %}
+                        No fee assignments match your search criteria.
+                    {% else %}
+                        No fee assignments have been created yet.
+                    {% endif %}
+                </p>
+                {% if request.GET %}
+                    <a href="{% url 'fees:manage_student_fees' %}" class="btn btn-outline-primary me-2 action-btn">
+                        <i class="fas fa-times me-2"></i>Clear Filters
+                    </a>
+                {% endif %}
+                <a href="{% url 'fees:assign_fee_to_student' %}" class="btn btn-primary action-btn">
+                    <i class="fas fa-plus me-2"></i>Assign Fee to Student
+                </a>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Enhanced UI interactions
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize Bootstrap dropdowns
+        const dropdownElementList = document.querySelectorAll('.dropdown-toggle');
+        const dropdownList = [...dropdownElementList].map(dropdownToggleEl => new bootstrap.Dropdown(dropdownToggleEl));
+        
+        // Add tooltip to action buttons
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+        
+        // Highlight overdue payments
+        const overdueRows = document.querySelectorAll('.table-danger');
+        overdueRows.forEach(row => {
+            row.style.borderLeft = '4px solid #dc3545';
+        });
+        
+        // Fix dropdown positioning to show above the row
+        document.addEventListener('show.bs.dropdown', function (event) {
+            const dropdownToggle = event.target;
+            const dropdownMenu = dropdownToggle.nextElementSibling;
+            
+            // Position dropdown above the button
+            dropdownMenu.style.position = 'absolute';
+            dropdownMenu.style.zIndex = '1060';
+            dropdownMenu.style.top = '-5px';
+            dropdownMenu.style.transform = 'translateY(-100%)';
+            dropdownMenu.style.left = 'auto';
+            dropdownMenu.style.right = '0';
+        });
+        
+        // Reset positioning when dropdown hides
+        document.addEventListener('hide.bs.dropdown', function (event) {
+            const dropdownToggle = event.target;
+            const dropdownMenu = dropdownToggle.nextElementSibling;
+            
+            // Reset styles
+            dropdownMenu.style.transform = '';
+            dropdownMenu.style.top = '';
+        });
+    });
+
+    function lockCourse(assignmentId) {
+        if (confirm('Are you sure you want to lock this course for the student? This will prevent them from accessing course content.')) {
+            showLoadingState('locking');
+            
+            fetch(`/fees/admin/student-fees/${assignmentId}/lock/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoadingState();
+                if (data.success) {
+                    showSuccessMessage('Course locked successfully!');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showErrorMessage('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                hideLoadingState();
+                console.error('Error:', error);
+                showErrorMessage('An error occurred while locking the course.');
+            });
+        }
+    }
+
+    function unlockCourse(assignmentId) {
+        const unlockDate = prompt('Enter unlock date (YYYY-MM-DD) or leave empty for immediate unlock:');
+        if (unlockDate === null) return; // User cancelled
+        
+        showLoadingState('unlocking');
+        
+        fetch(`/fees/admin/student-fees/${assignmentId}/unlock/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `unlock_date=${unlockDate || ''}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            hideLoadingState();
+            if (data.success) {
+                showSuccessMessage('Course unlocked successfully!');
+                setTimeout(() => location.reload(), 1500);
+            } else {
+                showErrorMessage('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            hideLoadingState();
+            console.error('Error:', error);
+            showErrorMessage('An error occurred while unlocking the course.');
+        });
+    }
+
+    function sendReminder(assignmentId) {
+        if (confirm('Send payment reminder to this student via email?')) {
+            showLoadingState('sending');
+            
+            fetch(`/fees/ajax/send-reminder/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || '',
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `assignment_id=${assignmentId}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoadingState();
+                if (data.success) {
+                    showSuccessMessage('Payment reminder sent successfully!');
+                } else {
+                    showErrorMessage('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                hideLoadingState();
+                console.error('Error:', error);
+                showErrorMessage('An error occurred while sending the reminder.');
+            });
+        }
+    }
+    
+    // Enhanced UI feedback functions
+    function showLoadingState(action) {
+        const loadingDiv = document.createElement('div');
+        loadingDiv.id = 'loading-overlay';
+        loadingDiv.innerHTML = `
+            <div class="d-flex justify-content-center align-items-center position-fixed top-0 start-0 w-100 h-100" style="background-color: rgba(0,0,0,0.5); z-index: 9999;">
+                <div class="text-center text-white">
+                    <div class="spinner-border mb-3" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <div>Please wait, ${action}...</div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(loadingDiv);
+    }
+    
+    function hideLoadingState() {
+        const loadingDiv = document.getElementById('loading-overlay');
+        if (loadingDiv) {
+            loadingDiv.remove();
+        }
+    }
+    
+    function showSuccessMessage(message) {
+        showToast(message, 'success');
+    }
+    
+    function showErrorMessage(message) {
+        showToast(message, 'error');
+    }
+    
+    function showToast(message, type) {
+        const toastDiv = document.createElement('div');
+        toastDiv.className = `alert alert-${type === 'success' ? 'success' : 'danger'} alert-dismissible fade show position-fixed`;
+        toastDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; max-width: 350px;';
+        toastDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.body.appendChild(toastDiv);
+        
+        // Auto remove after 5 seconds
+        setTimeout(() => {
+            if (toastDiv.parentNode) {
+                toastDiv.remove();
+            }
+        }, 5000);
+    }
+</script>
+{% endblock %}

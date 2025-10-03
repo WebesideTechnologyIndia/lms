@@ -1,0 +1,506 @@
+<!-- templates/batch_management_instructor/batch_lesson_form.html -->
+{% extends 'instructor_base.html' %}
+{% load static %}
+
+{% block title %}{{ page_title }} - Instructor Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+.step-header {
+    background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+    color: white;
+    padding: 15px 20px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+}
+
+.form-floating .form-control:focus {
+    border-color: #6f42c1;
+    box-shadow: 0 0 0 0.2rem rgba(111,66,193,0.25);
+}
+
+.btn-create {
+    background: linear-gradient(135deg, #6f42c1 0%, #e83e8c 100%);
+    border: none;
+    padding: 12px 30px;
+    border-radius: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.btn-create:hover {
+    background: linear-gradient(135deg, #5f37a9 0%, #d63384 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.module-info-card {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border: none;
+    border-radius: 10px;
+}
+
+.lesson-type-option {
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: #fff;
+    margin-bottom: 15px;
+}
+
+.lesson-type-option:hover {
+    border-color: #6f42c1;
+    background-color: #f8f6ff;
+}
+
+.lesson-type-option.selected {
+    border-color: #6f42c1;
+    background-color: #f0ecff;
+}
+
+.content-section {
+    display: none;
+    animation: fadeIn 0.3s ease;
+}
+
+.content-section.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8 col-xl-7">
+            
+            <!-- Page Header -->
+            <div class="step-header text-center">
+                <h2 class="mb-2">
+                    <i class="bi bi-play-circle me-2"></i>{{ page_title }}
+                </h2>
+                <p class="mb-0 opacity-75">Add a new lesson to {{ module.title }}</p>
+            </div>
+
+            <!-- Module Information -->
+            <div class="card module-info-card shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h6 class="text-muted mb-1">Adding lesson to:</h6>
+                            <h5 class="mb-2 text-dark">{{ module.title }}</h5>
+                            <div class="d-flex gap-3">
+                                <span class="badge bg-primary">{{ batch.name }}</span>
+                                <span class="badge bg-info">
+                                    <i class="bi bi-play-circle me-1"></i>
+                                    {{ module.lessons.count }} lessons
+                                </span>
+                                <span class="badge bg-success">Order: {{ module.order }}</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-end">
+                            <span class="text-muted small">Module in:</span>
+                            <br>
+                            <span class="badge bg-secondary fs-6">
+                                {{ course.course_code }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <form method="post" action="{{ submit_url }}">
+                {% csrf_token %}
+                
+                <!-- Basic Lesson Information -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-info-circle me-2"></i>Lesson Information
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <div class="form-floating">
+                                    {{ form.title }}
+                                    <label for="{{ form.title.id_for_label }}">Lesson Title *</label>
+                                </div>
+                                {% if form.title.errors %}
+                                    <div class="text-danger small mt-1">{{ form.title.errors.0 }}</div>
+                                {% endif %}
+                                <div class="form-text">Example: "Variables and Data Types", "Introduction to Functions"</div>
+                            </div>
+                            
+                            <div class="col-md-4 mb-3">
+                                <div class="form-floating">
+                                    {{ form.order }}
+                                    <label for="{{ form.order.id_for_label }}">Order/Position</label>
+                                </div>
+                                {% if form.order.errors %}
+                                    <div class="text-danger small mt-1">{{ form.order.errors.0 }}</div>
+                                {% endif %}
+                                <div class="form-text">Lesson sequence number</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-floating">
+                                {{ form.description }}
+                                <label for="{{ form.description.id_for_label }}">Lesson Description *</label>
+                            </div>
+                            {% if form.description.errors %}
+                                <div class="text-danger small mt-1">{{ form.description.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">Describe what this lesson covers and learning objectives</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lesson Type Selection -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-collection me-2"></i>Lesson Type
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">Choose the primary content type for this lesson:</p>
+                        
+                        <div class="lesson-type-option" data-type="text" onclick="selectLessonType('text')">
+                            <div class="d-flex align-items-start">
+                                <input type="radio" name="lesson_type" value="text" 
+                                       class="form-check-input me-3 mt-1" checked>
+                                <div>
+                                    <h6 class="text-primary mb-2">
+                                        <i class="bi bi-file-text me-2"></i>Text Content
+                                    </h6>
+                                    <p class="text-muted mb-0">
+                                        Written content with text, images, and formatted content.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="lesson-type-option" data-type="video" onclick="selectLessonType('video')">
+                            <div class="d-flex align-items-start">
+                                <input type="radio" name="lesson_type" value="video" 
+                                       class="form-check-input me-3 mt-1">
+                                <div>
+                                    <h6 class="text-danger mb-2">
+                                        <i class="bi bi-play-circle me-2"></i>Video Content
+                                    </h6>
+                                    <p class="text-muted mb-0">
+                                        Video lessons with YouTube links or uploaded videos.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="lesson-type-option" data-type="mixed" onclick="selectLessonType('mixed')">
+                            <div class="d-flex align-items-start">
+                                <input type="radio" name="lesson_type" value="mixed" 
+                                       class="form-check-input me-3 mt-1">
+                                <div>
+                                    <h6 class="text-success mb-2">
+                                        <i class="bi bi-collection me-2"></i>Mixed Content
+                                    </h6>
+                                    <p class="text-muted mb-0">
+                                        Combination of text, video, and other content types.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Hidden field for form submission -->
+                        {{ form.lesson_type.as_hidden }}
+                    </div>
+                </div>
+
+                <!-- Content Sections -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="mb-0">
+                            <i class="bi bi-pencil me-2"></i>Lesson Content
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        
+                        <!-- Text Content Section -->
+                        <div class="content-section active" id="text-content">
+                            <h6 class="text-primary mb-3">
+                                <i class="bi bi-file-text me-2"></i>Text Content
+                            </h6>
+                            <div class="form-floating">
+                                {{ form.text_content }}
+                                <label for="{{ form.text_content.id_for_label }}">Lesson Content</label>
+                            </div>
+                            {% if form.text_content.errors %}
+                                <div class="text-danger small mt-1">{{ form.text_content.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">Write your lesson content here. You can use formatting and add links.</div>
+                        </div>
+
+                        <!-- Video Content Section -->
+                        <div class="content-section" id="video-content">
+                            <h6 class="text-danger mb-3">
+                                <i class="bi bi-play-circle me-2"></i>Video Content
+                            </h6>
+                            
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle me-2"></i>
+                                <strong>Note:</strong> For now, we support YouTube links. More video options coming soon!
+                            </div>
+
+                            <div class="form-floating">
+                                {{ form.youtube_url }}
+                                <label for="{{ form.youtube_url.id_for_label }}">YouTube URL</label>
+                            </div>
+                            {% if form.youtube_url.errors %}
+                                <div class="text-danger small mt-1">{{ form.youtube_url.errors.0 }}</div>
+                            {% endif %}
+                            <div class="form-text">Paste the YouTube video URL (e.g., https://www.youtube.com/watch?v=...)</div>
+                        </div>
+
+                        <!-- Mixed Content Section -->
+                        <div class="content-section" id="mixed-content">
+                            <h6 class="text-success mb-3">
+                                <i class="bi bi-collection me-2"></i>Mixed Content
+                            </h6>
+                            
+                            <div class="mb-3">
+                                <div class="form-floating">
+                                    {{ form.text_content }}
+                                    <label for="{{ form.text_content.id_for_label }}">Text Content</label>
+                                </div>
+                                <div class="form-text">Add written content, instructions, or explanations</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <div class="form-floating">
+                                    {{ form.youtube_url }}
+                                    <label for="{{ form.youtube_url.id_for_label }}">YouTube URL (Optional)</label>
+                                </div>
+                                <div class="form-text">Add a supporting video if needed</div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Form Actions -->
+                <div class="card shadow-sm mb-4">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center">
+<a href="{% url 'courses:instructor_batch_detail' course.id batch.id %}" class="btn btn-outline-secondary"></a>                                <i class="bi bi-arrow-left me-2"></i>Back to Batch
+                            </a>
+                            
+                            <div>
+                                <button type="button" class="btn btn-outline-primary me-2" onclick="previewLesson()">
+                                    <i class="bi bi-eye me-2"></i>Preview
+                                </button>
+                                <button type="submit" class="btn btn-create text-white">
+                                    <i class="bi bi-check-circle me-2"></i>Create Lesson
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Lesson Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="previewContent">
+                <!-- Dynamic content will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" onclick="submitForm()">Create Lesson</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set initial lesson type
+    selectLessonType('text');
+    
+    // Form validation
+    document.querySelector('form').addEventListener('submit', function(e) {
+        if (!validateForm()) {
+            e.preventDefault();
+        }
+    });
+});
+
+function selectLessonType(type) {
+    // Update radio buttons
+    const radios = document.querySelectorAll('input[name="lesson_type"]');
+    radios.forEach(radio => {
+        radio.checked = radio.value === type;
+    });
+    
+    // Update hidden field
+    document.getElementById('id_lesson_type').value = type;
+    
+    // Update visual selection
+    const options = document.querySelectorAll('.lesson-type-option');
+    options.forEach(option => {
+        option.classList.remove('selected');
+        if (option.dataset.type === type) {
+            option.classList.add('selected');
+        }
+    });
+    
+    // Show/hide content sections
+    const sections = document.querySelectorAll('.content-section');
+    sections.forEach(section => {
+        section.classList.remove('active');
+    });
+    
+    if (type === 'text') {
+        document.getElementById('text-content').classList.add('active');
+    } else if (type === 'video') {
+        document.getElementById('video-content').classList.add('active');
+    } else if (type === 'mixed') {
+        document.getElementById('mixed-content').classList.add('active');
+    }
+}
+
+function validateForm() {
+    const title = document.getElementById('id_title').value.trim();
+    const description = document.getElementById('id_description').value.trim();
+    const lessonType = document.getElementById('id_lesson_type').value;
+    const textContent = document.getElementById('id_text_content').value.trim();
+    const youtubeUrl = document.getElementById('id_youtube_url').value.trim();
+    
+    if (!title) {
+        alert('Please enter a lesson title');
+        return false;
+    }
+    
+    if (!description) {
+        alert('Please enter a lesson description');
+        return false;
+    }
+    
+    // Validate based on lesson type
+    if (lessonType === 'text' && !textContent) {
+        alert('Please add text content for this lesson');
+        return false;
+    }
+    
+    if (lessonType === 'video' && !youtubeUrl) {
+        alert('Please add a YouTube URL for this video lesson');
+        return false;
+    }
+    
+    if (lessonType === 'mixed' && !textContent && !youtubeUrl) {
+        alert('Please add at least text content or a YouTube URL for mixed content');
+        return false;
+    }
+    
+    // Validate YouTube URL format
+    if (youtubeUrl && !isValidYouTubeUrl(youtubeUrl)) {
+        alert('Please enter a valid YouTube URL');
+        return false;
+    }
+    
+    return true;
+}
+
+function isValidYouTubeUrl(url) {
+    const regex = /^(https?\:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+$/;
+    return regex.test(url);
+}
+
+function previewLesson() {
+    if (!validateForm()) {
+        return;
+    }
+    
+    const title = document.getElementById('id_title').value;
+    const description = document.getElementById('id_description').value;
+    const order = document.getElementById('id_order').value || 'Auto';
+    const lessonType = document.getElementById('id_lesson_type').value;
+    const textContent = document.getElementById('id_text_content').value;
+    const youtubeUrl = document.getElementById('id_youtube_url').value;
+    
+    let contentPreview = '';
+    if (lessonType === 'text' && textContent) {
+        contentPreview = `<div class="alert alert-light"><strong>Text Content:</strong><br>${textContent.substring(0, 200)}${textContent.length > 200 ? '...' : ''}</div>`;
+    } else if (lessonType === 'video' && youtubeUrl) {
+        contentPreview = `<div class="alert alert-light"><strong>Video URL:</strong><br><a href="${youtubeUrl}" target="_blank">${youtubeUrl}</a></div>`;
+    } else if (lessonType === 'mixed') {
+        contentPreview = '<div class="alert alert-light">';
+        if (textContent) {
+            contentPreview += `<strong>Text Content:</strong><br>${textContent.substring(0, 150)}${textContent.length > 150 ? '...' : ''}<br><br>`;
+        }
+        if (youtubeUrl) {
+            contentPreview += `<strong>Video URL:</strong><br><a href="${youtubeUrl}" target="_blank">${youtubeUrl}</a>`;
+        }
+        contentPreview += '</div>';
+    }
+    
+    const previewContent = `
+        <div class="row">
+            <div class="col-md-8">
+                <h6 class="text-primary">Lesson Information</h6>
+                <table class="table table-sm">
+                    <tr><td><strong>Title:</strong></td><td>${title}</td></tr>
+                    <tr><td><strong>Type:</strong></td><td><span class="badge bg-primary">${lessonType}</span></td></tr>
+                    <tr><td><strong>Order:</strong></td><td>${order}</td></tr>
+                    <tr><td><strong>Module:</strong></td><td>{{ module.title }}</td></tr>
+                </table>
+                
+                <h6 class="text-secondary mt-3">Description</h6>
+                <div class="alert alert-light">${description}</div>
+                
+                <h6 class="text-info mt-3">Content Preview</h6>
+                ${contentPreview}
+            </div>
+            <div class="col-md-4">
+                <h6 class="text-success">Lesson Path</h6>
+                <div class="alert alert-light">
+                    <small>
+                        <strong>Course:</strong> {{ course.title }}<br>
+                        <strong>Batch:</strong> {{ batch.name }}<br>
+                        <strong>Module:</strong> {{ module.title }}<br>
+                        <strong>Lesson:</strong> ${title}
+                    </small>
+                </div>
+            </div>
+        </div>
+        <hr>
+        <div class="text-center">
+            <p class="text-muted mb-0">Ready to create this lesson?</p>
+        </div>
+    `;
+    
+    document.getElementById('previewContent').innerHTML = previewContent;
+    new bootstrap.Modal(document.getElementById('previewModal')).show();
+}
+
+function submitForm() {
+    document.querySelector('form').submit();
+}
+</script>
+{% endblock %}

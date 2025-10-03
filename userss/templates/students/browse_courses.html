@@ -1,0 +1,609 @@
+{% extends 'students/student_base.html' %}
+
+{% block title %}Browse Courses - Student Panel{% endblock %}
+
+{% block page_title %}Browse Courses{% endblock %}
+
+{% block content %}
+
+<div class="alert alert-info">
+    <strong>Debug:</strong> Total courses in database: {{ total_courses }}
+    <br>Found courses: {{ courses.paginator.count }}
+</div>
+
+<!-- Hero Section -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="bg-primary text-white p-4 rounded">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h2 class="mb-2">Discover Your Next Learning Adventure</h2>
+                    <p class="mb-0 opacity-75">
+                        Explore our comprehensive course catalog and find the perfect course to advance your skills.
+                    </p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <i class="fas fa-graduation-cap fa-4x opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters and Search -->
+<div class="card mb-4">
+    <div class="card-header bg-transparent">
+        <h5 class="mb-0">
+            <i class="fas fa-filter me-2"></i>
+            Find Your Perfect Course
+        </h5>
+    </div>
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <!-- Search -->
+            <div class="col-md-4">
+                <label for="search" class="form-label">Search Courses</label>
+                <div class="input-group">
+                    <input type="text" 
+                           class="form-control" 
+                           id="search" 
+                           name="search" 
+                           value="{{ search|default:'' }}" 
+                           placeholder="Course name, code, or keyword...">
+                    <button class="btn btn-outline-primary" type="submit">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Category Filter -->
+            <div class="col-md-2">
+                <label for="category" class="form-label">Category</label>
+                <select class="form-select" id="category" name="category">
+                    <option value="">All Categories</option>
+                    {% for cat in categories %}
+                        <option value="{{ cat.slug }}" {% if selected_category == cat.slug %}selected{% endif %}>
+                            {{ cat.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <!-- Difficulty Filter -->
+            <div class="col-md-2">
+                <label for="difficulty" class="form-label">Difficulty</label>
+                <select class="form-select" id="difficulty" name="difficulty">
+                    <option value="">All Levels</option>
+                    <option value="beginner" {% if selected_difficulty == 'beginner' %}selected{% endif %}>Beginner</option>
+                    <option value="intermediate" {% if selected_difficulty == 'intermediate' %}selected{% endif %}>Intermediate</option>
+                    <option value="advanced" {% if selected_difficulty == 'advanced' %}selected{% endif %}>Advanced</option>
+                </select>
+            </div>
+            
+            <!-- Course Type Filter -->
+            <div class="col-md-2">
+                <label for="type" class="form-label">Course Type</label>
+                <select class="form-select" id="type" name="type">
+                    <option value="">All Types</option>
+                    <option value="live" {% if selected_type == 'live' %}selected{% endif %}>Live Classes</option>
+                    <option value="recorded" {% if selected_type == 'recorded' %}selected{% endif %}>Recorded</option>
+                    <option value="hybrid" {% if selected_type == 'hybrid' %}selected{% endif %}>Hybrid</option>
+                </select>
+            </div>
+            
+            <!-- Sort -->
+            <div class="col-md-2">
+                <label for="sort" class="form-label">Sort By</label>
+                <select class="form-select" id="sort" name="sort">
+                    <option value="-created_at" {% if sort == '-created_at' %}selected{% endif %}>Newest First</option>
+                    <option value="title" {% if sort == 'title' %}selected{% endif %}>Name A-Z</option>
+                    <option value="price" {% if sort == 'price' %}selected{% endif %}>Price Low to High</option>
+                    <option value="-average_rating" {% if sort == '-average_rating' %}selected{% endif %}>Highest Rated</option>
+                    <option value="-total_enrollments" {% if sort == '-total_enrollments' %}selected{% endif %}>Most Popular</option>
+                </select>
+            </div>
+        </form>
+        
+        <!-- Active Filters Display -->
+        {% if search or selected_category or selected_difficulty or selected_type %}
+        <div class="mt-3">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <span class="text-muted">Active filters:</span>
+                
+                {% if search %}
+                    <span class="badge bg-primary">Search: "{{ search }}"</span>
+                {% endif %}
+                
+                {% if selected_category %}
+                    <span class="badge bg-secondary">Category: {{ selected_category|title }}</span>
+                {% endif %}
+                
+                {% if selected_difficulty %}
+                    <span class="badge bg-info">Difficulty: {{ selected_difficulty|title }}</span>
+                {% endif %}
+                
+                {% if selected_type %}
+                    <span class="badge bg-success">Type: {{ selected_type|title }}</span>
+                {% endif %}
+                
+                <a href="{% url 'browse_courses' %}" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-times me-1"></i>Clear All
+                </a>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Results Summary -->
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h6 class="mb-0">
+            {% if courses.object_list %}
+                Showing {{ courses.start_index }}-{{ courses.end_index }} of {{ courses.paginator.count }} courses
+            {% else %}
+                No courses found
+            {% endif %}
+        </h6>
+    </div>
+    <div>
+        <a href="{% url 'student_courses' %}" class="btn btn-outline-primary btn-sm">
+            <i class="fas fa-book me-1"></i>My Enrolled Courses
+        </a>
+    </div>
+</div>
+
+<!-- Courses Grid -->
+{% if courses %}
+    <div class="row">
+        {% for course in courses %}
+        <div class="col-lg-4 col-md-6 mb-4">
+            <div class="card h-100 course-card {% if course.is_student_enrolled %}enrolled-course{% endif %}">
+                <!-- Course Image with Badges -->
+                <div class="position-relative">
+                    {% if course.thumbnail %}
+                        <img src="{{ course.thumbnail.url }}" 
+                             class="card-img-top" 
+                             alt="{{ course.title }}"
+                             style="height: 200px; object-fit: cover;">
+                    {% else %}
+                        <div class="card-img-top bg-gradient-primary d-flex align-items-center justify-content-center text-white" 
+                             style="height: 200px;">
+                            <i class="fas fa-book fa-3x"></i>
+                        </div>
+                    {% endif %}
+                    
+                    <!-- Course Type Badge -->
+                    <span class="position-absolute top-0 start-0 m-2">
+                        {% if course.course_type == 'live' %}
+                            <span class="badge bg-danger">
+                                <i class="fas fa-video me-1"></i>Live
+                            </span>
+                        {% elif course.course_type == 'recorded' %}
+                            <span class="badge bg-info">
+                                <i class="fas fa-play me-1"></i>Recorded
+                            </span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">
+                                <i class="fas fa-layer-group me-1"></i>Hybrid
+                            </span>
+                        {% endif %}
+                    </span>
+                    
+                    <!-- Difficulty Badge -->
+                    <span class="position-absolute top-0 end-0 m-2">
+                        {% if course.difficulty_level == 'beginner' %}
+                            <span class="badge bg-success">Beginner</span>
+                        {% elif course.difficulty_level == 'intermediate' %}
+                            <span class="badge bg-warning text-dark">Intermediate</span>
+                        {% else %}
+                            <span class="badge bg-danger">Advanced</span>
+                        {% endif %}
+                    </span>
+                    
+                    <!-- Enrollment Status Badge -->
+                    {% if course.is_student_enrolled %}
+                        <span class="position-absolute" style="bottom: 8px; right: 8px;">
+                            {% if course.is_course_locked %}
+                                <span class="badge bg-danger enrollment-badge">
+                                    <i class="fas fa-lock me-1"></i>LOCKED
+                                </span>
+                            {% else %}
+                                <span class="badge bg-success enrollment-badge">
+                                    <i class="fas fa-check me-1"></i>ENROLLED
+                                </span>
+                            {% endif %}
+                        </span>
+                    {% endif %}
+                    
+                    <!-- Featured Badge -->
+                    {% if course.is_featured %}
+                        <span class="position-absolute" style="top: 40px; left: 8px;">
+                            <span class="badge bg-gold">
+                                <i class="fas fa-star me-1"></i>Featured
+                            </span>
+                        </span>
+                    {% endif %}
+                </div>
+
+                <div class="card-body d-flex flex-column">
+                    <!-- Category -->
+                    <div class="mb-2">
+                        <small class="text-primary fw-bold">{{ course.category.name }}</small>
+                        <small class="text-muted ms-2">{{ course.course_code }}</small>
+                    </div>
+                    
+                    <!-- Course Title -->
+                    <h5 class="card-title mb-2">{{ course.title }}</h5>
+                    
+                    <!-- Course Description -->
+                    <p class="card-text text-muted small mb-3">
+                        {{ course.short_description|truncatechars:100 }}
+                    </p>
+                    
+                    <!-- Instructor -->
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center">
+                            {% if course.instructor.profile_picture %}
+                                <img src="{{ course.instructor.profile_picture.url }}" 
+                                     alt="Instructor" 
+                                     class="rounded-circle me-2" 
+                                     style="width: 30px; height: 30px; object-fit: cover;">
+                            {% else %}
+                                <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-2 text-white" 
+                                     style="width: 30px; height: 30px;">
+                                    <i class="fas fa-user-tie small"></i>
+                                </div>
+                            {% endif %}
+                            <small class="text-muted">{{ course.instructor.get_full_name }}</small>
+                        </div>
+                    </div>
+
+                    <!-- Course Stats -->
+                    <div class="row mb-3">
+                        <div class="col-4 text-center">
+                            <small class="text-muted d-block">Duration</small>
+                            <small class="fw-bold">{{ course.duration_weeks }}w</small>
+                        </div>
+                        <div class="col-4 text-center">
+                            <small class="text-muted d-block">Students</small>
+                            <small class="fw-bold">{{ course.total_enrollments }}</small>
+                        </div>
+                        <div class="col-4 text-center">
+                            <small class="text-muted d-block">Rating</small>
+                            <small class="fw-bold">
+                                {% if course.average_rating > 0 %}
+                                    {{ course.average_rating|floatformat:1 }}<i class="fas fa-star text-warning ms-1"></i>
+                                {% else %}
+                                    <span class="text-muted">New</span>
+                                {% endif %}
+                            </small>
+                        </div>
+                    </div>
+
+                    <!-- Price -->
+                    <div class="mb-3">
+                        {% if course.is_free %}
+                            <h5 class="text-success mb-0">
+                                <i class="fas fa-gift me-1"></i>Free
+                            </h5>
+                        {% else %}
+                            <div class="d-flex align-items-center">
+                                {% if course.discounted_price %}
+                                    <h5 class="text-primary mb-0 me-2">${{ course.discounted_price }}</h5>
+                                    <small class="text-muted text-decoration-line-through">${{ course.price }}</small>
+                                    <span class="badge bg-danger ms-2">{{ course.get_discount_percentage }}% OFF</span>
+                                {% else %}
+                                    <h5 class="text-primary mb-0">${{ course.price }}</h5>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Enrollment Status Actions -->
+                    <div class="mt-auto">
+                        {% if course.is_student_enrolled %}
+                            <!-- ALREADY ENROLLED - Show Access Button -->
+                            <div class="d-grid gap-2">
+                                {% if course.is_course_locked %}
+                                    <!-- Course is locked due to payment -->
+                                    <button class="btn btn-danger" disabled>
+                                        <i class="fas fa-lock me-2"></i>Access Locked
+                                    </button>
+                                    <small class="text-danger text-center">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        Payment required to unlock access
+                                    </small>
+                                {% else %}
+                                    <!-- Course is accessible -->
+                                    <a href="#" class="btn btn-success">
+                                        <i class="fas fa-play me-2"></i>Access Course
+                                    </a>
+                                    <small class="text-success text-center">
+                                        <i class="fas fa-check me-1"></i>
+                                        Enrolled in: {{ course.student_batch.name }}
+                                    </small>
+                                {% endif %}
+                                
+                                <div class="row g-1">
+                                    <div class="col-6">
+                                        <a href="#" class="btn btn-outline-info btn-sm w-100" 
+                                           data-bs-toggle="modal" 
+                                           data-bs-target="#courseModal{{ course.id }}">
+                                            <i class="fas fa-eye me-1"></i>Details
+                                        </a>
+                                    </div>
+                                    <div class="col-6">
+                                        <a href="{% url 'student_batches' %}" class="btn btn-outline-primary btn-sm w-100">
+                                            <i class="fas fa-users me-1"></i>My Batches
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        {% elif course.is_enrollment_open %}
+                            <!-- NOT ENROLLED - Show Enroll Button -->
+                            <div class="d-grid gap-2">
+                                <button class="btn btn-primary" onclick="enrollInCourse({{ course.id }})">
+                                    <i class="fas fa-plus me-2"></i>Enroll Now
+                                </button>
+                                <div class="row g-1">
+                                    <div class="col-6">
+                                        <a href="#" class="btn btn-outline-info btn-sm w-100" 
+                                           data-bs-toggle="modal" 
+                                           data-bs-target="#courseModal{{ course.id }}">
+                                            <i class="fas fa-eye me-1"></i>Preview
+                                        </a>
+                                    </div>
+                                    <div class="col-6">
+                                        <a href="#" class="btn btn-outline-secondary btn-sm w-100">
+                                            <i class="fas fa-heart me-1"></i>Save
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                        {% else %}
+                            <!-- ENROLLMENT CLOSED -->
+                            <div class="d-grid">
+                                <button class="btn btn-outline-secondary" disabled>
+                                    <i class="fas fa-lock me-2"></i>
+                                    {% if course.get_available_seats <= 0 %}
+                                        Course Full
+                                    {% else %}
+                                        Enrollment Closed
+                                    {% endif %}
+                                </button>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Course Footer -->
+                <div class="card-footer bg-transparent">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-muted">
+                            {% if course.is_student_enrolled %}
+                                <i class="fas fa-check-circle text-success me-1"></i>
+                                Enrolled
+                            {% elif course.enrollment_end_date %}
+                                Enrollment ends: {{ course.enrollment_end_date|date:"M d" }}
+                            {% else %}
+                                Open enrollment
+                            {% endif %}
+                        </small>
+                        <small class="text-muted">
+                            {% if not course.is_student_enrolled %}
+                                {{ course.get_available_seats }} seats left
+                            {% else %}
+                                <span class="text-success">Active Student</span>
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if courses.has_other_pages %}
+    <nav aria-label="Course pagination">
+        <ul class="pagination justify-content-center">
+            {% if courses.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ courses.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_difficulty %}&difficulty={{ selected_difficulty }}{% endif %}{% if selected_type %}&type={{ selected_type }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+            {% endif %}
+
+            {% for num in courses.paginator.page_range %}
+                {% if courses.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                {% elif num > courses.number|add:'-3' and num < courses.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_difficulty %}&difficulty={{ selected_difficulty }}{% endif %}{% if selected_type %}&type={{ selected_type }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+                            {{ num }}
+                        </a>
+                    </li>
+                {% endif %}
+            {% endfor %}
+
+            {% if courses.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ courses.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if selected_category %}&category={{ selected_category }}{% endif %}{% if selected_difficulty %}&difficulty={{ selected_difficulty }}{% endif %}{% if selected_type %}&type={{ selected_type }}{% endif %}{% if sort %}&sort={{ sort }}{% endif %}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+{% else %}
+    <!-- Empty State -->
+    <div class="text-center py-5">
+        <div class="mb-4">
+            <i class="fas fa-search fa-4x text-muted"></i>
+        </div>
+        
+        <h4 class="text-muted mb-3">No courses found</h4>
+        
+        {% if search or selected_category or selected_difficulty or selected_type %}
+            <p class="text-muted mb-4">
+                No courses match your current search criteria. Try adjusting your filters or search terms.
+            </p>
+            <a href="{% url 'browse_courses' %}" class="btn btn-primary">
+                <i class="fas fa-refresh me-2"></i>View All Courses
+            </a>
+        {% else %}
+            <p class="text-muted mb-4">
+                No courses are currently available. Please check back later.
+            </p>
+        {% endif %}
+    </div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-submit form on filter change
+    document.addEventListener('DOMContentLoaded', function() {
+        const filters = ['category', 'difficulty', 'type', 'sort'];
+        
+        filters.forEach(function(filterId) {
+            const element = document.getElementById(filterId);
+            if (element) {
+                element.addEventListener('change', function() {
+                    this.form.submit();
+                });
+            }
+        });
+
+        // Course card hover effects (only for non-enrolled courses)
+        const courseCards = document.querySelectorAll('.course-card:not(.enrolled-course)');
+        courseCards.forEach(function(card) {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-5px)';
+                this.style.transition = 'transform 0.3s ease';
+                this.style.boxShadow = '0 8px 16px rgba(0,0,0,0.15)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+                this.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+            });
+        });
+
+        // Special hover for enrolled courses
+        const enrolledCards = document.querySelectorAll('.enrolled-course');
+        enrolledCards.forEach(function(card) {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-3px)';
+                this.style.transition = 'transform 0.3s ease';
+                this.style.boxShadow = '0 6px 12px rgba(40, 167, 69, 0.2)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0)';
+                this.style.boxShadow = '0 2px 8px rgba(40, 167, 69, 0.1)';
+            });
+        });
+    });
+
+    // Enrollment function
+    function enrollInCourse(courseId) {
+        if (confirm('Are you sure you want to enroll in this course?')) {
+            // Add AJAX enrollment logic here
+            fetch(`/enroll-course/${courseId}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Successfully enrolled in the course!');
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('An error occurred. Please try again.');
+            });
+        }
+    }
+</script>
+
+<style>
+    .course-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        border: none;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .enrolled-course {
+        border: 2px solid #28a745 !important;
+        box-shadow: 0 2px 8px rgba(40, 167, 69, 0.1) !important;
+    }
+    
+    .bg-gradient-primary {
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+    }
+    
+    .bg-gold {
+        background-color: #ffd700;
+        color: #000;
+    }
+    
+    .card-img-top {
+        border-radius: 8px 8px 0 0;
+    }
+    
+    .badge {
+        font-size: 0.75em;
+    }
+    
+    .enrollment-badge {
+        font-size: 0.7em !important;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 0.5em 0.8em;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+        animation: pulse-glow 2s infinite;
+    }
+    
+    .enrollment-badge.bg-success {
+        background: linear-gradient(45deg, #28a745, #20c997) !important;
+    }
+    
+    .enrollment-badge.bg-danger {
+        background: linear-gradient(45deg, #dc3545, #e74c3c) !important;
+    }
+    
+    @keyframes pulse-glow {
+        0%, 100% { 
+            opacity: 1; 
+            transform: scale(1);
+        }
+        50% { 
+            opacity: 0.9; 
+            transform: scale(1.05);
+        }
+    }
+    
+    .position-absolute .badge {
+        font-size: 0.7em;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+</style>
+{% endblock %}

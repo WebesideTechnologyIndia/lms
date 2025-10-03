@@ -1,0 +1,549 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Session Recordings - Zoom LMS{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<link href="https://cdn.datatables.net/1.11.5/css/dataTables.bootstrap5.min.css" rel="stylesheet">
+
+<style>
+    .card {
+        box-shadow: 0 0.15rem 1.75rem 0 rgba(58, 59, 69, 0.15);
+    }
+    .recording-status {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .status-processing { background: #fff3cd; color: #856404; }
+    .status-completed { background: #d1edff; color: #0c5460; }
+    .status-failed { background: #f8d7da; color: #721c24; }
+    
+    .file-size-badge {
+        background: #e9ecef;
+        color: #495057;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 0.7rem;
+    }
+    
+    .video-thumbnail {
+        width: 60px;
+        height: 40px;
+        background: #007bff;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+    }
+    
+    .play-btn {
+        background: rgba(0,0,0,0.7);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .play-btn:hover {
+        background: rgba(0,0,0,0.9);
+        transform: translate(-50%, -50%) scale(1.1);
+    }
+    
+    .recording-card {
+        position: relative;
+        overflow: hidden;
+        border-radius: 8px;
+    }
+    
+    .stats-badge {
+        font-size: 0.7rem;
+        padding: 2px 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-dark">
+            <i class="fas fa-play-circle text-primary"></i> Session Recordings
+        </h2>
+        <div class="btn-group">
+            <a href="{% url 'zoom:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Dashboard
+            </a>
+            <a href="{% url 'zoom:session_list' %}" class="btn btn-outline-primary">
+                <i class="fas fa-calendar"></i> Sessions
+            </a>
+            <button class="btn btn-success" onclick="refreshRecordings()">
+                <i class="fas fa-sync-alt"></i> Sync All
+            </button>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="text-primary">{{ recordings.count }}</h5>
+                    <p class="text-muted mb-0">Total Recordings</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="text-success">
+                        {{ recordings|length|floatformat:0 }}
+                    </h5>
+                    <p class="text-muted mb-0">Available Now</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="text-info">
+                        {% for recording in recordings %}
+                            {% if forloop.first %}{{ recording.get_file_size_mb }}{% endif %}
+                        {% endfor %} GB
+                    </h5>
+                    <p class="text-muted mb-0">Storage Used</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center">
+                <div class="card-body">
+                    <h5 class="text-warning">
+                        {% for recording in recordings %}
+                            {% if forloop.first %}{{ recording.view_count }}{% endif %}
+                        {% endfor %}
+                    </h5>
+                    <p class="text-muted mb-0">Total Views</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <label for="batch" class="form-label">Filter by Batch</label>
+                    <select name="batch" id="batch" class="form-select">
+                        <option value="">All Batches</option>
+                        {% for batch in batches %}
+                            <option value="{{ batch.id }}" {% if selected_batch == batch.id|stringformat:"s" %}selected{% endif %}>
+                                {{ batch.name }} ({{ batch.course.title }})
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label for="status" class="form-label">Filter by Status</label>
+                    <select name="status" id="status" class="form-select">
+                        <option value="">All Status</option>
+                        <option value="processing">Processing</option>
+                        <option value="completed">Completed</option>
+                        <option value="failed">Failed</option>
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-search"></i> Filter
+                    </button>
+                    <a href="{% url 'zoom:recording_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i> Clear
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Recordings Grid -->
+    <div class="row">
+        {% for recording in recordings %}
+            <div class="col-lg-4 col-md-6 mb-4">
+                <div class="card recording-card h-100">
+                    <div class="position-relative">
+                        <div class="video-thumbnail">
+                            <i class="fas fa-play fa-2x"></i>
+                        </div>
+                        <button class="play-btn" onclick="playRecording({{ recording.id }})">
+                            <i class="fas fa-play"></i>
+                        </button>
+                        
+                        <!-- Status Badge -->
+                        <span class="position-absolute top-0 end-0 m-2 recording-status status-{{ recording.status }}">
+                            {{ recording.get_status_display }}
+                        </span>
+                    </div>
+                    
+                    <div class="card-body">
+                        <h6 class="card-title">{{ recording.session.title|truncatechars:30 }}</h6>
+                        <p class="card-text text-muted small">
+                            <i class="fas fa-users"></i> {{ recording.session.batch.name }}
+                            <br>
+                            <i class="fas fa-calendar"></i> {{ recording.recording_start|date:"M d, Y H:i" }}
+                        </p>
+                        
+                        <!-- File Info -->
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="file-size-badge">
+                                <i class="fas fa-file"></i> {{ recording.get_file_size_mb }} MB
+                            </span>
+                            <span class="file-size-badge">
+                                <i class="fas fa-clock"></i> {{ recording.get_duration_formatted }}
+                            </span>
+                        </div>
+                        
+                        <!-- Stats -->
+                        <div class="d-flex justify-content-between text-muted small mb-3">
+                            <span>
+                                <i class="fas fa-eye"></i> {{ recording.view_count }} views
+                            </span>
+                            <span>
+                                <i class="fas fa-download"></i> {{ recording.download_count }} downloads
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="card-footer bg-transparent">
+                        <div class="btn-group w-100">
+                            <button class="btn btn-primary btn-sm" onclick="playRecording({{ recording.id }})">
+                                <i class="fas fa-play"></i> Play
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm" onclick="downloadRecording({{ recording.id }})">
+                                <i class="fas fa-download"></i> Download
+                            </button>
+                            <div class="btn-group">
+                                <button class="btn btn-outline-secondary btn-sm dropdown-toggle" 
+                                        data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <a class="dropdown-item" href="#" onclick="showRecordingDetails({{ recording.id }})">
+                                            <i class="fas fa-info-circle"></i> Details
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item" href="#" onclick="copyLink({{ recording.id }})">
+                                            <i class="fas fa-link"></i> Copy Link
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item text-danger" href="#" onclick="deleteRecording({{ recording.id }})">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-video-slash fa-4x text-muted mb-3"></i>
+                        <h4 class="text-muted">No Recordings Found</h4>
+                        <p class="text-muted mb-4">Recordings will appear here after sessions are completed with recording enabled.</p>
+                        <a href="{% url 'zoom:session_list' %}" class="btn btn-primary">
+                            <i class="fas fa-calendar-plus"></i> Create Session
+                        </a>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Table View Toggle -->
+    <div class="card mt-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-table"></i> Detailed List View
+            </h5>
+            <button class="btn btn-sm btn-outline-primary" onclick="toggleView()">
+                <i class="fas fa-th"></i> Toggle View
+            </button>
+        </div>
+        <div class="card-body" id="tableView" style="display: none;">
+            <div class="table-responsive">
+                <table class="table table-hover" id="recordingsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Session</th>
+                            <th>Batch</th>
+                            <th>Date</th>
+                            <th>Duration</th>
+                            <th>File Size</th>
+                            <th>Status</th>
+                            <th>Views</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for recording in recordings %}
+                            <tr>
+                                <td>
+                                    <div>
+                                        <h6 class="mb-0">{{ recording.session.title }}</h6>
+                                        <small class="text-muted">{{ recording.session.get_session_type_display }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-secondary">{{ recording.session.batch.name }}</span>
+                                </td>
+                                <td>
+                                    <div>
+                                        <strong>{{ recording.recording_start|date:"M d, Y" }}</strong>
+                                        <br>
+                                        <small class="text-muted">{{ recording.recording_start|time:"H:i" }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">{{ recording.get_duration_formatted }}</span>
+                                </td>
+                                <td>
+                                    <span class="file-size-badge">{{ recording.get_file_size_mb }} MB</span>
+                                </td>
+                                <td>
+                                    <span class="recording-status status-{{ recording.status }}">
+                                        {{ recording.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="text-center">
+                                        <div><i class="fas fa-eye text-primary"></i> {{ recording.view_count }}</div>
+                                        <small class="text-muted">
+                                            <i class="fas fa-download"></i> {{ recording.download_count }}
+                                        </small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-primary" onclick="playRecording({{ recording.id }})" title="Play">
+                                            <i class="fas fa-play"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary" onclick="downloadRecording({{ recording.id }})" title="Download">
+                                            <i class="fas fa-download"></i>
+                                        </button>
+                                        <button class="btn btn-outline-info" onclick="showRecordingDetails({{ recording.id }})" title="Details">
+                                            <i class="fas fa-info"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recording Details Modal -->
+<div class="modal fade" id="recordingModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-play-circle"></i> Recording Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="recordingDetails">
+                <!-- Details will be loaded here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="playFromModal">
+                    <i class="fas fa-play"></i> Play Recording
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.datatables.net/1.11.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/1.11.5/js/dataTables.bootstrap5.min.js"></script>
+
+<script>
+    let currentView = 'grid';
+    
+    $(document).ready(function() {
+        $('#recordingsTable').DataTable({
+            "pageLength": 25,
+            "order": [[ 2, "desc" ]], // Sort by date
+            "columnDefs": [
+                { "orderable": false, "targets": [7] }
+            ]
+        });
+    });
+    
+    function toggleView() {
+        const tableView = document.getElementById('tableView');
+        if (currentView === 'grid') {
+            tableView.style.display = 'block';
+            currentView = 'table';
+        } else {
+            tableView.style.display = 'none';
+            currentView = 'grid';
+        }
+    }
+    
+    function playRecording(recordingId) {
+        // Open recording in new window
+        window.open(`/zoom/recordings/${recordingId}/play/`, '_blank');
+    }
+    
+    function downloadRecording(recordingId) {
+        // Trigger download
+        window.location.href = `/zoom/recordings/${recordingId}/download/`;
+    }
+    
+    function showRecordingDetails(recordingId) {
+        // Load recording details via AJAX
+        fetch(`/zoom/recordings/${recordingId}/details/`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('recordingDetails').innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Session Information</h6>
+                            <p><strong>Title:</strong> ${data.session_title}</p>
+                            <p><strong>Batch:</strong> ${data.batch_name}</p>
+                            <p><strong>Instructor:</strong> ${data.instructor_name}</p>
+                            <p><strong>Date:</strong> ${data.session_date}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Recording Information</h6>
+                            <p><strong>Duration:</strong> ${data.duration}</p>
+                            <p><strong>File Size:</strong> ${data.file_size}</p>
+                            <p><strong>Format:</strong> ${data.file_type}</p>
+                            <p><strong>Status:</strong> ${data.status}</p>
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h6>Statistics</h6>
+                            <div class="row text-center">
+                                <div class="col-4">
+                                    <div class="border rounded p-2">
+                                        <h4 class="text-primary">${data.view_count}</h4>
+                                        <small>Views</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="border rounded p-2">
+                                        <h4 class="text-success">${data.download_count}</h4>
+                                        <small>Downloads</small>
+                                    </div>
+                                </div>
+                                <div class="col-4">
+                                    <div class="border rounded p-2">
+                                        <h4 class="text-info">${data.attendees}</h4>
+                                        <small>Attendees</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('playFromModal').onclick = () => playRecording(recordingId);
+                
+                const modal = new bootstrap.Modal(document.getElementById('recordingModal'));
+                modal.show();
+            })
+            .catch(error => {
+                alert('Failed to load recording details');
+            });
+    }
+    
+    function copyLink(recordingId) {
+        const link = `${window.location.origin}/zoom/recordings/${recordingId}/play/`;
+        navigator.clipboard.writeText(link).then(() => {
+            alert('Recording link copied to clipboard!');
+        });
+    }
+    
+    function deleteRecording(recordingId) {
+        if (confirm('Are you sure you want to delete this recording? This action cannot be undone.')) {
+            fetch(`/zoom/recordings/${recordingId}/delete/`, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    location.reload();
+                } else {
+                    alert('Failed to delete recording');
+                }
+            });
+        }
+    }
+    
+    function refreshRecordings() {
+        const btn = event.target;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Syncing...';
+        btn.disabled = true;
+        
+        fetch('/zoom/sync-recordings/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            alert(`Synced ${data.count} recordings successfully!`);
+            location.reload();
+        })
+        .catch(error => {
+            alert('Failed to sync recordings');
+        })
+        .finally(() => {
+            btn.innerHTML = '<i class="fas fa-sync-alt"></i> Sync All';
+            btn.disabled = false;
+        });
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+</script>
+{% endblock %}

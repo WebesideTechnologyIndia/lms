@@ -1,0 +1,391 @@
+<!-- templates/email_management/logs.html -->
+{% extends 'base.html' %}
+
+{% block title %}Email Logs - LMS{% endblock %}
+
+{% block extra_css %}
+<style>
+    .status-badge {
+        font-size: 0.8em;
+    }
+
+    .log-table {
+        font-size: 0.9em;
+    }
+
+    .stats-card {
+        transition: transform 0.2s;
+    }
+
+    .stats-card:hover {
+        transform: translateY(-2px);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-list-alt text-primary"></i> Email Logs</h2>
+        <p class="text-muted mb-0">Track all email delivery status and history</p>
+    </div>
+    <a href="{% url 'email_dashboard' %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Dashboard
+    </a>
+</div>
+
+<!-- Filters Card -->
+<div class="card shadow mb-4">
+    <div class="card-header bg-white">
+        <h5 class="mb-0"><i class="fas fa-filter"></i> Filters</h5>
+    </div>
+    <div class="card-body">
+        <form method="GET" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Date</label>
+                <input type="date" name="date" class="form-control" value="{{ date_filter }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Status</label>
+                <select name="status" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="success" {% if status_filter == "success" %}selected{% endif %}>Success</option>
+                    <option value="failed" {% if status_filter == "failed" %}selected{% endif %}>Failed</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Search</label>
+                <input type="text" name="search" class="form-control" placeholder="Email or subject..." value="{{ search_query }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">&nbsp;</label>
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i> Filter
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Email Statistics -->
+<div class="row mb-4">
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card bg-primary text-white stats-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3>{{ logs.paginator.count }}</h3>
+                        <p class="mb-0">Total Emails</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-envelope fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card bg-success text-white stats-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3>{{ successful_count }}</h3>
+                        <p class="mb-0">Successful</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card bg-danger text-white stats-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3>{{ failed_count }}</h3>
+                        <p class="mb-0">Failed</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-times-circle fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-3 col-md-6 mb-3">
+        <div class="card bg-info text-white stats-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h3>{{ success_rate }}%</h3>
+                        <p class="mb-0">Success Rate</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-chart-line fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Email Logs Table -->
+<div class="card shadow">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="fas fa-table"></i> Email Logs</h5>
+        <small class="text-muted">Showing {{ logs.start_index }}-{{ logs.end_index }} of {{ logs.paginator.count }} emails</small>
+    </div>
+    <div class="card-body p-0">
+        {% if logs %}
+        <div class="table-responsive">
+            <table class="table table-hover log-table mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date/Time</th>
+                        <th>Recipient</th>
+                        <th>Subject</th>
+                        <th>Template</th>
+                        <th>Sent By</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr>
+                        <td>
+                            <div class="small">
+                                <div class="fw-bold">{{ log.sent_date|date:"M d, Y" }}</div>
+                                <div class="text-muted">{{ log.sent_time|time:"g:i A" }}</div>
+                            </div>
+                        </td>
+                        <td>
+                            <div>
+                                <div class="fw-bold">{{ log.recipient_email }}</div>
+                                {% if log.recipient_user %}
+                                <small class="text-muted">{{ log.recipient_user.get_full_name|default:log.recipient_user.username }}</small>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="text-truncate" style="max-width: 200px;" title="{{ log.subject }}">
+                                {{ log.subject|truncatechars:50 }}
+                            </div>
+                        </td>
+                        <td>
+                            {% if log.template_used %}
+                            <span class="badge bg-secondary">{{ log.template_used.name }}</span>
+                            {% else %}
+                            <span class="badge bg-light text-dark">Custom</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.sent_by %}
+                            <small>{{ log.sent_by.username }}</small>
+                            {% else %}
+                            <small class="text-muted">System</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if log.is_sent_successfully %}
+                            <span class="badge bg-success status-badge">
+                                <i class="fas fa-check"></i> Success
+                            </span>
+                            {% else %}
+                            <span class="badge bg-danger status-badge">
+                                <i class="fas fa-times"></i> Failed
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#emailModal{{ log.id }}">
+                                <i class="fas fa-eye"></i> View
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+            <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+            <h5 class="text-muted">No Email Logs Found</h5>
+            <p class="text-muted">No emails match your current filters.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if logs.has_other_pages %}
+<div class="d-flex justify-content-center mt-4">
+    <nav aria-label="Email logs pagination">
+        <ul class="pagination">
+            {% if logs.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ logs.previous_page_number }}{% if date_filter %}&date={{ date_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">
+                    <i class="fas fa-chevron-left"></i> Previous
+                </a>
+            </li>
+            {% endif %}
+
+            {% for num in logs.paginator.page_range %}
+            {% if logs.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > logs.number|add:'-3' and num < logs.number|add:'3' %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ num }}{% if date_filter %}&date={{ date_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">{{ num }}</a>
+            </li>
+            {% endif %}
+            {% endfor %}
+
+            {% if logs.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ logs.next_page_number }}{% if date_filter %}&date={{ date_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">
+                    Next <i class="fas fa-chevron-right"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+</div>
+{% endif %}
+
+<!-- Email Detail Modals -->
+{% for log in logs %}
+<div class="modal fade" id="emailModal{{ log.id }}" tabindex="-1" aria-labelledby="emailModalLabel{{ log.id }}" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="emailModalLabel{{ log.id }}">
+                    <i class="fas fa-envelope"></i> Email Details
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Sent Date:</strong><br>
+                        <span class="text-muted">{{ log.sent_date|date:"F d, Y" }} at {{ log.sent_time|time:"g:i A" }}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Status:</strong><br>
+                        {% if log.is_sent_successfully %}
+                        <span class="badge bg-success">
+                            <i class="fas fa-check"></i> Successfully Sent
+                        </span>
+                        {% else %}
+                        <span class="badge bg-danger">
+                            <i class="fas fa-times"></i> Failed
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Recipient Email:</strong><br>
+                        <span class="text-muted">{{ log.recipient_email }}</span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Recipient User:</strong><br>
+                        {% if log.recipient_user %}
+                        <span class="text-muted">{{ log.recipient_user.get_full_name|default:log.recipient_user.username }}</span>
+                        {% else %}
+                        <span class="text-muted">N/A</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Template Used:</strong><br>
+                        {% if log.template_used %}
+                        <span class="badge bg-secondary">{{ log.template_used.name }}</span>
+                        {% else %}
+                        <span class="badge bg-light text-dark">Custom Email</span>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Sent By:</strong><br>
+                        {% if log.sent_by %}
+                        <span class="text-muted">{{ log.sent_by.username }}</span>
+                        {% else %}
+                        <span class="text-muted">System</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Subject:</strong><br>
+                    <div class="bg-light p-2 rounded">{{ log.subject }}</div>
+                </div>
+
+                <div class="mb-3">
+                    <strong>Email Content:</strong><br>
+                    <div class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;">
+                        <pre style="white-space: pre-wrap; font-family: inherit;">{{ log.email_body }}</pre>
+                    </div>
+                </div>
+
+                {% if not log.is_sent_successfully and log.error_message %}
+                <div class="mb-3">
+                    <strong>Error Message:</strong><br>
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i> {{ log.error_message }}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Close
+                </button>
+                {% if log.template_used %}
+                <a href="{% url 'edit_email_template' log.template_used.id %}" class="btn btn-primary">
+                    <i class="fas fa-edit"></i> Edit Template
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-submit form when filters change
+    document.addEventListener('DOMContentLoaded', function () {
+        const filterInputs = document.querySelectorAll('input[name="date"], select[name="status"]');
+        filterInputs.forEach(input => {
+            input.addEventListener('change', function () {
+                this.form.submit();
+            });
+        });
+    });
+
+    // Clear filters functionality
+    function clearFilters() {
+        window.location.href = window.location.pathname;
+    }
+
+    // Add clear button if filters are active
+    {% if date_filter or status_filter or search_query %}
+    document.addEventListener('DOMContentLoaded', function () {
+        const filterCard = document.querySelector('.card-body form');
+        const clearBtn = document.createElement('div');
+        clearBtn.className = 'col-12 mt-2';
+        clearBtn.innerHTML = '<button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearFilters()"><i class="fas fa-times"></i> Clear Filters</button>';
+        filterCard.appendChild(clearBtn);
+    });
+    {% endif %}
+</script>
+{% endblock %}

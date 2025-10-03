@@ -1,0 +1,265 @@
+<!-- templates/admin/create_instructor_permission.html -->
+{% extends 'base.html' %}
+
+{% block title %}Create New Instructor Permission{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item">
+                                <a href="{% url 'manage_instructor_permissions' %}">Instructor Permissions</a>
+                            </li>
+                            <li class="breadcrumb-item active">Create Permission</li>
+                        </ol>
+                    </nav>
+                    <h2><i class="fas fa-plus-circle me-2"></i>Create New Permission</h2>
+                    <p class="text-muted mb-0">Add a new permission that can be assigned to instructors</p>
+                </div>
+                <div>
+                    <a href="{% url 'manage_instructor_permissions' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-1"></i>Back to Permissions
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Permission Form -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-shield-alt me-2"></i>Permission Details</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="name" class="form-label">Permission Name *</label>
+                                <input type="text" class="form-control" id="name" name="name" 
+                                       placeholder="e.g., Advanced Analytics" required>
+                                <div class="form-text">Display name for the permission</div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label for="code" class="form-label">Permission Code *</label>
+                                <input type="text" class="form-control" id="code" name="code" 
+                                       placeholder="e.g., advanced_analytics" required>
+                                <div class="form-text">Unique code (lowercase, underscores only)</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="category" class="form-label">Category *</label>
+                            <div class="input-group">
+                                <select class="form-select" id="category_select" onchange="handleCategoryChange()">
+                                    <option value="">Select existing category</option>
+                                    {% for category in categories %}
+                                    <option value="{{ category }}">{{ category }}</option>
+                                    {% endfor %}
+                                    <option value="custom">+ Create New Category</option>
+                                </select>
+                                <input type="text" class="form-control" id="category" name="category" 
+                                       placeholder="Enter category name" required style="display: none;">
+                            </div>
+                            <div class="form-text">Group permissions by category for better organization</div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label for="description" class="form-label">Description *</label>
+                            <textarea class="form-control" id="description" name="description" rows="4" 
+                                      placeholder="Describe what this permission allows instructors to do..." required></textarea>
+                            <div class="form-text">Detailed explanation of what this permission grants access to</div>
+                        </div>
+
+                        <!-- Permission Preview -->
+                        <div class="permission-preview mb-4" style="display: none;">
+                            <h6 class="text-primary">Permission Preview</h6>
+                            <div class="preview-card">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <h6 class="preview-name mb-1">-</h6>
+                                        <p class="preview-description text-muted mb-1">-</p>
+                                        <small class="preview-code text-muted">Code: -</small>
+                                    </div>
+                                    <span class="preview-category badge bg-primary">-</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between">
+                            <button type="button" class="btn btn-outline-secondary" onclick="resetForm()">
+                                <i class="fas fa-undo me-1"></i>Reset Form
+                            </button>
+                            <div>
+                                <button type="button" class="btn btn-outline-primary me-2" onclick="previewPermission()">
+                                    <i class="fas fa-eye me-1"></i>Preview
+                                </button>
+                                <button type="submit" class="btn btn-success">
+                                    <i class="fas fa-save me-1"></i>Create Permission
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Existing Permissions Reference -->
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-list me-2"></i>Existing Permissions Reference</h6>
+                </div>
+                <div class="card-body">
+    <div class="row">
+        <div class="col-md-6">
+            <h6 class="text-success">Common Permission Codes:</h6>
+            <ul class="list-unstyled small">
+                <li><code>content_management</code> - Content Management</li>
+                <li><code>email_marketing</code> - Email Marketing</li>
+                <li><code>course_management</code> - Course Management</li>
+                <li><code>batch_management</code> - Batch Management</li>
+                <li><code>student_management</code> - Student Management</li>
+                <li><code>analytics_view</code> - Analytics View</li>
+            </ul>
+        </div>
+        <div class="col-md-6">
+            <h6 class="text-info">Existing Categories:</h6>
+            <ul class="list-unstyled small">
+                {% for category in categories %}
+                <li><span class="badge bg-light text-dark">{{ category }}</span></li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.preview-card {
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 15px;
+    background: #f9fafb;
+}
+
+.permission-preview {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.form-text {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+code {
+    background: #f3f4f6;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.875rem;
+}
+</style>
+
+<script>
+function handleCategoryChange() {
+    const categorySelect = document.getElementById('category_select');
+    const categoryInput = document.getElementById('category');
+    
+    if (categorySelect.value === 'custom') {
+        categorySelect.style.display = 'none';
+        categoryInput.style.display = 'block';
+        categoryInput.focus();
+        categoryInput.value = '';
+    } else {
+        categoryInput.value = categorySelect.value;
+        updatePreview();
+    }
+}
+
+function previewPermission() {
+    const preview = document.querySelector('.permission-preview');
+    preview.style.display = 'block';
+    updatePreview();
+    
+    // Scroll to preview
+    preview.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function updatePreview() {
+    const name = document.getElementById('name').value || '-';
+    const code = document.getElementById('code').value || '-';
+    const description = document.getElementById('description').value || '-';
+    const category = document.getElementById('category').value || '-';
+    
+    document.querySelector('.preview-name').textContent = name;
+    document.querySelector('.preview-description').textContent = description;
+    document.querySelector('.preview-code').textContent = `Code: ${code}`;
+    document.querySelector('.preview-category').textContent = category;
+}
+
+function resetForm() {
+    if (confirm('Are you sure you want to reset the form? All entered data will be lost.')) {
+        document.querySelector('form').reset();
+        document.querySelector('.permission-preview').style.display = 'none';
+        document.getElementById('category_select').style.display = 'block';
+        document.getElementById('category').style.display = 'none';
+    }
+}
+
+// Auto-generate code from name
+document.getElementById('name').addEventListener('input', function() {
+    const name = this.value;
+    const code = name.toLowerCase()
+                    .replace(/[^a-z0-9\s]/g, '')
+                    .replace(/\s+/g, '_')
+                    .replace(/^_+|_+$/g, '');
+    
+    document.getElementById('code').value = code;
+    updatePreview();
+});
+
+// Update preview on input
+document.getElementById('description').addEventListener('input', updatePreview);
+document.getElementById('category').addEventListener('input', updatePreview);
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const name = document.getElementById('name').value.trim();
+    const code = document.getElementById('code').value.trim();
+    const description = document.getElementById('description').value.trim();
+    const category = document.getElementById('category').value.trim();
+    
+    if (!name || !code || !description || !category) {
+        e.preventDefault();
+        alert('Please fill in all required fields.');
+        return;
+    }
+    
+    // Validate code format
+    const codePattern = /^[a-z0-9_]+$/;
+    if (!codePattern.test(code)) {
+        e.preventDefault();
+        alert('Permission code can only contain lowercase letters, numbers, and underscores.');
+        return;
+    }
+    
+    if (!confirm(`Create permission "${name}" with code "${code}"?`)) {
+        e.preventDefault();
+    }
+});
+</script>
+{% endblock %}

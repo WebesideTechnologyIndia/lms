@@ -1,0 +1,528 @@
+<!-- courses/templates/courses/batch_detail.html -->
+
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ batch.name }} - {{ course.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.batch-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.module-card {
+    transition: all 0.3s ease;
+    border-left: 4px solid #007bff;
+}
+
+.module-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.lesson-item {
+    transition: background-color 0.2s ease;
+}
+
+.lesson-item:hover {
+    background-color: #f8f9fa;
+}
+
+.stats-card {
+    border: none;
+    border-radius: 15px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.quick-action-btn {
+    border-radius: 8px;
+    padding: 10px;
+    transition: all 0.3s ease;
+}
+
+.quick-action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    
+    <!-- Batch Header -->
+    <div class="card shadow-lg mb-4">
+        <div class="card-header batch-header">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2 class="mb-1"><i class="fas fa-users me-2"></i>{{ batch.name }}</h2>
+                    <p class="mb-2 opacity-75">{{ course.title }} - {{ batch.code }}</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge bg-light text-dark">
+                            <i class="fas fa-calendar me-1"></i>
+                            {{ batch.start_date|date:"M d" }} - {{ batch.end_date|date:"M d, Y" }}
+                        </span>
+                        <span class="badge bg-light text-dark">
+                            <i class="fas fa-chalkboard-teacher me-1"></i>
+                            {{ batch.instructor.get_full_name|default:batch.instructor.username }}
+                        </span>
+                        {% if batch.content_type == 'fresh' %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-plus-circle me-1"></i>Fresh Content
+                            </span>
+                        {% else %}
+                            <span class="badge bg-info">
+                                <i class="fas fa-copy me-1"></i>Copied Content
+                            </span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="text-end">
+                    <div class="mb-2">
+                        <span class="badge {% if batch.status == 'active' %}bg-success{% elif batch.status == 'draft' %}bg-warning{% else %}bg-secondary{% endif %} fs-6">
+                            {{ batch.get_status_display }}
+                        </span>
+                    </div>
+                    <div class="btn-group">
+                        <a href="{% url 'courses:edit_batch' course.id batch.id %}" class="btn btn-outline-light btn-sm">
+                            <i class="fas fa-edit"></i> Edit
+                        </a>
+                        <a href="{% url 'courses:batch_enrollments' course.id batch.id %}" class="btn btn-light btn-sm">
+                            <i class="fas fa-users"></i> Students ({{ batch.get_enrolled_count }})
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Batch Stats -->
+        <div class="card-body bg-light">
+            <div class="row">
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="progress mx-auto" style="width: 60px; height: 60px;">
+                            {% with enrolled=batch.get_enrolled_count %}
+                                <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                                     style="width: {% widthratio enrolled batch.max_students 100 %}%"
+                                     data-bs-toggle="tooltip" 
+                                     title="{{ enrolled }}/{{ batch.max_students }} students">
+                                </div>
+                            {% endwith %}
+                        </div>
+                        <div class="mt-2">
+                            <strong>{{ batch.get_enrolled_count }}/{{ batch.max_students }}</strong><br>
+                            <small class="text-muted">Students Enrolled</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="display-6 text-primary">{{ modules|length }}</div>
+                        <small class="text-muted">Total Modules</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="display-6 text-info">
+                            {% with total_lessons=0 %}
+                                {% for module in modules %}
+                                    {% with total_lessons=total_lessons|add:module.lessons.count %}{% endwith %}
+                                {% endfor %}
+                                {{ total_lessons }}
+                            {% endwith %}
+                        </div>
+                        <small class="text-muted">Total Lessons</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="text-center">
+                        <div class="display-6 text-success">{{ batch.get_available_seats }}</div>
+                        <small class="text-muted">Available Seats</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Content - Modules & Lessons -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0">
+                        <i class="fas fa-book-open me-2"></i>Batch Content
+                    </h5>
+                    <!-- CHANGED: Remove condition - All batches can add modules -->
+                    <a href="{% url 'courses:create_batch_module' course.id batch.id %}" 
+                       class="btn btn-light btn-sm">
+                        <i class="fas fa-plus me-1"></i>Add Module
+                    </a>
+                </div>
+                
+                <div class="card-body">
+                    {% if modules %}
+                        <div class="accordion" id="modulesAccordion">
+                            {% for module in modules %}
+                                <div class="accordion-item module-card mb-3">
+                                    <h2 class="accordion-header" id="heading{{ module.id }}">
+                                        <button class="accordion-button {% if not forloop.first %}collapsed{% endif %}" 
+                                                type="button" data-bs-toggle="collapse" 
+                                                data-bs-target="#collapse{{ module.id }}" 
+                                                aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" 
+                                                aria-controls="collapse{{ module.id }}">
+                                            <div class="d-flex align-items-center w-100">
+                                                <div class="me-3">
+                                                    <i class="fas fa-folder-open text-primary fa-lg"></i>
+                                                </div>
+                                                <div class="flex-grow-1">
+                                                    <strong>Module {{ module.order }}: {{ module.title }}</strong>
+                                                    <div class="small text-muted mt-1">
+                                                        {{ module.lessons.count }} lesson{{ module.lessons.count|pluralize }}
+                                                        {% if module.description %}
+                                                            • {{ module.description|truncatechars:100 }}
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                                <div class="me-3">
+                                                    <span class="badge bg-primary">{{ module.lessons.count }}</span>
+                                                </div>
+                                            </div>
+                                        </button>
+                                    </h2>
+                                    
+                                    <div id="collapse{{ module.id }}" 
+                                         class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" 
+                                         aria-labelledby="heading{{ module.id }}" 
+                                         data-bs-parent="#modulesAccordion">
+                                        <div class="accordion-body">
+                                            {% if module.description %}
+                                                <div class="alert alert-info mb-3">
+                                                    <i class="fas fa-info-circle me-2"></i>
+                                                    {{ module.description }}
+                                                </div>
+                                            {% endif %}
+                                            
+                                            <!-- CHANGED: Remove condition - All batches can add lessons -->
+                                            <div class="mb-3">
+                                                <a href="{% url 'courses:create_batch_lesson' course.id batch.id module.id %}" 
+                                                   class="btn btn-outline-success btn-sm">
+                                                    <i class="fas fa-plus me-1"></i>Add Lesson
+                                                </a>
+                                            </div>
+                                            
+                                            <!-- Lessons List -->
+                                            {% if module.lessons.all %}
+                                                <div class="list-group list-group-flush">
+                                                    {% for lesson in module.lessons.all %}
+                                                        <div class="list-group-item lesson-item d-flex align-items-center">
+                                                            <div class="me-3">
+                                                                <i class="fas fa-{% if lesson.lesson_type == 'video' %}video text-danger{% elif lesson.lesson_type == 'pdf' %}file-pdf text-primary{% else %}align-left text-info{% endif %}"></i>
+                                                            </div>
+                                                            
+                                                            <div class="flex-grow-1">
+                                                                <div class="fw-medium">
+                                                                    {{ lesson.order }}. {{ lesson.title }}
+                                                                </div>
+                                                                <small class="text-muted">
+                                                                    {{ lesson.get_lesson_type_display }}
+                                                                    {% if lesson.description %}
+                                                                        • {{ lesson.description|truncatechars:80 }}
+                                                                    {% endif %}
+                                                                </small>
+                                                            </div>
+                                                            
+                                                            <div class="text-end">
+                                                                <span class="badge bg-light text-dark">
+                                                                    {{ lesson.lesson_type|upper }}
+                                                                </span>
+                                                                {% if lesson.youtube_url %}
+                                                                    <span class="badge bg-danger ms-1">
+                                                                        <i class="fab fa-youtube"></i>
+                                                                    </span>
+                                                                {% endif %}
+                                                            </div>
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                            {% else %}
+                                                <div class="text-center text-muted py-4">
+                                                    <i class="fas fa-book-open fa-2x mb-2 d-block"></i>
+                                                    <p class="mb-2">No lessons in this module yet.</p>
+                                                    <!-- CHANGED: Remove condition - All batches can add lessons -->
+                                                    <a href="{% url 'courses:create_batch_lesson' course.id batch.id module.id %}" 
+                                                       class="btn btn-outline-primary btn-sm">
+                                                        <i class="fas fa-plus me-1"></i>Add First Lesson
+                                                    </a>
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <!-- Empty State -->
+                        <div class="text-center py-5">
+                            <div class="mb-4">
+                                <i class="fas fa-book-open text-muted" style="font-size: 4rem;"></i>
+                            </div>
+                            <h4 class="text-muted">No Content Yet</h4>
+                            {% if batch.content_type == 'fresh' %}
+                                <p class="text-muted mb-4">Start building your batch curriculum by creating your first module.</p>
+                                <a href="{% url 'courses:create_batch_module' course.id batch.id %}" 
+                                   class="btn btn-primary btn-lg">
+                                    <i class="fas fa-plus me-2"></i>Create First Module
+                                </a>
+                            {% elif batch.content_type == 'copy' %}
+                                <p class="text-muted mb-4">Content should be automatically copied from the main course.</p>
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <strong>Don't see copied content?</strong> You can still add your own modules and lessons to this batch.
+                                </div>
+                                <div>
+                                    <!-- CHANGED: Add module button for copy type too -->
+                                    <a href="{% url 'courses:create_batch_module' course.id batch.id %}" 
+                                       class="btn btn-primary">
+                                        <i class="fas fa-plus me-2"></i>Create First Module
+                                    </a>
+                                    <button class="btn btn-outline-primary ms-2" onclick="location.reload()">
+                                        <i class="fas fa-sync-alt me-2"></i>Refresh Page
+                                    </button>
+                                    <a href="{% url 'courses:course_detail' course.id %}" class="btn btn-outline-info ms-2">
+                                        <i class="fas fa-eye me-2"></i>View Original Course
+                                    </a>
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            
+            <!-- Quick Stats Card -->
+            <div class="card stats-card mb-4">
+                <div class="card-header bg-gradient-primary text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Batch Overview
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="text-center p-2 bg-light rounded">
+                                <div class="fs-5 fw-bold text-primary">{{ modules|length }}</div>
+                                <small class="text-muted">Modules</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center p-2 bg-light rounded">
+                                <div class="fs-5 fw-bold text-info">
+                                    {% with total_lessons=0 %}
+                                        {% for module in modules %}
+                                            {% with total_lessons=total_lessons|add:module.lessons.count %}{% endwith %}
+                                        {% endfor %}
+                                        {{ total_lessons }}
+                                    {% endwith %}
+                                </div>
+                                <small class="text-muted">Lessons</small>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-3">
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small">Enrolled Students:</span>
+                        <strong class="text-success">{{ batch.get_enrolled_count }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small">Available Seats:</span>
+                        <strong class="text-info">{{ batch.get_available_seats }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="small">Batch Status:</span>
+                        <span class="badge bg-{% if batch.status == 'active' %}success{% elif batch.status == 'draft' %}warning{% else %}secondary{% endif %}">
+                            {{ batch.get_status_display }}
+                        </span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="small">Created:</span>
+                        <span class="text-muted small">{{ batch.created_at|date:"M d, Y" }}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Students -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-user-graduate me-2"></i>Recent Students
+                    </h6>
+                </div>
+                <div class="card-body p-0">
+                    {% if enrollments %}
+                        {% for enrollment in enrollments|slice:":5" %}
+                            <div class="d-flex align-items-center p-3 border-bottom">
+                                <div class="me-3">
+                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center" 
+                                         style="width: 40px; height: 40px;">
+                                        {{ enrollment.student.username|first|upper }}
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1">
+                                    <div class="fw-medium">
+                                        {{ enrollment.student.get_full_name|default:enrollment.student.username }}
+                                    </div>
+                                    <small class="text-muted">
+                                        Enrolled {{ enrollment.enrolled_at|timesince }} ago
+                                    </small>
+                                </div>
+                                <div>
+                                    <span class="badge bg-{% if enrollment.status == 'enrolled' %}success{% elif enrollment.status == 'completed' %}primary{% else %}secondary{% endif %}">
+                                        {{ enrollment.get_status_display }}
+                                    </span>
+                                </div>
+                            </div>
+                        {% endfor %}
+                        
+                        {% if enrollments|length > 5 %}
+                            <div class="text-center p-3 bg-light">
+                                <a href="{% url 'courses:batch_enrollments' course.id batch.id %}" 
+                                   class="btn btn-outline-success btn-sm">
+                                    <i class="fas fa-users me-1"></i>View All {{ enrollments|length }} Students
+                                </a>
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-user-plus text-muted fa-2x mb-2"></i>
+                            <p class="text-muted mb-2">No students enrolled yet.</p>
+                            <a href="{% url 'courses:batch_enrollments' course.id batch.id %}" 
+                               class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-plus me-1"></i>Add Students
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-dark text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'courses:batch_enrollments' course.id batch.id %}" 
+                           class="btn btn-outline-primary quick-action-btn">
+                            <i class="fas fa-users me-2"></i>Manage Students
+                        </a>
+                        
+                        <a href="{% url 'courses:edit_batch' course.id batch.id %}" 
+                           class="btn btn-outline-warning quick-action-btn">
+                            <i class="fas fa-edit me-2"></i>Edit Batch Details
+                        </a>
+                        
+                        <!-- NEW: Quick Add Module Button -->
+                        <a href="{% url 'courses:create_batch_module' course.id batch.id %}" 
+                           class="btn btn-outline-success quick-action-btn">
+                            <i class="fas fa-plus me-2"></i>Add Module
+                        </a>
+                        
+                        {% if batch.status == 'draft' %}
+                            <button class="btn btn-outline-success quick-action-btn" onclick="activateBatch()">
+                                <i class="fas fa-play me-2"></i>Activate Batch
+                            </button>
+                        {% elif batch.status == 'active' %}
+                            <button class="btn btn-outline-secondary quick-action-btn" onclick="completeBatch()">
+                                <i class="fas fa-check me-2"></i>Mark Complete
+                            </button>
+                        {% endif %}
+                        
+                        <hr>
+                        
+                        <a href="{% url 'courses:batch_list' course.id %}" 
+                           class="btn btn-outline-secondary quick-action-btn">
+                            <i class="fas fa-arrow-left me-2"></i>Back to Batches
+                        </a>
+                        
+                        <a href="{% url 'courses:course_detail' course.id %}" 
+                           class="btn btn-outline-info quick-action-btn">
+                            <i class="fas fa-book me-2"></i>View Original Course
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Initialize tooltips
+var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl);
+});
+
+function activateBatch() {
+    if (confirm('Are you sure you want to activate this batch?\n\nStudents will be able to access the content and enrollment will open.')) {
+        fetch(`/courses/{{ course.id }}/batches/{{ batch.id }}/activate/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error activating batch: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            location.reload();
+        });
+    }
+}
+
+function completeBatch() {
+    if (confirm('Are you sure you want to mark this batch as complete?\n\nThis will close enrollment and mark the batch as finished.')) {
+        fetch(`/courses/{{ course.id }}/batches/{{ batch.id }}/complete/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Error: ' + (data.message || 'Unknown error'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            location.reload();
+        });
+    }
+}
+</script>
+
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(45deg, #007bff, #0056b3);
+}
+</style>
+{% endblock %}

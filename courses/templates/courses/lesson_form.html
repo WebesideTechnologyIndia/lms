@@ -1,0 +1,497 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if lesson %}Edit Lesson{% else %}Create Lesson{% endif %} - {{ module.title }}{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="welcome-card">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb" class="mb-2">
+                <ol class="breadcrumb text-white-50">
+                    <li class="breadcrumb-item"><a href="{% url 'courses:course_dashboard' %}" class="text-white-50">Courses</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'courses:course_detail' course.id %}" class="text-white-50">{{ course.course_code }}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'courses:course_modules' course.id %}" class="text-white-50">Modules</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'courses:module_lessons' course.id module.id %}" class="text-white-50">{{ module.title }}</a></li>
+                    <li class="breadcrumb-item active text-white">{% if lesson %}Edit{% else %}Create{% endif %}</li>
+                </ol>
+            </nav>
+            <h1 class="mb-2">
+                <i class="fas fa-{% if lesson %}edit{% else %}plus{% endif %} me-3"></i>
+                {{ title }}
+            </h1>
+            <p class="mb-0 opacity-75">{{ module.title }} - Lesson Management</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'courses:module_lessons' course.id module.id %}" class="btn btn-light">
+                <i class="fas fa-arrow-left me-2"></i>
+                Back to Lessons
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Form -->
+<div class="row">
+    <div class="col-md-8">
+        <form method="post">
+            {% csrf_token %}
+            
+            <!-- Basic Information -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-info-circle me-2"></i>
+                        Lesson Information
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Lesson Title -->
+                    <div class="mb-4">
+                        <label class="form-label">
+                            <i class="fas fa-heading me-1"></i>
+                            Lesson Title *
+                        </label>
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                            <div class="text-danger mt-1">
+                                <small><i class="fas fa-exclamation-circle me-1"></i>{{ form.title.errors.0 }}</small>
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            Give your lesson a clear, descriptive title
+                        </small>
+                    </div>
+
+                    <!-- Lesson Type -->
+                    <div class="mb-4">
+                        <label class="form-label">
+                            <i class="fas fa-layer-group me-1"></i>
+                            Lesson Type *
+                        </label>
+                        {{ form.lesson_type }}
+                        {% if form.lesson_type.errors %}
+                            <div class="text-danger mt-1">
+                                <small><i class="fas fa-exclamation-circle me-1"></i>{{ form.lesson_type.errors.0 }}</small>
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            Choose the type of content for this lesson
+                        </small>
+                    </div>
+
+                    <!-- Lesson Description -->
+                    <div class="mb-4">
+                        <label class="form-label">
+                            <i class="fas fa-align-left me-1"></i>
+                            Lesson Description
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger mt-1">
+                                <small><i class="fas fa-exclamation-circle me-1"></i>{{ form.description.errors.0 }}</small>
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            Brief overview of what students will learn in this lesson
+                        </small>
+                    </div>
+
+                    <!-- Order and Duration -->
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="fas fa-sort-numeric-up me-1"></i>
+                                    Lesson Order *
+                                </label>
+                                {{ form.order }}
+                                {% if form.order.errors %}
+                                    <div class="text-danger mt-1">
+                                        <small><i class="fas fa-exclamation-circle me-1"></i>{{ form.order.errors.0 }}</small>
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">
+                                    Order within the module
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-4">
+                                <label class="form-label">
+                                    <i class="fas fa-clock me-1"></i>
+                                    Duration (Minutes)
+                                </label>
+                                {{ form.duration_minutes }}
+                                {% if form.duration_minutes.errors %}
+                                    <div class="text-danger mt-1">
+                                        <small><i class="fas fa-exclamation-circle me-1"></i>{{ form.duration_minutes.errors.0 }}</small>
+                                    </div>
+                                {% endif %}
+                                <small class="form-text text-muted">
+                                    Estimated time to complete
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Section -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-alt me-2"></i>
+                        Lesson Content
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Video URL (conditional) -->
+                    <div class="mb-4" id="video-section">
+                        <label class="form-label">
+                            <i class="fas fa-video me-1"></i>
+                            Video URL
+                        </label>
+                        {{ form.video_url }}
+                        {% if form.video_url.errors %}
+                            <div class="text-danger mt-1">
+                                <small><i class="fas fa-exclamation-circle me-1"></i>{{ form.video_url.errors.0 }}</small>
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            YouTube, Vimeo, or direct video link (for video lessons)
+                        </small>
+                    </div>
+
+                    <!-- Content Text -->
+                    <div class="mb-4">
+                        <label class="form-label">
+                            <i class="fas fa-edit me-1"></i>
+                            Lesson Content
+                        </label>
+                        {{ form.content }}
+                        {% if form.content.errors %}
+                            <div class="text-danger mt-1">
+                                <small><i class="fas fa-exclamation-circle me-1"></i>{{ form.content.errors.0 }}</small>
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            Main content for the lesson - text, instructions, quiz questions, etc.
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings -->
+            <div class="card mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-cog me-2"></i>
+                        Lesson Settings
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check mb-3">
+                                {{ form.is_free_preview }}
+                                <label class="form-check-label" for="{{ form.is_free_preview.id_for_label }}">
+                                    <i class="fas fa-unlock me-1"></i>
+                                    Free Preview Lesson
+                                </label>
+                                <div class="form-text text-muted">
+                                    Allow non-enrolled students to view this lesson
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check mb-3">
+                                {{ form.is_active }}
+                                <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                    <i class="fas fa-eye me-1"></i>
+                                    Lesson is active and visible
+                                </label>
+                                <div class="form-text text-muted">
+                                    Unchecked lessons are saved as drafts
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="card">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'courses:module_lessons' course.id module.id %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <div>
+                            <button type="submit" name="save_and_continue" class="btn btn-outline-primary me-2">
+                                <i class="fas fa-save me-2"></i>Save & Add Another
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-check me-2"></i>{{ button_text }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Module Info -->
+        <div class="card mb-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-list me-2"></i>
+                    Module Information
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center me-3" style="width: 40px; height: 40px;">
+                        {{ module.order }}
+                    </div>
+                    <div>
+                        <h6 class="mb-1">{{ module.title }}</h6>
+                        <small class="text-muted">{{ course.title }}</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="fw-bold text-primary">{{ module.get_lessons_count }}</div>
+                        <small class="text-muted">Lessons</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="fw-bold text-success">{{ module.order }}</div>
+                        <small class="text-muted">Order</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lesson Type Guide -->
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-question-circle me-2"></i>
+                    Lesson Types Guide
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-2">
+                    <i class="fas fa-play text-primary me-2"></i>
+                    <strong>Video:</strong> Video content with optional text
+                </div>
+                <div class="mb-2">
+                    <i class="fas fa-file-alt text-secondary me-2"></i>
+                    <strong>Text:</strong> Written content, articles, guides
+                </div>
+                <div class="mb-2">
+                    <i class="fas fa-question-circle text-warning me-2"></i>
+                    <strong>Quiz:</strong> Test student knowledge
+                </div>
+                <div class="mb-2">
+                    <i class="fas fa-file-text text-info me-2"></i>
+                    <strong>Assignment:</strong> Homework, projects
+                </div>
+                <div class="mb-0">
+                    <i class="fas fa-video text-danger me-2"></i>
+                    <strong>Live Session:</strong> Scheduled live classes
+                </div>
+            </div>
+        </div>
+
+        <!-- Content Tips -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    Content Tips
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <strong>Clear Titles:</strong> Be specific about what students will learn
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <strong>Set Duration:</strong> Help students plan their study time
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <strong>Free Previews:</strong> Use strategically to attract students
+                    </li>
+                    <li class="mb-0">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <strong>Draft Mode:</strong> Test content before making it live
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        {% if lesson %}
+        <!-- Lesson Stats -->
+        <div class="card mt-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Lesson Stats
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="fw-bold text-primary">{{ lesson.duration_minutes|default:0 }}</div>
+                        <small class="text-muted">Minutes</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="fw-bold text-info">{{ lesson.order }}</div>
+                        <small class="text-muted">Order</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="text-center">
+                    <span class="badge bg-{% if lesson.is_active %}success{% else %}secondary{% endif %}">
+                        {% if lesson.is_active %}Active{% else %}Draft{% endif %}
+                    </span>
+                    {% if lesson.is_free_preview %}
+                        <span class="badge bg-warning text-dark ms-1">Free Preview</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Content Preview -->
+{% if lesson %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-eye me-2"></i>
+                    Current Lesson Preview
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <strong>Type:</strong> 
+                        <span class="badge bg-{% if lesson.lesson_type == 'video' %}primary{% elif lesson.lesson_type == 'quiz' %}warning{% elif lesson.lesson_type == 'assignment' %}info{% else %}secondary{% endif %} ms-2">
+                            {{ lesson.get_lesson_type_display }}
+                        </span>
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Duration:</strong> {{ lesson.duration_minutes|default:"Not set" }} minutes
+                    </div>
+                </div>
+                {% if lesson.video_url %}
+                    <hr>
+                    <strong>Video:</strong> <a href="{{ lesson.video_url }}" target="_blank" class="text-primary">{{ lesson.video_url }}</a>
+                {% endif %}
+                {% if lesson.content %}
+                    <hr>
+                    <strong>Content Preview:</strong>
+                    <div class="bg-light p-3 rounded mt-2">
+                        {{ lesson.content|truncatechars:200|linebreaks }}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Show/hide video URL field based on lesson type
+document.addEventListener('DOMContentLoaded', function() {
+    const lessonTypeField = document.getElementById('{{ form.lesson_type.id_for_label }}');
+    const videoSection = document.getElementById('video-section');
+    
+    function toggleVideoSection() {
+        if (lessonTypeField.value === 'video' || lessonTypeField.value === 'live_session') {
+            videoSection.style.display = 'block';
+        } else {
+            videoSection.style.display = 'none';
+        }
+    }
+    
+    // Initial check
+    toggleVideoSection();
+    
+    // Listen for changes
+    lessonTypeField.addEventListener('change', toggleVideoSection);
+});
+
+// Auto-suggest lesson order
+document.addEventListener('DOMContentLoaded', function() {
+    const orderField = document.getElementById('{{ form.order.id_for_label }}');
+    if (orderField && !orderField.value) {
+        orderField.placeholder = 'Auto-suggested: Next available order';
+    }
+});
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const titleField = document.getElementById('{{ form.title.id_for_label }}');
+    const lessonTypeField = document.getElementById('{{ form.lesson_type.id_for_label }}');
+    const videoUrlField = document.getElementById('{{ form.video_url.id_for_label }}');
+    const contentField = document.getElementById('{{ form.content.id_for_label }}');
+    
+    // Title is required
+    if (!titleField.value.trim()) {
+        e.preventDefault();
+        titleField.focus();
+        alert('Please enter a lesson title');
+        return false;
+    }
+    
+    // Video URL required for video lessons
+    if ((lessonTypeField.value === 'video' || lessonTypeField.value === 'live_session') && !videoUrlField.value.trim()) {
+        e.preventDefault();
+        videoUrlField.focus();
+        alert('Video URL is required for video lessons');
+        return false;
+    }
+    
+    // Content required for text lessons
+    if (lessonTypeField.value === 'text' && !contentField.value.trim()) {
+        e.preventDefault();
+        contentField.focus();
+        alert('Content is required for text lessons');
+        return false;
+    }
+});
+
+// Character counter for content field
+const contentField = document.getElementById('{{ form.content.id_for_label }}');
+if (contentField) {
+    const maxLength = 5000; // Adjust as needed
+    const counter = document.createElement('small');
+    counter.className = 'text-muted';
+    counter.style.float = 'right';
+    contentField.parentNode.appendChild(counter);
+    
+    function updateCounter() {
+        const remaining = maxLength - contentField.value.length;
+        counter.textContent = `${contentField.value.length}/${maxLength} characters`;
+        counter.className = remaining < 100 ? 'text-warning' : 'text-muted';
+    }
+    
+    contentField.addEventListener('input', updateCounter);
+    updateCounter(); // Initial count
+}
+</script>
+{% endblock %}

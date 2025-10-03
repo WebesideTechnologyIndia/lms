@@ -1,0 +1,577 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Zoom Configuration Status - LMS Admin{% endblock %}
+
+{% block extra_css %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<style>
+    .status-card {
+        border-radius: 15px;
+        box-shadow: 0 0.15rem 1.75rem rgba(58, 59, 69, 0.15);
+        transition: all 0.3s ease;
+    }
+    
+    .status-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 0.5rem 2rem rgba(58, 69, 69, 0.2);
+    }
+    
+    .status-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 15px 15px 0 0;
+        padding: 25px;
+    }
+    
+    .status-indicator {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 10px;
+        position: relative;
+    }
+    
+    .status-active {
+        background: #28a745;
+        animation: pulse-green 2s infinite;
+    }
+    
+    .status-inactive {
+        background: #dc3545;
+    }
+    
+    .status-warning {
+        background: #ffc107;
+        animation: pulse-yellow 2s infinite;
+    }
+    
+    @keyframes pulse-green {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+        50% { box-shadow: 0 0 0 10px rgba(40, 167, 69, 0); }
+    }
+    
+    @keyframes pulse-yellow {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(255, 193, 7, 0.7); }
+        50% { box-shadow: 0 0 0 10px rgba(255, 193, 7, 0); }
+    }
+    
+    .config-detail {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 10px 0;
+    }
+    
+    .test-result {
+        padding: 15px;
+        border-radius: 8px;
+        margin: 15px 0;
+    }
+    
+    .test-success {
+        background: #d4edda;
+        border: 1px solid #c3e6cb;
+        color: #155724;
+    }
+    
+    .test-failure {
+        background: #f8d7da;
+        border: 1px solid #f5c6cb;
+        color: #721c24;
+    }
+    
+    .test-warning {
+        background: #fff3cd;
+        border: 1px solid #ffeaa7;
+        color: #856404;
+    }
+    
+    .credential-item {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 10px 0;
+    }
+    
+    .credential-label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 5px;
+    }
+    
+    .credential-value {
+        font-family: 'Courier New', monospace;
+        color: #6c757d;
+        word-break: break-all;
+    }
+    
+    .masked-value {
+        color: #adb5bd;
+    }
+    
+    .btn-gradient {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+    }
+    
+    .btn-gradient:hover {
+        background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+        color: white;
+    }
+    
+    .timeline-item {
+        position: relative;
+        padding-left: 30px;
+        margin-bottom: 20px;
+    }
+    
+    .timeline-item::before {
+        content: '';
+        position: absolute;
+        left: 8px;
+        top: 8px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #667eea;
+    }
+    
+    .timeline-item::after {
+        content: '';
+        position: absolute;
+        left: 11px;
+        top: 20px;
+        width: 2px;
+        height: calc(100% - 10px);
+        background: #e9ecef;
+    }
+    
+    .timeline-item:last-child::after {
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="text-dark">
+            <i class="fas fa-satellite-dish text-primary"></i> Zoom Configuration Status
+        </h2>
+        <div class="btn-group">
+            <a href="{% url 'zoom:dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Dashboard
+            </a>
+            {% if is_superadmin %}
+                <a href="{% url 'zoom:config_setup' %}" class="btn btn-primary">
+                    <i class="fas fa-cog"></i> Configure Zoom
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Main Status Card -->
+        <div class="col-lg-8">
+            <div class="status-card mb-4">
+                <div class="status-header">
+                    <div class="d-flex align-items-center">
+                        {% if active_config %}
+                            <span class="status-indicator status-active"></span>
+                            <div>
+                                <h4 class="mb-0">Zoom Integration Active</h4>
+                                <p class="mb-0 opacity-75">{{ active_config.organization_name }}</p>
+                            </div>
+                        {% else %}
+                            <span class="status-indicator status-inactive"></span>
+                            <div>
+                                <h4 class="mb-0">Zoom Integration Inactive</h4>
+                                <p class="mb-0 opacity-75">No configuration found</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="card-body">
+                    {% if active_config %}
+                        <!-- Active Configuration Details -->
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="config-detail">
+                                    <h6><i class="fas fa-info-circle text-primary"></i> Configuration Status</h6>
+                                    <div class="mt-2">
+                                        <strong>Configured:</strong> 
+                                        {% if active_config.is_configured %}
+                                            <span class="text-success"><i class="fas fa-check"></i> Yes</span>
+                                        {% else %}
+                                            <span class="text-danger"><i class="fas fa-times"></i> Incomplete</span>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <strong>Active:</strong> 
+                                        {% if active_config.is_active %}
+                                            <span class="text-success"><i class="fas fa-check"></i> Yes</span>
+                                        {% else %}
+                                            <span class="text-warning"><i class="fas fa-pause"></i> No</span>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <strong>Last Updated:</strong> 
+                                        <span class="text-muted">{{ active_config.updated_at|date:"M d, Y H:i" }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="config-detail">
+                                    <h6><i class="fas fa-plug text-success"></i> Connection Status</h6>
+                                    <div class="mt-2">
+                                        <strong>Last Test:</strong> 
+                                        {% if active_config.last_test_date %}
+                                            <span class="text-muted">{{ active_config.last_test_date|date:"M d, Y H:i" }}</span>
+                                        {% else %}
+                                            <span class="text-muted">Never tested</span>
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <strong>Test Result:</strong>
+                                        {% if active_config.test_status == 'success' %}
+                                            <span class="text-success"><i class="fas fa-check-circle"></i> Success</span>
+                                        {% elif active_config.test_status == 'failed' %}
+                                            <span class="text-danger"><i class="fas fa-times-circle"></i> Failed</span>
+                                        {% else %}
+                                            <span class="text-muted"><i class="fas fa-question-circle"></i> Not Tested</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if is_superadmin %}
+                                        <button class="btn btn-sm btn-gradient mt-2" onclick="testConnection()">
+                                            <i class="fas fa-flask"></i> Test Now
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Test Result Display -->
+                        <div id="testResult" style="display: none;"></div>
+                        
+                        {% if active_config.test_error_message %}
+                            <div class="test-result test-failure">
+                                <h6><i class="fas fa-exclamation-triangle"></i> Last Error</h6>
+                                <p class="mb-0">{{ active_config.test_error_message }}</p>
+                            </div>
+                        {% endif %}
+                        
+                    {% else %}
+                        <!-- No Configuration -->
+                        <div class="text-center py-5">
+                            <i class="fas fa-video-slash fa-4x text-muted mb-3"></i>
+                            <h4 class="text-muted">No Zoom Configuration Found</h4>
+                            <p class="text-muted mb-4">Set up Zoom integration to enable live sessions and recordings.</p>
+                            {% if is_superadmin %}
+                                <a href="{% url 'zoom:config_setup' %}" class="btn btn-gradient btn-lg">
+                                    <i class="fas fa-plus-circle"></i> Configure Zoom Now
+                                </a>
+                            {% else %}
+                                <p class="text-muted">Contact your super admin to configure Zoom integration.</p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <!-- All Configurations -->
+            {% if configs %}
+                <div class="status-card">
+                    <div class="card-header bg-light">
+                        <h5 class="mb-0">
+                            <i class="fas fa-history"></i> Configuration History
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Organization</th>
+                                        <th>Status</th>
+                                        <th>Last Test</th>
+                                        <th>Created</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for config in configs %}
+                                        <tr {% if config.is_active %}class="table-success"{% endif %}>
+                                            <td>
+                                                <div>
+                                                    <strong>{{ config.organization_name }}</strong>
+                                                    {% if config.is_active %}
+                                                        <span class="badge bg-success ms-2">Active</span>
+                                                    {% endif %}
+                                                    <br>
+                                                    <small class="text-muted">{{ config.admin_email }}</small>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                {% if config.is_configured %}
+                                                    <span class="badge bg-success">Configured</span>
+                                                {% else %}
+                                                    <span class="badge bg-warning">Incomplete</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if config.last_test_date %}
+                                                    <div>
+                                                        <small>{{ config.last_test_date|date:"M d, H:i" }}</small>
+                                                        <br>
+                                                        {% if config.test_status == 'success' %}
+                                                            <span class="badge bg-success">Success</span>
+                                                        {% elif config.test_status == 'failed' %}
+                                                            <span class="badge bg-danger">Failed</span>
+                                                        {% else %}
+                                                            <span class="badge bg-secondary">Not Tested</span>
+                                                        {% endif %}
+                                                    </div>
+                                                {% else %}
+                                                    <span class="text-muted">Never tested</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <small>{{ config.created_at|date:"M d, Y" }}</small>
+                                                {% if config.created_by %}
+                                                    <br><small class="text-muted">by {{ config.created_by.get_full_name }}</small>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                {% if is_superadmin %}
+                                                    <div class="btn-group btn-group-sm">
+                                                        {% if not config.is_active %}
+                                                            <button class="btn btn-outline-primary" onclick="activateConfig({{ config.id }})">
+                                                                <i class="fas fa-play"></i> Activate
+                                                            </button>
+                                                        {% endif %}
+                                                        <button class="btn btn-outline-info" onclick="testSpecificConfig({{ config.id }})">
+                                                            <i class="fas fa-flask"></i> Test
+                                                        </button>
+                                                    </div>
+                                                {% else %}
+                                                    <small class="text-muted">Admin Only</small>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Sidebar Info -->
+        <div class="col-lg-4">
+            <!-- Quick Stats -->
+            {% if active_config %}
+                <div class="status-card mb-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-chart-bar"></i> Quick Stats</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-6">
+                                <div class="border-end">
+                                    <h4 class="text-primary mb-0">{{ total_sessions|default:0 }}</h4>
+                                    <small class="text-muted">Total Sessions</small>
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <h4 class="text-success mb-0">{{ total_recordings|default:0 }}</h4>
+                                <small class="text-muted">Recordings</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <!-- Current Settings -->
+            {% if active_config %}
+                <div class="status-card mb-4">
+                    <div class="card-header bg-light">
+                        <h6 class="mb-0"><i class="fas fa-cog"></i> Default Settings</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="credential-item">
+                            <div class="credential-label">Host Video</div>
+                            <div class="credential-value">
+                                {% if active_config.default_host_video %}
+                                    <span class="text-success"><i class="fas fa-check"></i> Enabled</span>
+                                {% else %}
+                                    <span class="text-muted"><i class="fas fa-times"></i> Disabled</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="credential-item">
+                            <div class="credential-label">Participant Video</div>
+                            <div class="credential-value">
+                                {% if active_config.default_participant_video %}
+                                    <span class="text-success"><i class="fas fa-check"></i> Enabled</span>
+                                {% else %}
+                                    <span class="text-muted"><i class="fas fa-times"></i> Disabled</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="credential-item">
+                            <div class="credential-label">Waiting Room</div>
+                            <div class="credential-value">
+                                {% if active_config.default_waiting_room %}
+                                    <span class="text-success"><i class="fas fa-check"></i> Enabled</span>
+                                {% else %}
+                                    <span class="text-muted"><i class="fas fa-times"></i> Disabled</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="credential-item">
+                            <div class="credential-label">Auto Recording</div>
+                            <div class="credential-value">
+                                {% if active_config.default_auto_recording == 'cloud' %}
+                                    <span class="text-primary"><i class="fas fa-cloud"></i> Cloud</span>
+                                {% elif active_config.default_auto_recording == 'local' %}
+                                    <span class="text-info"><i class="fas fa-desktop"></i> Local</span>
+                                {% else %}
+                                    <span class="text-muted"><i class="fas fa-times"></i> Disabled</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endif %}
+            
+            <!-- Setup Guide -->
+            <div class="status-card">
+                <div class="card-header bg-light">
+                    <h6 class="mb-0"><i class="fas fa-question-circle"></i> Setup Guide</h6>
+                </div>
+                <div class="card-body">
+                    <div class="timeline-item">
+                        <h6 class="text-primary">Step 1: Create Zoom App</h6>
+                        <p class="small text-muted mb-0">Visit <a href="https://marketplace.zoom.us" target="_blank">marketplace.zoom.us</a> and create a Server-to-Server OAuth app.</p>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <h6 class="text-primary">Step 2: Get Credentials</h6>
+                        <p class="small text-muted mb-0">Copy Account ID, Client ID, Client Secret from your Zoom app.</p>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <h6 class="text-primary">Step 3: Configure LMS</h6>
+                        <p class="small text-muted mb-0">Enter credentials in the Zoom Configuration page and test connection.</p>
+                    </div>
+                    
+                    <div class="timeline-item">
+                        <h6 class="text-success">Step 4: Start Creating Sessions</h6>
+                        <p class="small text-muted mb-0">Create batch sessions with automatic Zoom meeting integration.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function testConnection() {
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        const resultDiv = document.getElementById('testResult');
+        
+        // Show loading
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Testing...';
+        btn.disabled = true;
+        
+        fetch('{% url "zoom:test_connection" %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            resultDiv.style.display = 'block';
+            if (data.success) {
+                resultDiv.className = 'test-result test-success';
+                resultDiv.innerHTML = `
+                    <h6><i class="fas fa-check-circle"></i> Connection Test Successful</h6>
+                    <p class="mb-0">${data.message}</p>
+                    <small class="text-muted">Tested at: ${new Date().toLocaleString()}</small>
+                `;
+                
+                // Auto refresh page after 2 seconds
+                setTimeout(() => {
+                    location.reload();
+                }, 2000);
+            } else {
+                resultDiv.className = 'test-result test-failure';
+                resultDiv.innerHTML = `
+                    <h6><i class="fas fa-times-circle"></i> Connection Test Failed</h6>
+                    <p class="mb-0">${data.message}</p>
+                    <small class="text-muted">Please check your credentials and try again.</small>
+                `;
+            }
+        })
+        .catch(error => {
+            resultDiv.style.display = 'block';
+            resultDiv.className = 'test-result test-failure';
+            resultDiv.innerHTML = `
+                <h6><i class="fas fa-exclamation-triangle"></i> Test Error</h6>
+                <p class="mb-0">Could not complete connection test. Please try again.</p>
+            `;
+        })
+        .finally(() => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+        });
+    }
+    
+    function activateConfig(configId) {
+        if (confirm('Are you sure you want to activate this configuration? This will deactivate the current active configuration.')) {
+            // Implementation for activating specific config
+            window.location.href = `/admin/zoom/zoomconfiguration/${configId}/change/`;
+        }
+    }
+    
+    function testSpecificConfig(configId) {
+        alert('Test functionality for specific config - to be implemented');
+    }
+    
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    // Auto refresh page every 5 minutes to get latest status
+    setInterval(() => {
+        location.reload();
+    }, 300000);
+</script>
+{% endblock %}

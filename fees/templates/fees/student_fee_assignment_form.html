@@ -1,0 +1,308 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }} - LMS Admin{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-4">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fees:admin_fees_dashboard' %}">Fees</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fees:manage_student_fees' %}">Student Fees</a></li>
+        <li class="breadcrumb-item active">{{ title }}</li>
+    </ol>
+</nav>
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2 class="mb-1">
+            <i class="fas fa-user-plus me-2 text-primary"></i>{{ title }}
+        </h2>
+        <p class="text-muted mb-0">Assign fee structure to student for specific course</p>
+    </div>
+    <div>
+        <a href="{% url 'fees:manage_student_fees' %}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Student Fees
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Assignment Form -->
+        <div class="card shadow">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-edit me-2"></i>Fee Assignment Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="assignmentForm">
+                    {% csrf_token %}
+                    
+                    <!-- Student & Course Selection -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-2">Student & Course Selection</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.student.id_for_label }}" class="form-label">Select Student *</label>
+                            {{ form.student }}
+                            {% if form.student.errors %}
+                                <div class="text-danger small">{{ form.student.errors.0 }}</div>
+                            {% endif %}
+                            <small class="text-muted">Choose the student to assign fees</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.course.id_for_label }}" class="form-label">Select Course *</label>
+                            {{ form.course }}
+                            {% if form.course.errors %}
+                                <div class="text-danger small">{{ form.course.errors.0 }}</div>
+                            {% endif %}
+                            <small class="text-muted">Choose the course for fee assignment</small>
+                        </div>
+                    </div>
+
+                    <!-- Fee Structure Selection -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-success border-bottom pb-2">Fee Structure & Amount</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.fee_structure.id_for_label }}" class="form-label">Fee Structure *</label>
+                            {{ form.fee_structure }}
+                            {% if form.fee_structure.errors %}
+                                <div class="text-danger small">{{ form.fee_structure.errors.0 }}</div>
+                            {% endif %}
+                            <small class="text-muted">Select payment plan for this student</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.total_amount.id_for_label }}" class="form-label">Total Amount ($) *</label>
+                            {{ form.total_amount }}
+                            {% if form.total_amount.errors %}
+                                <div class="text-danger small">{{ form.total_amount.errors.0 }}</div>
+                            {% endif %}
+                            <small class="text-muted">Will auto-fill based on fee structure</small>
+                        </div>
+                    </div>
+
+                    <!-- Payment Schedule -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-info border-bottom pb-2">Payment Schedule</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.payment_start_date.id_for_label }}" class="form-label">Payment Start Date *</label>
+                            {{ form.payment_start_date }}
+                            {% if form.payment_start_date.errors %}
+                                <div class="text-danger small">{{ form.payment_start_date.errors.0 }}</div>
+                            {% endif %}
+                            <small class="text-muted">When should payments begin</small>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.status.id_for_label }}" class="form-label">Assignment Status</label>
+                            {{ form.status }}
+                            {% if form.status.errors %}
+                                <div class="text-danger small">{{ form.status.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Admin Override (Optional) -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            <h6 class="text-warning border-bottom pb-2">Admin Override (Optional)</h6>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.unlock_date.id_for_label }}" class="form-label">Grace Unlock Date</label>
+                            {{ form.unlock_date }}
+                            {% if form.unlock_date.errors %}
+                                <div class="text-danger small">{{ form.unlock_date.errors.0 }}</div>
+                            {% endif %}
+                            <small class="text-muted">Course will remain unlocked until this date (optional)</small>
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'fees:manage_student_fees' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>Assign Fee Structure
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-4">
+        <!-- Fee Structure Preview -->
+        <div class="card shadow" id="fee-preview" style="display: none;">
+            <div class="card-header bg-info text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-eye me-2"></i>Fee Structure Preview
+                </h6>
+            </div>
+            <div class="card-body">
+                <div id="structure-details">
+                    <!-- Will be populated via AJAX -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Assignment Help -->
+        <div class="card shadow mt-3">
+            <div class="card-header bg-secondary text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>Assignment Guide
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <h6 class="text-primary">Step 1: Select Student</h6>
+                    <p class="small text-muted">Choose the student from active student list</p>
+                </div>
+                
+                <div class="mb-3">
+                    <h6 class="text-success">Step 2: Choose Course</h6>
+                    <p class="small text-muted">Select the course for which fees are being assigned</p>
+                </div>
+                
+                <div class="mb-3">
+                    <h6 class="text-info">Step 3: Fee Structure</h6>
+                    <p class="small text-muted">Pick appropriate payment plan (Full payment or EMI)</p>
+                </div>
+                
+                <div class="mb-3">
+                    <h6 class="text-warning">What Happens Next?</h6>
+                    <ul class="small text-muted">
+                        <li>Student gets enrolled in course</li>
+                        <li>EMI schedule created (if EMI plan)</li>
+                        <li>Payment reminders automated</li>
+                        <li>Course access controlled</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="card shadow mt-3">
+            <div class="card-header bg-success text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>Quick Stats
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="small text-muted">Active Students:</span>
+                    <span class="small fw-bold">{{ total_students|default:0 }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="small text-muted">Active Courses:</span>
+                    <span class="small fw-bold">{{ total_courses|default:0 }}</span>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="small text-muted">Fee Structures:</span>
+                    <span class="small fw-bold">{{ total_structures|default:0 }}</span>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="small text-muted">Total Assignments:</span>
+                    <span class="small fw-bold">{{ total_assignments|default:0 }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const feeStructureField = document.getElementById('{{ form.fee_structure.id_for_label }}');
+        const totalAmountField = document.getElementById('{{ form.total_amount.id_for_label }}');
+        const studentField = document.getElementById('{{ form.student.id_for_label }}');
+        const courseField = document.getElementById('{{ form.course.id_for_label }}');
+        
+        // Auto-populate total amount based on fee structure
+        function updateTotalAmount() {
+            const structureId = feeStructureField.value;
+            if (!structureId) {
+                document.getElementById('fee-preview').style.display = 'none';
+                return;
+            }
+            
+            fetch(`/fees/ajax/fee-structure-details/?structure_id=${structureId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.structure) {
+                        // Auto-fill total amount
+                        totalAmountField.value = data.structure.total_amount;
+                        
+                        // Show preview
+                        displayStructurePreview(data.structure);
+                        document.getElementById('fee-preview').style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading fee structure details:', error);
+                });
+        }
+        
+        function displayStructurePreview(structure) {
+            let previewHtml = `
+                <div class="mb-3">
+                    <h6 class="text-primary">${structure.name}</h6>
+                    <p class="mb-1"><strong>Total Amount:</strong> $${structure.total_amount}</p>
+                    <p class="mb-1"><strong>Payment Type:</strong> ${structure.payment_type}</p>
+            `;
+            
+            if (structure.payment_type === 'emi') {
+                previewHtml += `
+                    <p class="mb-1"><strong>EMI Duration:</strong> ${structure.emi_duration_months} months</p>
+                    <p class="mb-1"><strong>EMI Amount:</strong> $${structure.emi_amount}</p>
+                    <p class="mb-1"><strong>Down Payment:</strong> $${structure.down_payment}</p>
+                `;
+            }
+            
+            previewHtml += `
+                    <p class="mb-1"><strong>Grace Period:</strong> ${structure.grace_period_days} days</p>
+                </div>
+                <div class="alert alert-info small">
+                    <i class="fas fa-info-circle me-2"></i>
+                    ${structure.payment_type === 'emi' ? 'EMI schedule will be created automatically' : 'Single payment expected'}
+                </div>
+            `;
+            
+            document.getElementById('structure-details').innerHTML = previewHtml;
+        }
+        
+        // Validate student-course combination
+        function validateCombination() {
+            const studentId = studentField.value;
+            const courseId = courseField.value;
+            
+            if (studentId && courseId) {
+                // Check if assignment already exists
+                // You can add AJAX call here to validate
+                console.log(`Checking assignment for student ${studentId} in course ${courseId}`);
+            }
+        }
+        
+        // Event listeners
+        feeStructureField.addEventListener('change', updateTotalAmount);
+        studentField.addEventListener('change', validateCombination);
+        courseField.addEventListener('change', validateCombination);
+        
+        // Set default payment start date to today
+        const startDateField = document.getElementById('{{ form.payment_start_date.id_for_label }}');
+        if (startDateField && !startDateField.value) {
+            const today = new Date().toISOString().split('T')[0];
+            startDateField.value = today;
+        }
+    });
+</script>
+{% endblock %}

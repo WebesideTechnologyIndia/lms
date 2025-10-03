@@ -1,0 +1,384 @@
+<!-- templates/webinars/register.html -->
+{% extends 'webinars/base.html' %}
+
+{% block title %}Register for {{ webinar.title }} - Learning Platform{% endblock %}
+
+{% block content %}
+<!-- Page Header -->
+<div class="page-header">
+    <div class="container">
+        <div class="row">
+            <div class="col-12">
+                <nav aria-label="breadcrumb">
+                    <ol class="breadcrumb">
+                        <li class="breadcrumb-item"><a href="{% url 'webinars:webinar_list' %}">Webinars</a></li>
+                        <li class="breadcrumb-item"><a href="{% url 'webinars:webinar_detail' webinar.slug %}">{{ webinar.title }}</a></li>
+                        <li class="breadcrumb-item active">Register</li>
+                    </ol>
+                </nav>
+                <h1><i class="fas fa-user-plus me-2"></i>Register for Webinar</h1>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <!-- Webinar Info Card -->
+            <div class="card webinar-info-card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            {% if webinar.thumbnail %}
+                                <img src="{{ webinar.thumbnail.url }}" class="img-fluid rounded" alt="{{ webinar.title }}">
+                            {% else %}
+                                <div class="webinar-placeholder">
+                                    <i class="fas fa-video"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-8">
+                            <h4 class="card-title">{{ webinar.title }}</h4>
+                            <p class="text-muted">{{ webinar.short_description }}</p>
+                            
+                            <div class="webinar-details">
+                                <div class="detail-item">
+                                    <i class="fas fa-calendar text-primary"></i>
+                                    <strong>Date:</strong> {{ webinar.scheduled_date|date:"F j, Y" }}
+                                </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-clock text-success"></i>
+                                    <strong>Time:</strong> {{ webinar.scheduled_date|time:"g:i A" }}
+                                </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-hourglass-half text-info"></i>
+                                    <strong>Duration:</strong> {{ webinar.duration_minutes }} minutes
+                                </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-user text-warning"></i>
+                                    <strong>Instructor:</strong> {{ webinar.instructor.get_full_name }}
+                                </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-tag text-danger"></i>
+                                    <strong>Category:</strong> {{ webinar.category.name }}
+                                </div>
+                                <div class="detail-item">
+                                    <i class="fas fa-users text-secondary"></i>
+                                    <strong>Available Spots:</strong> {{ webinar.get_available_spots }}
+                                </div>
+                                <div class="detail-item">
+                                    {% if webinar.webinar_type == 'free' %}
+                                        <span class="badge bg-success fs-6">
+                                            <i class="fas fa-gift me-1"></i>FREE WEBINAR
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-warning text-dark fs-6">
+                                            <i class="fas fa-rupee-sign me-1"></i>₹{{ webinar.price }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Registration Form -->
+            <div class="card registration-card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-edit me-2"></i>Registration Details
+                        {% if webinar.webinar_type == 'paid' %}
+                            <span class="badge bg-info ms-2">Payment Required After Registration</span>
+                        {% endif %}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Registration Form -->
+                    <form method="post" class="registration-form">
+                        {% csrf_token %}
+                        
+                        <div class="row">
+                            <!-- First Name -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.first_name.id_for_label }}" class="form-label">
+                                    First Name <span class="text-danger">*</span>
+                                </label>
+                                {{ form.first_name }}
+                                {% if form.first_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.first_name.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Last Name -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.last_name.id_for_label }}" class="form-label">
+                                    Last Name <span class="text-danger">*</span>
+                                </label>
+                                {{ form.last_name }}
+                                {% if form.last_name.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.last_name.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Email -->
+                        <div class="mb-3">
+                            <label for="{{ form.email.id_for_label }}" class="form-label">
+                                Email Address <span class="text-danger">*</span>
+                            </label>
+                            {{ form.email }}
+                            <div class="form-text">
+                                We'll send webinar details and login credentials to this email.
+                            </div>
+                            {% if form.email.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.email.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Phone Number -->
+                        <div class="mb-3">
+                            <label for="{{ form.phone_number.id_for_label }}" class="form-label">
+                                Phone Number <span class="text-muted">(Optional)</span>
+                            </label>
+                            {{ form.phone_number }}
+                            {% if form.phone_number.errors %}
+                                <div class="invalid-feedback d-block">
+                                    {{ form.phone_number.errors.0 }}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row">
+                            <!-- Company -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.company.id_for_label }}" class="form-label">
+                                    Company <span class="text-muted">(Optional)</span>
+                                </label>
+                                {{ form.company }}
+                                {% if form.company.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.company.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Designation -->
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.designation.id_for_label }}" class="form-label">
+                                    Designation <span class="text-muted">(Optional)</span>
+                                </label>
+                                {{ form.designation }}
+                                {% if form.designation.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.designation.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Terms Agreement -->
+                        <div class="mb-4">
+                            <div class="form-check">
+                                {{ form.agree_terms }}
+                                <label class="form-check-label" for="{{ form.agree_terms.id_for_label }}">
+                                    {{ form.agree_terms.label }}
+                                </label>
+                                {% if form.agree_terms.errors %}
+                                    <div class="invalid-feedback d-block">
+                                        {{ form.agree_terms.errors.0 }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Registration Summary -->
+                        <div class="registration-summary p-3 mb-4">
+                            <h6><i class="fas fa-info-circle me-2"></i>Registration Summary</h6>
+                            <ul class="list-unstyled mb-0">
+                                {% if webinar.webinar_type == 'free' %}
+                                    <li><i class="fas fa-check text-success me-2"></i>Free webinar - No payment required</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Instant access after registration</li>
+                                    <li><i class="fas fa-check text-success me-2"></i>Account upgraded to Webinar User</li>
+                                {% else %}
+                                    <li><i class="fas fa-rupee-sign text-warning me-2"></i>Total Amount: ₹{{ webinar.price }}</li>
+                                    <li><i class="fas fa-credit-card text-info me-2"></i>Payment required to confirm registration</li>
+                                    <li><i class="fas fa-user-graduate text-success me-2"></i>Account upgraded after payment</li>
+                                {% endif %}
+                                <li><i class="fas fa-envelope text-primary me-2"></i>Login details sent via email</li>
+                                <li><i class="fas fa-link text-secondary me-2"></i>Webinar link shared before event</li>
+                            </ul>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-user-plus me-2"></i>
+                                {% if webinar.webinar_type == 'free' %}
+                                    Register for FREE Webinar
+                                {% else %}
+                                    Register & Proceed to Payment
+                                {% endif %}
+                            </button>
+                            <a href="{% url 'webinars:webinar_detail' webinar.slug %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-arrow-left me-2"></i>Back to Webinar Details
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .page-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 40px 0;
+        margin-top: -20px;
+    }
+    
+    .breadcrumb-item a {
+        color: rgba(255,255,255,0.8);
+        text-decoration: none;
+    }
+    
+    .breadcrumb-item a:hover {
+        color: white;
+    }
+    
+    .breadcrumb-item.active {
+        color: rgba(255,255,255,0.9);
+    }
+    
+    .webinar-info-card {
+        border: none;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .webinar-placeholder {
+        background: linear-gradient(45deg, #667eea, #764ba2);
+        height: 150px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        color: white;
+        font-size: 3rem;
+    }
+    
+    .webinar-details {
+        margin-top: 1rem;
+    }
+    
+    .detail-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .detail-item i {
+        margin-right: 0.5rem;
+        width: 20px;
+    }
+    
+    .registration-card {
+        border: none;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .registration-card .card-header {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border-bottom: none;
+    }
+    
+    .registration-summary {
+        background: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+    }
+    
+    .registration-summary ul li {
+        margin-bottom: 0.25rem;
+    }
+    
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .form-check-input:checked {
+        background-color: #667eea;
+        border-color: #667eea;
+    }
+    
+    .btn-primary {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border: none;
+        padding: 12px 24px;
+    }
+    
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #5a6fd8, #6a4190);
+        transform: translateY(-1px);
+    }
+    
+    .invalid-feedback {
+        font-size: 0.875rem;
+    }
+    
+    @media (max-width: 768px) {
+        .webinar-info-card .row {
+            text-align: center;
+        }
+        
+        .webinar-info-card .col-md-4 {
+            margin-bottom: 1rem;
+        }
+        
+        .detail-item {
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Form validation
+        const form = document.querySelector('.registration-form');
+        const submitBtn = form.querySelector('button[type="submit"]');
+        
+        form.addEventListener('submit', function(e) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
+        });
+        
+        // Auto-format phone number
+        const phoneInput = document.getElementById('id_phone_number');
+        if (phoneInput) {
+            phoneInput.addEventListener('input', function(e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length > 10) {
+                    value = value.substring(0, 10);
+                }
+                e.target.value = value;
+            });
+        }
+    });
+</script>
+{% endblock %}

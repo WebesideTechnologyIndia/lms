@@ -1,0 +1,278 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if module %}Edit Module{% else %}Create Module{% endif %} - {{ course.title }}{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="welcome-card">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb" class="mb-2">
+                <ol class="breadcrumb text-white-50">
+                    <li class="breadcrumb-item"><a href="{% url 'courses:course_dashboard' %}" class="text-white-50">Courses</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'courses:course_detail' course.id %}" class="text-white-50">{{ course.course_code }}</a></li>
+                    <li class="breadcrumb-item"><a href="{% url 'courses:course_modules' course.id %}" class="text-white-50">Modules</a></li>
+                    <li class="breadcrumb-item active text-white">{% if module %}Edit{% else %}Create{% endif %}</li>
+                </ol>
+            </nav>
+            <h1 class="mb-2">
+                <i class="fas fa-{% if module %}edit{% else %}plus{% endif %} me-3"></i>
+                {{ title }}
+            </h1>
+            <p class="mb-0 opacity-75">{{ course.title }} - Course Module Management</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'courses:course_modules' course.id %}" class="btn btn-light">
+                <i class="fas fa-arrow-left me-2"></i>
+                Back to Modules
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Form -->
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-info-circle me-2"></i>
+                    Module Information
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <!-- Module Title -->
+                    <div class="mb-4">
+                        <label class="form-label">
+                            <i class="fas fa-heading me-1"></i>
+                            Module Title *
+                        </label>
+                        {{ form.title }}
+                        {% if form.title.errors %}
+                            <div class="text-danger mt-1">
+                                <small><i class="fas fa-exclamation-circle me-1"></i>{{ form.title.errors.0 }}</small>
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            Give your module a clear, descriptive title (e.g., "Introduction to Python", "Advanced CSS Techniques")
+                        </small>
+                    </div>
+
+                    <!-- Module Description -->
+                    <div class="mb-4">
+                        <label class="form-label">
+                            <i class="fas fa-align-left me-1"></i>
+                            Module Description
+                        </label>
+                        {{ form.description }}
+                        {% if form.description.errors %}
+                            <div class="text-danger mt-1">
+                                <small><i class="fas fa-exclamation-circle me-1"></i>{{ form.description.errors.0 }}</small>
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            Provide a brief overview of what students will learn in this module
+                        </small>
+                    </div>
+
+                    <!-- Module Order -->
+                    <div class="mb-4">
+                        <label class="form-label">
+                            <i class="fas fa-sort-numeric-up me-1"></i>
+                            Module Order *
+                        </label>
+                        {{ form.order }}
+                        {% if form.order.errors %}
+                            <div class="text-danger mt-1">
+                                <small><i class="fas fa-exclamation-circle me-1"></i>{{ form.order.errors.0 }}</small>
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            Set the order in which this module appears in the course (e.g., 1 for first module, 2 for second, etc.)
+                        </small>
+                    </div>
+
+                    <!-- Module Status -->
+                    <div class="mb-4">
+                        <div class="form-check">
+                            {{ form.is_active }}
+                            <label class="form-check-label" for="{{ form.is_active.id_for_label }}">
+                                <i class="fas fa-eye me-1"></i>
+                                Module is active and visible to students
+                            </label>
+                        </div>
+                        {% if form.is_active.errors %}
+                            <div class="text-danger mt-1">
+                                <small><i class="fas fa-exclamation-circle me-1"></i>{{ form.is_active.errors.0 }}</small>
+                            </div>
+                        {% endif %}
+                        <small class="form-text text-muted">
+                            Unchecked modules will be hidden from students but saved as drafts
+                        </small>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'courses:course_modules' course.id %}" class="btn btn-secondary">
+                            <i class="fas fa-times me-2"></i>Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-2"></i>{{ button_text }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Course Info -->
+        <div class="card mb-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-book me-2"></i>
+                    Course Information
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    {% if course.thumbnail %}
+                        <img src="{{ course.thumbnail.url }}" alt="{{ course.title }}" class="rounded me-3" style="width: 50px; height: 50px; object-fit: cover;">
+                    {% else %}
+                        <div class="rounded bg-primary text-white d-flex align-items-center justify-content-center me-3" style="width: 50px; height: 50px;">
+                            <i class="fas fa-book"></i>
+                        </div>
+                    {% endif %}
+                    <div>
+                        <h6 class="mb-1">{{ course.title }}</h6>
+                        <small class="text-muted">{{ course.course_code }}</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="row text-center">
+                    <div class="col-4">
+                        <div class="fw-bold text-primary">{{ course.modules.count }}</div>
+                        <small class="text-muted">Modules</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="fw-bold text-success">{{ course.get_enrolled_count }}</div>
+                        <small class="text-muted">Students</small>
+                    </div>
+                    <div class="col-4">
+                        <div class="fw-bold text-info">{{ course.duration_weeks }}w</div>
+                        <small class="text-muted">Duration</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Module Tips -->
+        <div class="card">
+            <div class="card-header bg-light">
+                <h6 class="mb-0">
+                    <i class="fas fa-lightbulb me-2"></i>
+                    Module Best Practices
+                </h6>
+            </div>
+            <div class="card-body">
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <strong>Clear Titles:</strong> Use descriptive names that tell students what they'll learn
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <strong>Logical Order:</strong> Arrange modules from basic to advanced concepts
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <strong>Bite-sized Content:</strong> Keep modules focused on specific topics
+                    </li>
+                    <li class="mb-2">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <strong>Descriptions:</strong> Help students understand what to expect
+                    </li>
+                    <li class="mb-0">
+                        <i class="fas fa-check text-success me-2"></i>
+                        <strong>Preview:</strong> Use inactive status for work-in-progress modules
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        {% if module %}
+        <!-- Module Stats -->
+        <div class="card mt-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-bar me-2"></i>
+                    Module Stats
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="row text-center">
+                    <div class="col-6">
+                        <div class="fw-bold text-primary">{{ module.get_lessons_count }}</div>
+                        <small class="text-muted">Lessons</small>
+                    </div>
+                    <div class="col-6">
+                        <div class="fw-bold text-info">{{ module.order }}</div>
+                        <small class="text-muted">Order</small>
+                    </div>
+                </div>
+                <hr>
+                <div class="d-grid">
+                    <a href="{% url 'courses:module_lessons' course.id module.id %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-eye me-1"></i>
+                        View Lessons
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Next Steps (for new modules) -->
+{% if not module %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="alert alert-info">
+            <h6 class="alert-heading">
+                <i class="fas fa-info-circle me-2"></i>
+                What's Next?
+            </h6>
+            <p class="mb-0">After creating this module, you'll be able to add lessons with videos, text content, quizzes, and assignments.</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-suggest module order
+document.addEventListener('DOMContentLoaded', function() {
+    const orderField = document.getElementById('{{ form.order.id_for_label }}');
+    if (orderField && !orderField.value) {
+        // This would be set from the backend, but as fallback
+        orderField.placeholder = 'Auto-suggested: Next available order';
+    }
+});
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const titleField = document.getElementById('{{ form.title.id_for_label }}');
+    if (!titleField.value.trim()) {
+        e.preventDefault();
+        titleField.focus();
+        alert('Please enter a module title');
+        return false;
+    }
+});
+</script>
+{% endblock %}
