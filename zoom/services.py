@@ -28,7 +28,7 @@ class ZoomAPIService:
     
     def get_access_token(self):
         """Get OAuth 2.0 access token - FIXED METHOD"""
-        print(f"\n=== GETTING ACCESS TOKEN ===")
+        # print(f"\n=== GETTING ACCESS TOKEN ===")
         
         if self.access_token:
             print("Using cached access token")
@@ -52,21 +52,21 @@ class ZoomAPIService:
                 'account_id': self.config.account_id
             }
             
-            print(f"Token request URL: {auth_url}")
-            print(f"Account ID: {self.config.account_id}")
-            print(f"Client ID: {self.config.client_id[:8]}...")
+            # print(f"Token request URL: {auth_url}")
+            # print(f"Account ID: {self.config.account_id}")
+            # print(f"Client ID: {self.config.client_id[:8]}...")
             
             response = requests.post(auth_url, headers=headers, data=data, timeout=30)
             
-            print(f"Token response status: {response.status_code}")
-            print(f"Token response: {response.text}")
+            # print(f"Token response status: {response.status_code}")
+            # print(f"Token response: {response.text}")
             
             if response.status_code == 200:
                 token_data = response.json()
                 self.access_token = token_data.get('access_token')
                 
                 if self.access_token:
-                    print(f"SUCCESS: Access token obtained")
+                    # print(f"SUCCESS: Access token obtained")
                     return self.access_token
                 else:
                     raise Exception("No access token in response")

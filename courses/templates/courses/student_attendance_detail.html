@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ student.get_full_name }} - Attendance{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-user me-2"></i>{{ student.get_full_name|default:student.username }} - Attendance
+                    </h4>
+                    <a href="{% url 'courses:attendance_status' %}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </a>
+                </div>
+                <div class="card-body">
+                    <!-- Student Info -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <p><strong>Email:</strong> {{ student.email }}</p>
+                            <p><strong>Username:</strong> {{ student.username }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <p><strong>Total Logins:</strong> {{ logs.count }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Logs -->
+                    <h5 class="mb-3">Login History</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Login</th>
+                                    <th>Logout</th>
+                                    <th>Duration</th>
+                                    <th>IP</th>
+                                    <th>Device</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in logs %}
+                                <tr>
+                                    <td>{{ log.login_time|date:"M d, Y H:i" }}</td>
+                                    <td>
+                                        {% if log.logout_time %}
+                                            {{ log.logout_time|date:"M d, Y H:i" }}
+                                        {% else %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ log.session_duration }} min</td>
+                                    <td><small>{{ log.ip_address }}</small></td>
+                                    <td><small>{{ log.device_info|truncatewords:5 }}</small></td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4">
+                                        <p class="text-muted">No login history</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

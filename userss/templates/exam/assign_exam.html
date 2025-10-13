@@ -51,16 +51,6 @@
                             </div>
                         </div>
                         
-                        <!-- Exam Details Display -->
-                        <div id="exam-details" class="row mb-4" style="display: none;">
-                            <div class="col-12">
-                                <div class="alert alert-info">
-                                    <h6 class="mb-2">Selected Exam Details:</h6>
-                                    <div id="exam-info"></div>
-                                </div>
-                            </div>
-                        </div>
-                        
                         <!-- Assignment Targets -->
                         <div class="row mb-4">
                             <div class="col-12">
@@ -70,114 +60,162 @@
                             </div>
                         </div>
                         
-                        <!-- Individual Students -->
-                        <div id="individual-section" style="display: none;">
+                        <!-- Individual Students Section -->
+                        <div id="individual-section" class="assignment-section" style="display: none;">
                             <div class="row mb-3">
                                 <div class="col-12">
-                                    <label class="form-label">Select Students</label>
-                                    <div class="row">
+                                    <label class="form-label fw-bold">Select Students</label>
+                                    <div class="row mb-3">
                                         <div class="col-md-6">
-                                            <input type="text" id="student-search" class="form-control mb-2" placeholder="Search students...">
+                                            <input type="text" id="student-search" class="form-control" placeholder="🔍 Search students by name or email...">
                                         </div>
                                         <div class="col-md-6">
                                             <button type="button" id="select-all-students" class="btn btn-outline-primary btn-sm">
-                                                Select All
+                                                <i class="fas fa-check-square"></i> Select All
                                             </button>
                                             <button type="button" id="deselect-all-students" class="btn btn-outline-secondary btn-sm">
-                                                Deselect All
+                                                <i class="fas fa-square"></i> Deselect All
                                             </button>
                                         </div>
                                     </div>
                                     
-                                    <div class="student-list border rounded p-3" style="max-height: 300px; overflow-y: auto;">
-                                        {% for student in students %}
-                                        <div class="form-check student-item">
-                                            <input class="form-check-input" type="checkbox" name="selected_students" 
-                                                   value="{{ student.id }}" id="student_{{ student.id }}">
-                                            <label class="form-check-label" for="student_{{ student.id }}">
-                                                <strong>{{ student.get_full_name|default:student.username }}</strong>
-                                                <small class="text-muted d-block">{{ student.email }}</small>
-                                            </label>
+                                    {% if students %}
+                                        <div class="student-list border rounded p-3 bg-light" style="max-height: 350px; overflow-y: auto;">
+                                            <div class="mb-2">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-info-circle"></i> 
+                                                    Total Students: <strong>{{ students|length }}</strong>
+                                                </small>
+                                            </div>
+                                            {% for student in students %}
+                                            <div class="form-check student-item mb-2 p-2 rounded hover-bg">
+                                                <input class="form-check-input" type="checkbox" name="selected_students" 
+                                                       value="{{ student.id }}" id="student_{{ student.id }}">
+                                                <label class="form-check-label w-100" for="student_{{ student.id }}" style="cursor: pointer;">
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="fas fa-user-circle text-primary me-2"></i>
+                                                        <div>
+                                                            <strong>{{ student.get_full_name|default:student.username }}</strong>
+                                                            <small class="text-muted d-block">
+                                                                <i class="fas fa-envelope"></i> {{ student.email }}
+                                                            </small>
+                                                        </div>
+                                                    </div>
+                                                </label>
+                                            </div>
+                                            {% endfor %}
                                         </div>
-                                        {% empty %}
-                                        <p class="text-muted">No students available</p>
-                                        {% endfor %}
-                                    </div>
+                                    {% else %}
+                                        <div class="alert alert-warning">
+                                            <i class="fas fa-exclamation-triangle"></i> 
+                                            No students available. Please add students first.
+                                        </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
                         
-                       <!-- Debug Info -->
-<div class="alert alert-info">
-    <strong>Debug Info:</strong><br>
-    Total Batches: {{ batches|length }}<br>
-    Total Students: {{ students|length }}<br>
-    Total Courses: {{ courses|length }}
-</div>
-
-<!-- Batch Section -->
-<div id="batch-section" style="display: none;">
-    <div class="row mb-3">
-        <div class="col-12">
-            <label class="form-label">Select Batches</label>
-            
-            {% if batches %}
-                <div class="row">
-                    {% for batch in batches %}
-                    <div class="col-md-6 mb-2">
-                        <div class="card">
-                            <div class="card-body p-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="selected_batches" 
-                                           value="{{ batch.id }}" id="batch_{{ batch.id }}">
-                                    <label class="form-check-label" for="batch_{{ batch.id }}">
-                                        <strong>{{ batch.name }}</strong>
-                                        <small class="text-muted d-block">
-                                            Course: {{ batch.course.title }}<br>
-                                            Instructor: {{ batch.instructor.get_full_name|default:batch.instructor.username }}
-                                        </small>
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-            {% else %}
-                <p class="text-muted">No active batches found. Please create some batches first.</p>
-            {% endif %}
-        </div>
-    </div>
-</div>
-                        
-                        <!-- Course Selection -->
-                        <div id="course-section" style="display: none;">
+                        <!-- Batch Section -->
+                        <div id="batch-section" class="assignment-section" style="display: none;">
                             <div class="row mb-3">
                                 <div class="col-12">
-                                    <label class="form-label">Select Courses</label>
-                                    <div class="row">
-                                        {% for course in courses %}
-                                        <div class="col-md-6 mb-2">
-                                            <div class="card">
-                                                <div class="card-body p-3">
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox" name="selected_courses" 
-                                                               value="{{ course.id }}" id="course_{{ course.id }}">
-                                                        <label class="form-check-label" for="course_{{ course.id }}">
-                                                            <strong>{{ course.title }}</strong>
-                                                            <small class="text-muted d-block">
-                                                                Code: {{ course.course_code }}
-                                                                <br>Students: <span class="course-student-count" data-course-id="{{ course.id }}">Loading...</span>
-                                                            </small>
-                                                        </label>
+                                    <label class="form-label fw-bold">Select Batches</label>
+                                    
+                                    {% if batches %}
+                                        <div class="mb-3">
+                                            <small class="text-muted">
+                                                <i class="fas fa-info-circle"></i> 
+                                                Total Batches: <strong>{{ batches|length }}</strong>
+                                            </small>
+                                        </div>
+                                        <div class="row">
+                                            {% for batch in batches %}
+                                            <div class="col-md-6 mb-3">
+                                                <div class="card border-primary h-100 hover-shadow">
+                                                    <div class="card-body p-3">
+                                                        <div class="form-check">
+                                                            <input class="form-check-input batch-checkbox" type="checkbox" name="selected_batches" 
+                                                                   value="{{ batch.id }}" id="batch_{{ batch.id }}">
+                                                            <label class="form-check-label w-100" for="batch_{{ batch.id }}" style="cursor: pointer;">
+                                                                <div class="d-flex align-items-start">
+                                                                    <i class="fas fa-users text-success me-2 mt-1"></i>
+                                                                    <div class="flex-grow-1">
+                                                                        <h6 class="mb-1">{{ batch.name }}</h6>
+                                                                        <small class="text-muted">
+                                                                            <i class="fas fa-book"></i> {{ batch.course.title }}<br>
+                                                                            <i class="fas fa-chalkboard-teacher"></i> {{ batch.instructor.get_full_name|default:batch.instructor.username }}<br>
+                                                                            <i class="fas fa-user-graduate"></i> 
+                                                                            <span class="batch-student-count" data-batch-id="{{ batch.id }}">
+                                                                                {{ batch.students.count }} student{{ batch.students.count|pluralize }}
+                                                                            </span>
+                                                                        </small>
+                                                                    </div>
+                                                                </div>
+                                                            </label>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
+                                            {% endfor %}
                                         </div>
-                                        {% empty %}
-                                        <p class="text-muted">No courses available</p>
-                                        {% endfor %}
-                                    </div>
+                                    {% else %}
+                                        <div class="alert alert-warning">
+                                            <i class="fas fa-exclamation-triangle"></i> 
+                                            <strong>No batches found!</strong> Please create batches first before assigning exams.
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Course Section -->
+                        <div id="course-section" class="assignment-section" style="display: none;">
+                            <div class="row mb-3">
+                                <div class="col-12">
+                                    <label class="form-label fw-bold">Select Courses</label>
+                                    
+                                    {% if courses %}
+                                        <div class="mb-3">
+                                            <small class="text-muted">
+                                                <i class="fas fa-info-circle"></i> 
+                                                Total Courses: <strong>{{ courses|length }}</strong>
+                                            </small>
+                                        </div>
+                                        <div class="row">
+                                            {% for course in courses %}
+                                            <div class="col-md-6 mb-3">
+                                                <div class="card border-info h-100 hover-shadow">
+                                                    <div class="card-body p-3">
+                                                        <div class="form-check">
+                                                            <input class="form-check-input course-checkbox" type="checkbox" name="selected_courses" 
+                                                                   value="{{ course.id }}" id="course_{{ course.id }}">
+                                                            <label class="form-check-label w-100" for="course_{{ course.id }}" style="cursor: pointer;">
+                                                                <div class="d-flex align-items-start">
+                                                                    <i class="fas fa-graduation-cap text-info me-2 mt-1"></i>
+                                                                    <div class="flex-grow-1">
+                                                                        <h6 class="mb-1">{{ course.title }}</h6>
+                                                                        <small class="text-muted">
+                                                                            <i class="fas fa-code"></i> Code: {{ course.course_code }}<br>
+                                                                            <i class="fas fa-user-graduate"></i> 
+                                                                            <span class="course-student-count" data-course-id="{{ course.id }}">
+                                                                                Loading...
+                                                                            </span>
+                                                                        </small>
+                                                                    </div>
+                                                                </div>
+                                                            </label>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <div class="alert alert-warning">
+                                            <i class="fas fa-exclamation-triangle"></i> 
+                                            <strong>No courses found!</strong> Please create courses first before assigning exams.
+                                        </div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -209,7 +247,7 @@
                         <div id="assignment-summary" class="row mb-4" style="display: none;">
                             <div class="col-12">
                                 <div class="alert alert-success">
-                                    <h6 class="mb-2">Assignment Summary:</h6>
+                                    <h6 class="mb-2"><i class="fas fa-check-circle"></i> Assignment Summary:</h6>
                                     <div id="summary-content"></div>
                                 </div>
                             </div>
@@ -235,6 +273,7 @@
     </div>
     
     <!-- Recent Assignments -->
+    {% if recent_assignments %}
     <div class="row mt-4">
         <div class="col-12">
             <div class="card">
@@ -245,7 +284,6 @@
                     </h5>
                 </div>
                 <div class="card-body">
-                    {% if recent_assignments %}
                     <div class="table-responsive">
                         <table class="table table-hover">
                             <thead>
@@ -291,308 +329,296 @@
                             </tbody>
                         </table>
                     </div>
-                    {% else %}
-                    <div class="text-center py-4">
-                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">No recent assignments found</p>
-                    </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
+    {% endif %}
 </div>
+
+<style>
+    .assignment-section {
+        min-height: 200px;
+    }
+    
+    .hover-bg:hover {
+        background-color: #f8f9fa;
+        transition: background-color 0.3s ease;
+    }
+    
+    .hover-shadow {
+        transition: box-shadow 0.3s ease, transform 0.3s ease;
+    }
+    
+    .hover-shadow:hover {
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+        transform: translateY(-2px);
+    }
+    
+    .student-list::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .student-list::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 10px;
+    }
+    
+    .student-list::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 10px;
+    }
+    
+    .student-list::-webkit-scrollbar-thumb:hover {
+        background: #555;
+    }
+</style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-$(document).ready(function() {
-    // Show/hide assignment sections based on type
-    $('#assignment_type').change(function() {
-        var type = $(this).val();
+// Check if jQuery is loaded
+(function() {
+    if (typeof jQuery === 'undefined') {
+        // console.error('❌ jQuery is NOT loaded! Loading from CDN...');
+        var script = document.createElement('script');
+        script.src = 'https://code.jquery.com/jquery-3.6.0.min.js';
+        script.onload = function() {
+            // console.log('✅ jQuery loaded from CDN');
+            initializeAssignExam();
+        };
+        document.head.appendChild(script);
+    } else {
+        // console.log('✅ jQuery already loaded');
+        initializeAssignExam();
+    }
+})();
+
+function initializeAssignExam() {
+    $(document).ready(function() {
+        // console.log('=== Assign Exam Page Initialized ===');
+        // console.log('📊 Data Available:');
+        // console.log('  - Exams:', {{ exams|length }});
+        // console.log('  - Students:', {{ students|length }});
+        // console.log('  - Batches:', {{ batches|length }});
+        // console.log('  - Courses:', {{ courses|length }});
         
-        $('#individual-section, #batch-section, #course-section').hide();
-        
-        if (type === 'individual') {
-            $('#individual-section').show();
-        } else if (type === 'batch') {
-            $('#batch-section').show();
-            loadBatchStudentCounts();
-        } else if (type === 'course') {
-            $('#course-section').show();
-            loadCourseStudentCounts();
-        }
-        
-        updateAssignButton();
-        updateSummary();
-    });
-    
-    // Show exam details when exam is selected
-    $('#exam_id').change(function() {
-        var selectedOption = $(this).find(':selected');
-        var examId = selectedOption.val();
-        
-        if (examId) {
-            // Show loading state
-            $('#exam-info').html('<div class="spinner-border spinner-border-sm me-2" role="status"></div>Loading exam details...');
-            $('#exam-details').show();
+        // Assignment type change
+        $('#assignment_type').on('change', function() {
+            var type = $(this).val();
+            // console.log('📝 Assignment type changed:', type);
             
-            // Fetch exam details via AJAX
-            $.ajax({
-                url: `/exams/ajax/load-exam-details/${examId}/`,
-                method: 'GET',
-                success: function(data) {
-                    if (data.success) {
-                        var exam = data.exam;
-                        var examInfo = `
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <strong>Title:</strong> ${exam.title}<br>
-                                    <strong>Type:</strong> ${exam.exam_type_display}<br>
-                                    <strong>Total Marks:</strong> ${exam.total_marks}<br>
-                                    <strong>Passing Marks:</strong> ${exam.passing_marks}
-                                </div>
-                                <div class="col-md-6">
-                                    <strong>Timing:</strong> ${exam.timing_type_display}<br>
-                                    <strong>Status:</strong> <span class="badge bg-${exam.status === 'published' ? 'success' : 'warning'}">${exam.status_display}</span><br>
-                                    <strong>Created:</strong> ${exam.created_at}
-                                </div>
-                            </div>
-                        `;
-                        
-                        // Add timing details if available
-                        if (exam.start_datetime || exam.end_datetime) {
-                            examInfo += `
-                                <div class="row mt-2 pt-2 border-top">
-                                    <div class="col-12">
-                                        <strong>Exam Schedule:</strong><br>
-                                        ${exam.start_datetime ? 'Start: ' + exam.start_datetime + '<br>' : ''}
-                                        ${exam.end_datetime ? 'End: ' + exam.end_datetime : ''}
-                                    </div>
-                                </div>
-                            `;
+            // Hide all sections
+            $('.assignment-section').hide();
+            
+            // Show selected section
+            if (type === 'individual') {
+                $('#individual-section').show();
+                // console.log('✅ Individual section shown');
+            } else if (type === 'batch') {
+                $('#batch-section').show();
+                // console.log('✅ Batch section shown');
+                loadCourseStudentCounts(); // Load counts when batch section opens
+            } else if (type === 'course') {
+                $('#course-section').show();
+                // console.log('✅ Course section shown');
+                loadCourseStudentCounts(); // Load counts when course section opens
+            }
+            
+            updateAssignButton();
+            updateSummary();
+        });
+        
+        // Exam selection
+        $('#exam_id').on('change', function() {
+            // console.log('📋 Exam selected:', $(this).find(':selected').text());
+            updateAssignButton();
+            updateSummary();
+        });
+        
+        // Student search
+        $('#student-search').on('input', function() {
+            var searchTerm = $(this).val().toLowerCase();
+            var visibleCount = 0;
+            
+            $('.student-item').each(function() {
+                var text = $(this).find('label').text().toLowerCase();
+                if (text.includes(searchTerm)) {
+                    $(this).show();
+                    visibleCount++;
+                } else {
+                    $(this).hide();
+                }
+            });
+            
+            // console.log('🔍 Search:', visibleCount, 'students visible');
+        });
+        
+        // Select all students
+        $('#select-all-students').on('click', function() {
+            var visible = $('.student-item:visible input[type="checkbox"]');
+            visible.prop('checked', true);
+            // console.log('✔️ Selected', visible.length, 'students');
+            updateAssignButton();
+            updateSummary();
+        });
+        
+        // Deselect all students
+        $('#deselect-all-students').on('click', function() {
+            $('.student-item input[type="checkbox"]').prop('checked', false);
+            // console.log('❌ Deselected all students');
+            updateAssignButton();
+            updateSummary();
+        });
+        
+        // Checkbox change
+        $(document).on('change', 'input[type="checkbox"]', function() {
+            var name = $(this).attr('name');
+            var checked = $('input[name="' + name + '"]:checked').length;
+            // console.log('☑️', name, '- checked:', checked);
+            updateAssignButton();
+            updateSummary();
+        });
+        
+        // Load course student counts via AJAX
+        function loadCourseStudentCounts() {
+            // console.log('📊 Loading course student counts...');
+            
+            $('.course-student-count').each(function() {
+                var $element = $(this);
+                var courseId = $element.data('course-id');
+                
+                $.ajax({
+                    url: '/exams/api/course/' + courseId + '/students/',
+                    method: 'GET',
+                    success: function(data) {
+                        if (data.success) {
+                            var count = data.total_count || 0;
+                            $element.text(count + ' student' + (count !== 1 ? 's' : ''));
+                            // console.log('  ✓ Course', courseId, ':', count, 'students');
+                        } else {
+                            $element.text('0 students');
                         }
-                        
-                        $('#exam-info').html(examInfo);
-                    } else {
-                        $('#exam-info').html('<div class="text-danger">Error loading exam details</div>');
+                    },
+                    error: function(xhr, status, error) {
+                        // console.warn('  ⚠️ Error loading count for course', courseId, ':', error);
+                        $element.text('N/A');
                     }
-                },
-                error: function() {
-                    // Fallback to basic info from option attributes
-                    var examType = selectedOption.data('type');
-                    var examMarks = selectedOption.data('marks');
-                    var examTitle = selectedOption.text();
-                    
-                    $('#exam-info').html(`
-                        <div class="row">
-                            <div class="col-md-6">
-                                <strong>Title:</strong> ${examTitle}<br>
-                                <strong>Type:</strong> ${examType}<br>
-                                <strong>Total Marks:</strong> ${examMarks}
-                            </div>
-                            <div class="col-md-6">
-                                <em>Additional details unavailable</em>
-                            </div>
-                        </div>
-                    `);
-                }
+                });
             });
-        } else {
-            $('#exam-details').hide();
         }
         
-        updateAssignButton();
-        updateSummary();
-    });
-    
-    // Student search functionality
-    $('#student-search').on('input', function() {
-        var searchTerm = $(this).val().toLowerCase();
-        $('.student-item').each(function() {
-            var studentName = $(this).find('label').text().toLowerCase();
-            if (studentName.includes(searchTerm)) {
-                $(this).show();
+        // Update assign button state
+        function updateAssignButton() {
+            var examSelected = $('#exam_id').val();
+            var typeSelected = $('#assignment_type').val();
+            var targetsSelected = false;
+            
+            if (typeSelected === 'individual') {
+                targetsSelected = $('input[name="selected_students"]:checked').length > 0;
+            } else if (typeSelected === 'batch') {
+                targetsSelected = $('input[name="selected_batches"]:checked').length > 0;
+            } else if (typeSelected === 'course') {
+                targetsSelected = $('input[name="selected_courses"]:checked').length > 0;
+            }
+            
+            var canEnable = examSelected && typeSelected && targetsSelected;
+            $('#assign-btn').prop('disabled', !canEnable);
+            
+            // console.log('🔘 Button state:', canEnable ? 'ENABLED' : 'DISABLED');
+        }
+        
+        // Update summary
+        function updateSummary() {
+            var examTitle = $('#exam_id option:selected').text();
+            var type = $('#assignment_type').val();
+            var typeName = $('#assignment_type option:selected').text();
+            var selectedCount = 0;
+            var selectedItems = [];
+            
+            if (type === 'individual') {
+                $('input[name="selected_students"]:checked').each(function() {
+                    selectedCount++;
+                    var name = $(this).next('label').find('strong').first().text();
+                    selectedItems.push(name);
+                });
+            } else if (type === 'batch') {
+                $('input[name="selected_batches"]:checked').each(function() {
+                    selectedCount++;
+                    var name = $(this).next('label').find('h6').text();
+                    selectedItems.push(name);
+                });
+            } else if (type === 'course') {
+                $('input[name="selected_courses"]:checked').each(function() {
+                    selectedCount++;
+                    var name = $(this).next('label').find('h6').text();
+                    selectedItems.push(name);
+                });
+            }
+            
+            if (selectedCount > 0 && $('#exam_id').val()) {
+                var summary = '<strong>Exam:</strong> ' + examTitle + '<br>';
+                summary += '<strong>Type:</strong> ' + typeName + '<br>';
+                summary += '<strong>Selected:</strong> ' + selectedCount + ' item(s)';
+                
+                if (selectedItems.length > 0) {
+                    if (selectedItems.length <= 5) {
+                        summary += '<br><strong>Items:</strong> ' + selectedItems.join(', ');
+                    } else {
+                        summary += '<br><strong>Items:</strong> ' + selectedItems.slice(0, 5).join(', ') + ' and ' + (selectedItems.length - 5) + ' more...';
+                    }
+                }
+                
+                $('#summary-content').html(summary);
+                $('#assignment-summary').show();
             } else {
-                $(this).hide();
+                $('#assignment-summary').hide();
             }
-        });
-    });
-    
-    // Select/Deselect all students
-    $('#select-all-students').click(function() {
-        $('.student-item:visible input[type="checkbox"]').prop('checked', true);
-        updateSummary();
-    });
-    
-    $('#deselect-all-students').click(function() {
-        $('.student-item input[type="checkbox"]').prop('checked', false);
-        updateSummary();
-    });
-    
-    // Update summary when selections change
-    $('input[type="checkbox"]').change(function() {
-        updateAssignButton();
-        updateSummary();
-    });
-    
-    // Load student counts for batches
-    function loadBatchStudentCounts() {
-        $('.batch-student-count').each(function() {
-            var batchId = $(this).data('batch-id');
-            var element = $(this);
+        }
+        
+        // Form validation
+        $('#assignExamForm').on('submit', function(e) {
+            var examId = $('#exam_id').val();
+            var type = $('#assignment_type').val();
             
-            $.ajax({
-                url: `/exams/api/batch/${batchId}/students/`,
-                method: 'GET',
-                success: function(data) {
-                    if (data.success) {
-                        element.text(data.total_count + ' students');
-                    } else {
-                        element.text('Error loading');
-                    }
-                },
-                error: function() {
-                    element.text('Unable to load');
-                }
-            });
-        });
-    }
-    
-    // Load student counts for courses
-    function loadCourseStudentCounts() {
-        $('.course-student-count').each(function() {
-            var courseId = $(this).data('course-id');
-            var element = $(this);
-            
-            $.ajax({
-                url: `/exams/api/course/${courseId}/students/`,
-                method: 'GET',
-                success: function(data) {
-                    if (data.success) {
-                        element.text(data.total_count + ' students');
-                    } else {
-                        element.text('Error loading');
-                    }
-                },
-                error: function() {
-                    element.text('Unable to load');
-                }
-            });
-        });
-    }
-    
-    // Update assign button state
-    function updateAssignButton() {
-        var examSelected = $('#exam_id').val();
-        var typeSelected = $('#assignment_type').val();
-        var targetsSelected = false;
-        
-        if (typeSelected === 'individual') {
-            targetsSelected = $('input[name="selected_students"]:checked').length > 0;
-        } else if (typeSelected === 'batch') {
-            targetsSelected = $('input[name="selected_batches"]:checked').length > 0;
-        } else if (typeSelected === 'course') {
-            targetsSelected = $('input[name="selected_courses"]:checked').length > 0;
-        }
-        
-        if (examSelected && typeSelected && targetsSelected) {
-            $('#assign-btn').prop('disabled', false);
-        } else {
-            $('#assign-btn').prop('disabled', true);
-        }
-    }
-    
-    // Update assignment summary
-    function updateSummary() {
-        var examTitle = $('#exam_id option:selected').text();
-        var assignmentType = $('#assignment_type option:selected').text();
-        var selectedCount = 0;
-        var selectedItems = [];
-        
-        if ($('#assignment_type').val() === 'individual') {
-            selectedCount = $('input[name="selected_students"]:checked').length;
-            $('input[name="selected_students"]:checked').each(function() {
-                var label = $(this).next('label').find('strong').text();
-                selectedItems.push(label);
-            });
-        } else if ($('#assignment_type').val() === 'batch') {
-            selectedCount = $('input[name="selected_batches"]:checked').length;
-            $('input[name="selected_batches"]:checked').each(function() {
-                var label = $(this).next('label').find('strong').text();
-                selectedItems.push(label);
-            });
-        } else if ($('#assignment_type').val() === 'course') {
-            selectedCount = $('input[name="selected_courses"]:checked').length;
-            $('input[name="selected_courses"]:checked').each(function() {
-                var label = $(this).next('label').find('strong').text();
-                selectedItems.push(label);
-            });
-        }
-        
-        if (selectedCount > 0 && $('#exam_id').val()) {
-            var summary = `
-                <strong>Exam:</strong> ${examTitle}<br>
-                <strong>Assignment Type:</strong> ${assignmentType}<br>
-                <strong>Selected:</strong> ${selectedCount} item(s)<br>
-            `;
-            
-            if (selectedItems.length <= 5) {
-                summary += `<strong>Items:</strong> ${selectedItems.join(', ')}`;
-            } else {
-                summary += `<strong>Items:</strong> ${selectedItems.slice(0, 5).join(', ')} and ${selectedItems.length - 5} more...`;
-            }
-            
-            $('#summary-content').html(summary);
-            $('#assignment-summary').show();
-        } else {
-            $('#assignment-summary').hide();
-        }
-    }
-    
-    // Form submission validation
-    $('#assignExamForm').submit(function(e) {
-        var examSelected = $('#exam_id').val();
-        var typeSelected = $('#assignment_type').val();
-        
-        if (!examSelected) {
-            e.preventDefault();
-            alert('Please select an exam to assign!');
-            return false;
-        }
-        
-        if (!typeSelected) {
-            e.preventDefault();
-            alert('Please select an assignment type!');
-            return false;
-        }
-        
-        var targetsSelected = false;
-        if (typeSelected === 'individual') {
-            targetsSelected = $('input[name="selected_students"]:checked').length > 0;
-            if (!targetsSelected) {
+            if (!examId) {
                 e.preventDefault();
-                alert('Please select at least one student!');
+                alert('⚠️ Please select an exam!');
                 return false;
             }
-        } else if (typeSelected === 'batch') {
-            targetsSelected = $('input[name="selected_batches"]:checked').length > 0;
-            if (!targetsSelected) {
+            
+            if (!type) {
                 e.preventDefault();
-                alert('Please select at least one batch!');
+                alert('⚠️ Please select assignment type!');
                 return false;
             }
-        } else if (typeSelected === 'course') {
-            targetsSelected = $('input[name="selected_courses"]:checked').length > 0;
-            if (!targetsSelected) {
+            
+            var hasTargets = false;
+            var errorMsg = '';
+            
+            if (type === 'individual') {
+                hasTargets = $('input[name="selected_students"]:checked').length > 0;
+                errorMsg = '⚠️ Please select at least one student!';
+            } else if (type === 'batch') {
+                hasTargets = $('input[name="selected_batches"]:checked').length > 0;
+                errorMsg = '⚠️ Please select at least one batch!';
+            } else if (type === 'course') {
+                hasTargets = $('input[name="selected_courses"]:checked').length > 0;
+                errorMsg = '⚠️ Please select at least one course!';
+            }
+            
+            if (!hasTargets) {
                 e.preventDefault();
-                alert('Please select at least one course!');
+                alert(errorMsg);
                 return false;
             }
-        }
+            
+            // console.log('✅ Form validation passed - submitting...');
+            return true;
+        });
         
-        return true;
+        // console.log('=== Initialization Complete ===');
     });
-});
+}
 </script>
 {% endblock %}

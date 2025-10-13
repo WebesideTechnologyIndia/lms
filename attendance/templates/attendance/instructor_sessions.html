@@ -1,0 +1,182 @@
+{% extends base_template %}
+
+{% block title %}My Attendance Sessions{% endblock %}
+
+{% block extra_css %}
+<style>
+    .session-card {
+        border-left: 4px solid #007bff;
+        transition: all 0.3s;
+        background: white;
+        border-radius: 8px;
+    }
+    
+    .session-card:hover {
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        transform: translateY(-3px);
+    }
+    
+    .status-badge {
+        font-size: 0.9rem;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: 600;
+    }
+    
+    .qr-thumbnail {
+        max-width: 80px;
+        border: 2px solid #dee2e6;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .qr-thumbnail:hover {
+        transform: scale(1.1);
+        transition: transform 0.3s;
+    }
+    
+    .live-badge {
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-calendar-check"></i> {{ page_title }}</h2>
+            <p class="text-muted">Manage and monitor your attendance sessions</p>
+        </div>
+        <div>
+            <a href="{% url 'attendance:pending_requests' %}" class="btn btn-warning">
+                <i class="fas fa-clock"></i> Pending Requests
+            </a>
+            <a href="{% url 'attendance:create_session' %}" class="btn btn-primary">
+                <i class="fas fa-plus"></i> Create New Session
+            </a>
+        </div>
+    </div>
+    
+    {% if sessions_data %}
+        <div class="row">
+            {% for item in sessions_data %}
+            <div class="col-md-6 mb-3">
+                <div class="card session-card">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <h5 class="card-title mb-1">{{ item.session.batch.name }}</h5>
+                                <small class="text-muted">Course: {{ item.session.batch.course.name }}</small>
+                                
+                                <p class="text-muted mb-2 mt-2">
+                                    <i class="fas fa-calendar"></i> {{ item.session.date|date:"D, d M Y" }}
+                                    <br>
+                                    <i class="fas fa-clock"></i> {{ item.session.start_time|time:"h:i A" }} - {{ item.session.end_time|time:"h:i A" }}
+                                    <br>
+                                    <i class="fas fa-map-marker-alt"></i> {{ item.session.classroom_location }}
+                                </p>
+                                
+                                <!-- Status Badge -->
+                                <div class="mb-3">
+                                    {% if item.is_ongoing %}
+                                        <span class="badge badge-success status-badge live-badge">
+                                            <i class="fas fa-circle"></i> LIVE NOW
+                                        </span>
+                                    {% elif item.session.is_active %}
+                                        <span class="badge badge-info status-badge">
+                                            <i class="fas fa-clock"></i> Scheduled
+                                        </span>
+                                    {% else %}
+                                        <span class="badge badge-secondary status-badge">
+                                            <i class="fas fa-check"></i> Completed
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Attendance Stats -->
+                                <div class="mt-3">
+                                    <strong>Attendance Overview:</strong>
+                                    <div class="progress mt-2" style="height: 28px;">
+                                        <div class="progress-bar {% if item.percentage >= 75 %}bg-success{% elif item.percentage >= 50 %}bg-warning{% else %}bg-danger{% endif %}" 
+                                             style="width: {{ item.percentage }}%">
+                                            <strong>{{ item.present_count }}/{{ item.total_students }} ({{ item.percentage }}%)</strong>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex justify-content-between mt-2 text-sm">
+                                        <span class="text-success"><i class="fas fa-check-circle"></i> Present: {{ item.present_count }}</span>
+                                        <span class="text-danger"><i class="fas fa-times-circle"></i> Absent: {{ item.absent_count }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- QR Code Thumbnail -->
+                            <div class="ml-3">
+                                {% if item.session.qr_code %}
+                                    <a href="{{ item.session.qr_code.url }}" target="_blank">
+                                        <img src="{{ item.session.qr_code.url }}" class="qr-thumbnail" alt="QR Code" title="Click to view full size">
+                                    </a>
+                                {% else %}
+                                    <div class="qr-thumbnail d-flex align-items-center justify-content-center bg-light">
+                                        <i class="fas fa-qrcode fa-2x text-muted"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <!-- Actions -->
+                        <div class="mt-3 d-flex justify-content-between align-items-center">
+                            <div>
+                                {% if item.session.qr_code %}
+                                <a href="{{ item.session.qr_code.url }}" download class="btn btn-sm btn-outline-primary" title="Download QR Code">
+                                    <i class="fas fa-download"></i> Download QR
+                                </a>
+                                <a href="{{ item.session.qr_code.url }}" target="_blank" class="btn btn-sm btn-outline-info" title="View Full QR Code">
+                                    <i class="fas fa-qrcode"></i> View QR
+                                </a>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <a href="{% url 'attendance:mark_attendance' item.session.id %}" class="btn btn-sm btn-outline-success" title="Mark Attendance">
+                                    <i class="fas fa-edit"></i> Mark
+                                </a>
+                                <a href="{% url 'attendance:session_detail' item.session.id %}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-eye"></i> View Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info text-center py-5">
+            <i class="fas fa-info-circle fa-4x mb-3 text-primary"></i>
+            <h4>No Sessions Yet</h4>
+            <p class="mb-4">You haven't created any attendance sessions yet. Get started by creating your first session!</p>
+            <a href="{% url 'attendance:create_session' %}" class="btn btn-primary btn-lg">
+                <i class="fas fa-plus"></i> Create Your First Session
+            </a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-refresh if any session is live
+{% for item in sessions_data %}
+    {% if item.is_ongoing %}
+        setTimeout(function(){
+            location.reload();
+        }, 60000); // Refresh every 60 seconds
+    {% endif %}
+{% endfor %}
+</script>
+{% endblock %}

@@ -1,0 +1,166 @@
+{% extends base_template %}
+{% load static %}
+
+{% block title %}All Attendance Sessions{% endblock %}
+
+{% block extra_css %}
+<style>
+    .session-grid {
+        display: grid;
+        gap: 20px;
+    }
+    .session-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s, box-shadow 0.2s;
+        border-left: 4px solid #e5e7eb;
+    }
+    .session-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    .session-card.active { border-left-color: #10b981; }
+    .session-card.closed { border-left-color: #ef4444; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-8">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-800">📋 All Attendance Sessions</h1>
+            <p class="text-gray-600 mt-2">View all attendance sessions across batches</p>
+        </div>
+        
+        {% if user.role == 'instructor' or user.role == 'superadmin' %}
+        <a href="{% url 'attendance:create_session' %}" 
+           class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition shadow-lg flex items-center gap-2">
+            <span class="text-xl">➕</span>
+            <span class="font-semibold">Create Session</span>
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Stats Overview -->
+    <div class="grid md:grid-cols-4 gap-6 mb-8">
+        <div class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
+            <div class="text-4xl mb-2">📊</div>
+            <div class="text-3xl font-bold text-blue-600">{{ sessions.count }}</div>
+            <div class="text-gray-600 mt-1">Total Sessions</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
+            <div class="text-4xl mb-2">🟢</div>
+            <div class="text-3xl font-bold text-green-600">{{ sessions|length }}</div>
+            <div class="text-gray-600 mt-1">All Sessions</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
+            <div class="text-4xl mb-2">📅</div>
+            <div class="text-3xl font-bold text-purple-600">{{ sessions|slice:":7"|length }}</div>
+            <div class="text-gray-600 mt-1">Recent</div>
+        </div>
+        <div class="bg-white rounded-lg shadow p-6 hover:shadow-lg transition">
+            <div class="text-4xl mb-2">👥</div>
+            <div class="text-3xl font-bold text-orange-600">{{ sessions.count }}</div>
+            <div class="text-gray-600 mt-1">Managed</div>
+        </div>
+    </div>
+
+    <!-- Sessions List -->
+    {% if sessions %}
+    <div class="session-grid">
+        {% for session in sessions %}
+        <div class="session-card {% if session.is_active %}active{% else %}closed{% endif %}">
+            <div class="flex justify-between items-start">
+                <div class="flex-1">
+                    <!-- Header -->
+                    <div class="flex items-center gap-3 mb-3">
+                        <h3 class="text-xl font-bold text-gray-800">{{ session.batch.name }}</h3>
+                        {% if session.is_active %}
+                            <span class="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-semibold">
+                                🟢 Active
+                            </span>
+                        {% else %}
+                            <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-sm font-semibold">
+                                🔴 Closed
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Details -->
+                    <div class="grid md:grid-cols-2 gap-3 mb-4 text-sm">
+                        <div>
+                            <span class="text-gray-500">📚 Course:</span>
+                            <span class="font-semibold ml-1">{{ session.batch.course.name }}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">👨‍🏫 Instructor:</span>
+                            <span class="font-semibold ml-1">{{ session.instructor.get_full_name }}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">📅 Date:</span>
+                            <span class="font-semibold ml-1">{{ session.date|date:"d M, Y" }}</span>
+                        </div>
+                        <div>
+                            <span class="text-gray-500">⏰ Time:</span>
+                            <span class="font-semibold ml-1">
+                                {{ session.start_time|time:"g:i A" }} - {{ session.end_time|time:"g:i A" }}
+                            </span>
+                        </div>
+                        <div class="md:col-span-2">
+                            <span class="text-gray-500">📍 Location:</span>
+                            <span class="font-semibold ml-1">{{ session.classroom_location }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Stats -->
+                    <div class="grid grid-cols-4 gap-3 bg-gray-50 p-4 rounded-lg">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-green-600">{{ session.stats.present }}</div>
+                            <div class="text-xs text-gray-500">Present</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-red-600">{{ session.stats.absent }}</div>
+                            <div class="text-xs text-gray-500">Absent</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-blue-600">{{ session.stats.total }}</div>
+                            <div class="text-xs text-gray-500">Total</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-purple-600">{{ session.stats.percentage }}%</div>
+                            <div class="text-xs text-gray-500">Rate</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <div class="ml-4">
+                    <a href="{% url 'attendance:session_detail' session.id %}" 
+                       class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 font-semibold block text-center transition shadow hover:shadow-lg">
+                        👁️ View Details
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <!-- Empty State -->
+    <div class="bg-white rounded-lg shadow-lg p-12 text-center">
+        <div class="text-6xl mb-4">📋</div>
+        <h3 class="text-2xl font-bold text-gray-700 mb-2">No Sessions Found</h3>
+        <p class="text-gray-500 mb-6">Create your first attendance session to get started</p>
+        
+        {% if user.role == 'instructor' or user.role == 'superadmin' %}
+        <a href="{% url 'attendance:create_session' %}" 
+           class="inline-block bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition shadow-lg font-semibold">
+            ➕ Create First Session
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

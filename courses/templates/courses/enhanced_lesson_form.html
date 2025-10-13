@@ -333,53 +333,68 @@
                         </div>
 
                         <!-- Attachments Section -->
-                        <div class="form-section">
-                            <h5 class="section-title">
-                                <i class="fas fa-paperclip me-2"></i>
-                                Lesson Attachments
-                            </h5>
-                            
-                            <div id="attachment-forms">
-                                {{ attachment_formset.management_form }}
-                                {% for form in attachment_formset %}
-                                    <div class="attachment-row">
-                                        {% if form.instance.pk %}{{ form.DELETE }}{% endif %}
-                                        <div class="row">
-                                            <div class="col-md-4">
-                                                <div class="mb-2">
-                                                    <label class="form-label small">Title</label>
-                                                    {{ form.title }}
-                                                </div>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <div class="mb-2">
-                                                    <label class="form-label small">File</label>
-                                                    {{ form.file }}
-                                                </div>
-                                            </div>
-                                            <div class="col-md-4">
-                                                <div class="mb-2">
-                                                    <label class="form-label small">Description</label>
-                                                    {{ form.description }}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        {% if form.instance.pk %}
-                                            <div class="form-check">
-                                                <label class="form-check-label text-danger">
-                                                    {{ form.DELETE }} Delete this attachment
-                                                </label>
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                {% endfor %}
-                            </div>
-                            
-                            <button type="button" id="add-attachment" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-plus me-1"></i>Add Another Attachment
-                            </button>
+                        <!-- Attachments Section -->
+<div class="form-section">
+    <h5 class="section-title">
+        <i class="fas fa-paperclip me-2"></i>
+        Lesson Attachments
+    </h5>
+    
+    <div id="attachment-forms">
+        {{ attachment_formset.management_form }}
+        
+        {% for form in attachment_formset %}
+            <div class="attachment-row" data-form-index="{{ forloop.counter0 }}">
+                {{ form.id }}
+                {% if form.instance.pk %}
+                    {{ form.DELETE }}
+                {% endif %}
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-2">
+                            <label class="form-label small">Title</label>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                                <div class="text-danger small">{{ form.title.errors }}</div>
+                            {% endif %}
                         </div>
-
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-2">
+                            <label class="form-label small">File</label>
+                            {{ form.file }}
+                            {% if form.file.errors %}
+                                <div class="text-danger small">{{ form.file.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-2">
+                            <label class="form-label small">Description</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="text-danger small">{{ form.description.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                {% if form.instance.pk %}
+                    <div class="form-check">
+                        <label class="form-check-label text-danger">
+                            {{ form.DELETE }} Delete this attachment
+                        </label>
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+    
+    <button type="button" id="add-attachment" class="btn btn-sm btn-outline-primary mt-2">
+        <i class="fas fa-plus me-1"></i>Add Another Attachment
+    </button>
+</div>
                         <!-- Form Actions -->
                         <div class="form-section">
                             <div class="d-flex justify-content-between">
@@ -479,7 +494,6 @@
         </div>
     </div>
 </div>
-
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const lessonTypeSelect = document.getElementById('{{ form.lesson_type.id_for_label }}');
@@ -493,15 +507,24 @@ document.addEventListener('DOMContentLoaded', function() {
     const contentTips = document.querySelectorAll('.content-tip');
     
     function showContentSection(type) {
-        // Hide all sections first
-        Object.values(contentSections).forEach(section => {
-            if (section) section.style.display = 'none';
+        // Hide all sections and DISABLE their inputs
+        Object.entries(contentSections).forEach(([sectionType, section]) => {
+            if (section) {
+                if (sectionType === type) {
+                    // Show and enable inputs in active section
+                    section.style.display = 'block';
+                    section.querySelectorAll('input, textarea, select').forEach(input => {
+                        input.disabled = false;
+                    });
+                } else {
+                    // Hide and disable inputs in inactive sections
+                    section.style.display = 'none';
+                    section.querySelectorAll('input, textarea, select').forEach(input => {
+                        input.disabled = true;
+                    });
+                }
+            }
         });
-        
-        // Show selected section
-        if (contentSections[type]) {
-            contentSections[type].style.display = 'block';
-        }
         
         // Show appropriate tips
         contentTips.forEach(tip => {
@@ -529,37 +552,69 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
     
-    // Initialize on page load
     if (lessonTypeSelect.value) {
         showContentSection(lessonTypeSelect.value);
     }
     
-    // Handle lesson type change
     lessonTypeSelect.addEventListener('change', function() {
         showContentSection(this.value);
     });
     
-    // Handle attachment formset
-    let attachmentFormCount = parseInt(document.querySelector('[name="attachments-TOTAL_FORMS"]').value);
+    // Attachment formset handling
+    const totalFormsInput = document.querySelector('input[name="attachments-TOTAL_FORMS"]');
+    const initialFormsInput = document.querySelector('input[name="attachments-INITIAL_FORMS"]');
+    
+    if (!totalFormsInput || !initialFormsInput) {
+        console.error('Management form inputs not found!');
+        return;
+    }
+    
+    let formCount = parseInt(totalFormsInput.value) || 0;
     
     document.getElementById('add-attachment').addEventListener('click', function() {
         const formsetDiv = document.getElementById('attachment-forms');
-        const newForm = document.querySelector('.attachment-row').cloneNode(true);
+        const allForms = formsetDiv.querySelectorAll('.attachment-row');
         
-        // Update form indices
-        const formRegex = RegExp(`attachments-(\\d+)-`, 'g');
-        newForm.innerHTML = newForm.innerHTML.replace(formRegex, `attachments-${attachmentFormCount}-`);
+        if (allForms.length === 0) {
+            console.error('No attachment forms found to clone!');
+            return;
+        }
         
-        // Clear form values
-        newForm.querySelectorAll('input, textarea').forEach(input => {
+        const lastForm = allForms[allForms.length - 1];
+        const newForm = lastForm.cloneNode(true);
+        
+        const inputs = newForm.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            if (input.name) {
+                input.name = input.name.replace(/attachments-\d+-/, `attachments-${formCount}-`);
+            }
+            if (input.id) {
+                input.id = input.id.replace(/id_attachments-\d+-/, `id_attachments-${formCount}-`);
+            }
             if (input.type !== 'hidden') {
                 input.value = '';
             }
         });
         
+        const labels = newForm.querySelectorAll('label');
+        labels.forEach(label => {
+            if (label.htmlFor) {
+                label.htmlFor = label.htmlFor.replace(/id_attachments-\d+-/, `id_attachments-${formCount}-`);
+            }
+        });
+        
+        newForm.setAttribute('data-form-index', formCount);
+        
+        const deleteCheckbox = newForm.querySelector('input[name*="DELETE"]');
+        if (deleteCheckbox) {
+            const deleteContainer = deleteCheckbox.closest('.form-check');
+            if (deleteContainer) deleteContainer.remove();
+        }
+        
         formsetDiv.appendChild(newForm);
-        attachmentFormCount++;
-        document.querySelector('[name="attachments-TOTAL_FORMS"]').value = attachmentFormCount;
+        
+        formCount++;
+        totalFormsInput.value = formCount;
     });
 });
 </script>

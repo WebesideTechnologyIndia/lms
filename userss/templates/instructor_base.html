@@ -343,6 +343,49 @@
                         Assign Exams
                     </a>
 
+                    <!-- Attendance Management Section (Add after "Exam Management" section) -->
+<div class="nav-section">Attendance Management</div>
+
+<!-- Attendance Dashboard -->
+<a class="nav-link {% if request.resolver_match.url_name == 'instructor_sessions' %}active{% endif %}"
+    href="{% url 'attendance:instructor_sessions' %}">
+    <i class="fas fa-clipboard-check"></i>
+    Attendance Dashboard
+</a>
+
+<!-- Create Session -->
+<a class="nav-link {% if request.resolver_match.url_name == 'create_session' %}active{% endif %}"
+    href="{% url 'attendance:create_session' %}">
+    <i class="fas fa-calendar-plus"></i>
+    Create Session
+</a>
+
+<!-- View Sessions -->
+<a class="nav-link {% if request.resolver_match.url_name == 'session_list' %}active{% endif %}"
+    href="{% url 'attendance:session_list' %}">
+    <i class="fas fa-list-alt"></i>
+    All Sessions
+</a>
+
+<!-- Pending Requests -->
+<a class="nav-link {% if request.resolver_match.url_name == 'pending_requests' %}active{% endif %}"
+    href="{% url 'attendance:pending_requests' %}">
+    <i class="fas fa-clock"></i>
+    Pending Requests
+    {% comment %}
+    <!-- Optional: Add notification badge -->
+    <span class="badge bg-warning ms-2" id="pending-requests-count">0</span>
+    {% endcomment %}
+</a>
+
+<!-- Reports -->
+<a class="nav-link {% if request.resolver_match.url_name == 'attendance_reports' %}active{% endif %}"
+    href="{% url 'attendance:attendance_reports' %}">
+    <i class="fas fa-chart-bar"></i>
+    Attendance Reports
+</a>
+
+
                     <!-- Student Management Section -->
                     <div class="nav-section">Student Management</div>
                     

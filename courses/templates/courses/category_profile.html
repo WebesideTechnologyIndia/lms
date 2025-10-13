@@ -1,0 +1,347 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ category.name }} - Category Profile{% endblock %}
+
+{% block content %}
+<!-- Category Header -->
+<div class="welcome-card mb-4">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1 class="mb-2">
+                <i class="fas fa-tag me-3"></i>
+                {{ category.name }}
+            </h1>
+            <p class="mb-0 opacity-75">{{ category.description|default:"Category overview with courses and students" }}</p>
+        </div>
+        <div class="col-md-4 text-end">
+            <a href="{% url 'courses:manage_categories' %}" class="btn btn-outline-primary">
+                <i class="fas fa-arrow-left me-2"></i>Back to Categories
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-book fa-2x text-primary mb-2"></i>
+                <h3 class="mb-0">{{ total_courses }}</h3>
+                <p class="text-muted mb-0">Total Courses</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-users fa-2x text-success mb-2"></i>
+                <h3 class="mb-0">{{ total_students }}</h3>
+                <p class="text-muted mb-0">Unique Students</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-user-graduate fa-2x text-info mb-2"></i>
+                <h3 class="mb-0">{{ total_enrollments }}</h3>
+                <p class="text-muted mb-0">Total Enrollments</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card text-center">
+            <div class="card-body">
+                <i class="fas fa-dollar-sign fa-2x text-warning mb-2"></i>
+                <h3 class="mb-0">${{ total_revenue|floatformat:2 }}</h3>
+                <p class="text-muted mb-0">Total Revenue</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Courses in Category -->
+<div class="card mb-4">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">
+            <i class="fas fa-book me-2"></i>
+            Courses in {{ category.name }}
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if courses %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Course Code</th>
+                            <th>Title</th>
+                            <th>Instructor</th>
+                            <th>Status</th>
+                            <th>Students</th>
+                            <th>Revenue</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for course in courses %}
+                        <tr>
+                            <td><strong>{{ course.course_code }}</strong></td>
+                            <td>{{ course.title }}</td>
+                            <td>{{ course.instructor.get_full_name|default:course.instructor.username }}</td>
+                            <td>
+                                {% if course.status == 'published' %}
+                                    <span class="badge bg-success">Published</span>
+                                {% elif course.status == 'draft' %}
+                                    <span class="badge bg-secondary">Draft</span>
+                                {% else %}
+                                    <span class="badge bg-warning">{{ course.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-info">{{ course.enrollment_count }}</span>
+                            </td>
+                            <td>${{ course.total_revenue|default:0|floatformat:2 }}</td>
+                            <td>
+                                <a href="{% url 'courses:course_detail' course.id %}" 
+                                   class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-book fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No courses in this category yet.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Course Performance -->
+<div class="card mb-4">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">
+            <i class="fas fa-chart-line me-2"></i>
+            Course Performance
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if course_performance %}
+            <div class="row">
+                {% for item in course_performance %}
+                <div class="col-md-6 mb-3">
+                    <div class="card border">
+                        <div class="card-body">
+                            <h6 class="mb-3">{{ item.course.title }}</h6>
+                            <div class="row text-center">
+                                <div class="col-3">
+                                    <p class="mb-0 text-muted small">Students</p>
+                                    <h5 class="mb-0">{{ item.total_students }}</h5>
+                                </div>
+                                <div class="col-3">
+                                    <p class="mb-0 text-muted small">Active</p>
+                                    <h5 class="mb-0 text-success">{{ item.active }}</h5>
+                                </div>
+                                <div class="col-3">
+                                    <p class="mb-0 text-muted small">Completed</p>
+                                    <h5 class="mb-0 text-info">{{ item.completed }}</h5>
+                                </div>
+                                <div class="col-3">
+                                    <p class="mb-0 text-muted small">Revenue</p>
+                                    <h5 class="mb-0 text-warning">${{ item.revenue|floatformat:0 }}</h5>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Enrolled Students -->
+<div class="card">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="fas fa-users me-2"></i>
+            Enrolled Students
+        </h5>
+        
+        <!-- Search and Filter -->
+        <form method="get" class="d-flex gap-2">
+            <input type="text" name="search" value="{{ search }}" 
+                   placeholder="Search students..." class="form-control form-control-sm">
+            
+            <select name="course" class="form-select form-select-sm">
+                <option value="">All Courses</option>
+                {% for course in courses %}
+                    <option value="{{ course.id }}" {% if course_filter == course.id|stringformat:"s" %}selected{% endif %}>
+                        {{ course.title }}
+                    </option>
+                {% endfor %}
+            </select>
+            
+            <button type="submit" class="btn btn-sm btn-primary">
+                <i class="fas fa-search"></i>
+            </button>
+        </form>
+    </div>
+    <div class="card-body">
+        {% if enrollments %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Student</th>
+                            <th>Email</th>
+                            <th>Course</th>
+                            <th>Status</th>
+                            <th>Progress</th>
+                            <th>Enrolled</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for enrollment in enrollments %}
+                        <tr>
+                            <td>
+                                <strong>{{ enrollment.student.get_full_name|default:enrollment.student.username }}</strong>
+                            </td>
+                            <td>{{ enrollment.student.email }}</td>
+                            <td>
+                                <a href="{% url 'courses:course_detail' enrollment.course.id %}">
+                                    {{ enrollment.course.title }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if enrollment.status == 'enrolled' %}
+                                    <span class="badge bg-success">Active</span>
+                                {% elif enrollment.status == 'completed' %}
+                                    <span class="badge bg-info">Completed</span>
+                                {% else %}
+                                    <span class="badge bg-warning">{{ enrollment.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="progress" style="height: 20px;">
+                                    <div class="progress-bar" role="progressbar" 
+                                         style="width: {{ enrollment.progress_percentage }}%"
+                                         aria-valuenow="{{ enrollment.progress_percentage }}" 
+                                         aria-valuemin="0" aria-valuemax="100">
+                                        {{ enrollment.progress_percentage }}%
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ enrollment.enrolled_at|date:"M d, Y" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if enrollments.has_other_pages %}
+            <nav>
+                <ul class="pagination justify-content-center">
+                    {% if enrollments.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ enrollments.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if course_filter %}&course={{ course_filter }}{% endif %}">Previous</a>
+                        </li>
+                    {% endif %}
+                    
+                    {% for num in enrollments.paginator.page_range %}
+                        {% if enrollments.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > enrollments.number|add:'-3' and num < enrollments.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if course_filter %}&course={{ course_filter }}{% endif %}">{{ num }}</a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if enrollments.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ enrollments.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if course_filter %}&course={{ course_filter }}{% endif %}">Next</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+        {% else %}
+            <div class="text-center py-4">
+                <i class="fas fa-users fa-3x text-muted mb-3"></i>
+                <p class="text-muted">No students enrolled in this category yet.</p>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Top Students -->
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-star me-2"></i>
+                    Top Students in Category
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if top_students %}
+                    <div class="list-group list-group-flush">
+                        {% for student in top_students %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>{{ student.student__first_name }} {{ student.student__last_name }}</strong>
+                                <br>
+                                <small class="text-muted">@{{ student.student__username }}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-primary">{{ student.total_courses }} courses</span>
+                                <span class="badge bg-success">{{ student.completed_courses }} completed</span>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-center text-muted">No student data available.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-chart-pie me-2"></i>
+                    Status Distribution
+                </h6>
+            </div>
+            <div class="card-body">
+                {% if status_breakdown %}
+                    {% for status in status_breakdown %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>{{ status.status|title }}</span>
+                        <strong>{{ status.count }}</strong>
+                    </div>
+                    <div class="progress mb-3" style="height: 20px;">
+                        {% widthratio status.count total_enrollments 100 as percentage %}
+                        <div class="progress-bar" style="width: {{ percentage }}%">
+                            {{ percentage }}%
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Subscription{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="fas fa-edit me-2"></i>Edit Subscription</h4>
+                    <a href="{% url 'courses:subscription_details' subscription.student.id %}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </a>
+                </div>
+                <div class="card-body">
+                    <!-- Current Info -->
+                    <div class="alert alert-info mb-4">
+                        <h6><i class="fas fa-info-circle"></i> Current Subscription</h6>
+                        <p class="mb-1"><strong>Student:</strong> {{ subscription.student.get_full_name|default:subscription.student.username }}</p>
+                        <p class="mb-1"><strong>Course:</strong> {{ subscription.course.title }}</p>
+                        <p class="mb-0"><strong>Subscribed:</strong> {{ subscription.subscribed_at|date:"M d, Y" }}</p>
+                    </div>
+
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <!-- Max Devices -->
+                        <div class="mb-3">
+                            <label class="form-label">Maximum Devices</label>
+                            <input type="number" name="max_devices" class="form-control" 
+                                   value="{{ subscription.max_devices }}" min="1" max="10">
+                            <small class="form-text text-muted">Current devices: {{ subscription.current_devices }}</small>
+                        </div>
+
+                        <!-- Is Active -->
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" name="is_active" class="form-check-input" id="is_active"
+                                   {% if subscription.is_active %}checked{% endif %}>
+                            <label class="form-check-label" for="is_active">
+                                Subscription Active
+                            </label>
+                        </div>
+
+                        <!-- Expiry -->
+                        <div class="mb-3">
+                            <label class="form-label">Add Validity (Days)</label>
+                            <input type="number" name="expires_days" class="form-control" 
+                                   placeholder="Extend subscription by days">
+                            <small class="form-text text-muted">
+                                {% if subscription.expires_at %}
+                                    Current expiry: {{ subscription.expires_at|date:"M d, Y" }}
+                                {% else %}
+                                    Currently: Lifetime access
+                                {% endif %}
+                            </small>
+                        </div>
+
+                        <!-- Remove Expiry -->
+                        {% if subscription.expires_at %}
+                        <div class="mb-3 form-check">
+                            <input type="checkbox" name="remove_expiry" class="form-check-input" id="remove_expiry">
+                            <label class="form-check-label" for="remove_expiry">
+                                Remove expiry date (make lifetime)
+                            </label>
+                        </div>
+                        {% endif %}
+
+                        <!-- Submit -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Update Subscription
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

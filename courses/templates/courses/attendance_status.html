@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Attendance Status{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="fas fa-clipboard-check me-2"></i>Student Login/Logout Attendance</h4>
+                    <div>
+                        <a href="{% url 'courses:attendance_dashboard' %}" class="btn btn-info btn-sm me-2">
+                            <i class="fas fa-chart-line"></i> Dashboard
+                        </a>
+                        <a href="{% url 'courses:export_attendance' %}" class="btn btn-success btn-sm me-2">
+                            <i class="fas fa-download"></i> Export
+                        </a>
+                        <a href="{% url 'courses:course_dashboard' %}" class="btn btn-secondary btn-sm">
+                            <i class="fas fa-arrow-left"></i> Back
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <!-- Stats -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="alert alert-primary">
+                                <h5>{{ total_logs }}</h5>
+                                <small>Total Sessions</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="alert alert-success">
+                                <h5>{{ active_sessions }}</h5>
+                                <small>Active Now</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="alert alert-info">
+                                <h5>{{ total_students }}</h5>
+                                <small>Unique Students</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filters -->
+                    <form method="get" class="row g-3 mb-4">
+                        <div class="col-md-2">
+                            <input type="date" name="date" class="form-control" value="{{ date_filter }}" placeholder="Date">
+                        </div>
+                        <div class="col-md-3">
+                            <select name="course" class="form-select">
+                                <option value="">All Courses</option>
+                                {% for course in courses %}
+                                <option value="{{ course.id }}" {% if course_filter == course.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ course.title }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <select name="status" class="form-select">
+                                <option value="">All Status</option>
+                                <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                                <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Completed</option>
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <input type="text" name="search" class="form-control" placeholder="Search student..." value="{{ search }}">
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-search"></i> Filter
+                            </button>
+                        </div>
+                    </form>
+
+                    <!-- Table -->
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Course</th>
+                                    <th>Login Time</th>
+                                    <th>Logout Time</th>
+                                    <th>Duration</th>
+                                    <th>IP Address</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in logs %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ log.student.get_full_name|default:log.student.username }}</strong><br>
+                                        <small class="text-muted">{{ log.student.email }}</small>
+                                    </td>
+                                    <td>
+                                        {% if log.course %}
+                                            <span class="badge bg-info">{{ log.course.title }}</span>
+                                        {% else %}
+                                            <span class="text-muted">General</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ log.login_time|date:"M d, Y H:i" }}</td>
+                                    <td>
+                                        {% if log.logout_time %}
+                                            {{ log.logout_time|date:"M d, Y H:i" }}
+                                        {% else %}
+                                            <span class="badge bg-success">Active</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if log.session_duration > 0 %}
+                                            {{ log.session_duration }} min
+                                        {% else %}
+                                            <span class="text-muted">-</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><small>{{ log.ip_address }}</small></td>
+                                    <td>
+                                        {% if not log.logout_time %}
+                                            <span class="badge bg-success">Online</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Completed</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'courses:student_attendance_detail' log.student.id %}" 
+                                           class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i> View All
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="8" class="text-center py-4">
+                                        <p class="text-muted">No attendance logs found</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    {% if logs.has_other_pages %}
+                    <nav>
+                        <ul class="pagination justify-content-center">
+                            {% if logs.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ logs.previous_page_number }}&date={{ date_filter }}&course={{ course_filter }}&search={{ search }}&status={{ status_filter }}">Previous</a>
+                            </li>
+                            {% endif %}
+                            
+                            <li class="page-item disabled">
+                                <span class="page-link">Page {{ logs.number }} of {{ logs.paginator.num_pages }}</span>
+                            </li>
+                            
+                            {% if logs.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ logs.next_page_number }}&date={{ date_filter }}&course={{ course_filter }}&search={{ search }}&status={{ status_filter }}">Next</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

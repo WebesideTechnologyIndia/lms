@@ -317,6 +317,47 @@
     </style>
 </head>
 <body>
+
+    {% if error %}
+<div class="alert alert-danger alert-dismissible fade show" role="alert">
+    <div class="d-flex align-items-start">
+        {% if 'Device Limit Reached' in error %}
+            <!-- Special styling for device limit errors -->
+            <i class="fas fa-mobile-alt fa-2x me-3 text-danger"></i>
+            <div>
+                <h5 class="alert-heading mb-2">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Device Limit Reached!
+                </h5>
+                <div style="white-space: pre-line;">{{ error }}</div>
+                <hr class="my-3">
+                <div class="mt-3">
+                    <p class="mb-2"><strong>What can you do?</strong></p>
+                    <ul class="mb-0">
+                        <li>Remove an existing device from your account settings</li>
+                        <li>Contact admin to increase your device limit</li>
+                        <li>Use a previously registered device to login</li>
+                    </ul>
+                </div>
+                <div class="mt-3">
+                    <a href="mailto:admin@yoursite.com" class="btn btn-sm btn-outline-danger">
+                        <i class="fas fa-envelope me-2"></i>Contact Admin
+                    </a>
+                </div>
+            </div>
+        {% else %}
+            <!-- Regular error display -->
+            <i class="fas fa-exclamation-circle fa-2x me-3"></i>
+            <div class="flex-grow-1">
+                <strong>Error!</strong> {{ error }}
+            </div>
+        {% endif %}
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>
+{% endif %}
+
+
     <div class="login-container">
         <!-- Left Side - Image/Branding -->
         <div class="login-image">

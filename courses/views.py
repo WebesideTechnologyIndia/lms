@@ -151,6 +151,15 @@ def manage_courses(request):
     return render(request, 'courses/manage_courses.html', context)
 
 
+
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
+from django.contrib import messages
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.utils.text import slugify
+import json
+
 @login_required
 def create_course(request):
     """Create a new course"""
@@ -196,7 +205,7 @@ def edit_course(request, course_id):
     # Check permissions
     if request.user.role == 'instructor' and course.instructor != request.user:
         messages.error(request, "You can only edit your own courses!")
-        return redirect('manage_courses')
+        return redirect('courses:manage_courses')
     elif request.user.role not in ['superadmin', 'instructor']:
         return redirect('user_login')
     
@@ -218,6 +227,95 @@ def edit_course(request, course_id):
     
     return render(request, 'courses/course_form.html', context)
 
+
+@login_required
+@require_POST
+def toggle_course_status(request, course_id):
+    """Toggle course status between published and draft"""
+    course = get_object_or_404(Course, id=course_id)
+    
+    # Check permissions
+    if request.user.role == 'instructor' and course.instructor != request.user:
+        return JsonResponse({
+            'success': False,
+            'message': 'You can only modify your own courses!'
+        }, status=403)
+    elif request.user.role not in ['superadmin', 'instructor']:
+        return JsonResponse({
+            'success': False,
+            'message': 'You do not have permission to perform this action!'
+        }, status=403)
+    
+    try:
+        # Toggle status
+        if course.status == 'published':
+            course.status = 'draft'
+            message = f'Course "{course.title}" has been set to Draft.'
+        elif course.status == 'draft':
+            course.status = 'published'
+            message = f'Course "{course.title}" has been Published.'
+        elif course.status == 'archived':
+            course.status = 'published'
+            message = f'Course "{course.title}" has been Reactivated.'
+        else:
+            # For suspended or other statuses, set to draft
+            course.status = 'draft'
+            message = f'Course "{course.title}" status updated to Draft.'
+        
+        course.save()
+        
+        return JsonResponse({
+            'success': True,
+            'message': message,
+            'new_status': course.status,
+            'status_display': course.get_status_display()
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error updating status: {str(e)}'
+        }, status=500)
+
+
+@login_required
+def change_course_status(request, course_id):
+    """Change course status to any available status"""
+    course = get_object_or_404(Course, id=course_id)
+    
+    # Check permissions
+    if request.user.role == 'instructor' and course.instructor != request.user:
+        messages.error(request, "You can only modify your own courses!")
+        return redirect('courses:manage_courses')
+    elif request.user.role not in ['superadmin', 'instructor']:
+        return redirect('user_login')
+    
+    if request.method == 'POST':
+        new_status = request.POST.get('status')
+        
+        # Validate status
+        valid_statuses = ['draft', 'published', 'archived', 'suspended']
+        if new_status in valid_statuses:
+            old_status = course.get_status_display()
+            course.status = new_status
+            course.save()
+            
+            messages.success(
+                request, 
+                f'Course "{course.title}" status changed from {old_status} to {course.get_status_display()}.'
+            )
+        else:
+            messages.error(request, 'Invalid status selected.')
+        
+        return redirect('courses:manage_courses')
+    
+    # GET request - show status change form
+    context = {
+        'course': course,
+        'status_choices': Course.STATUS_CHOICES
+    }
+    
+    return render(request, 'courses/change_status.html', context)
 
 @login_required
 def course_detail(request, course_id):
@@ -293,34 +391,6 @@ def delete_course(request, course_id):
     return render(request, 'courses/delete_course.html', context)
 
 
-@login_required
-def toggle_course_status(request, course_id):
-    """Toggle course status between published and draft"""
-    course = get_object_or_404(Course, id=course_id)
-    
-    # Check permissions
-    if request.user.role == 'instructor' and course.instructor != request.user:
-        return JsonResponse({'success': False, 'message': 'Permission denied'})
-    elif request.user.role not in ['superadmin', 'instructor']:
-        return JsonResponse({'success': False, 'message': 'Permission denied'})
-    
-    if request.method == 'POST':
-        if course.status == 'published':
-            course.status = 'draft'
-            message = f'Course "{course.title}" moved to draft'
-        else:
-            course.status = 'published'
-            message = f'Course "{course.title}" published successfully'
-        
-        course.save()
-        
-        return JsonResponse({
-            'success': True, 
-            'message': message,
-            'new_status': course.status
-        })
-    
-    return JsonResponse({'success': False, 'message': 'Invalid request'})
 
 
 # ==================== COURSE CATEGORY MANAGEMENT ====================
@@ -551,28 +621,6 @@ def delete_module(request, course_id, module_id):
 
 # ==================== COURSE LESSONS MANAGEMENT ====================
 
-@login_required
-def module_lessons(request, course_id, module_id):
-    """Manage lessons within a module"""
-    course = get_object_or_404(Course, id=course_id)
-    module = get_object_or_404(CourseModule, id=module_id, course=course)
-    
-    # Check permissions
-    if request.user.role == 'instructor' and course.instructor != request.user:
-        messages.error(request, "You can only manage your own course lessons!")
-        return redirect('manage_courses')
-    elif request.user.role not in ['superadmin', 'instructor']:
-        return redirect('user_login')
-    
-    lessons = module.lessons.all().order_by('order')
-    
-    context = {
-        'course': course,
-        'module': module,
-        'lessons': lessons,
-    }
-    
-    return render(request, 'courses/module_lessons.html', context)
 
 
 from django.shortcuts import render, redirect, get_object_or_404
@@ -599,59 +647,113 @@ from django.http import JsonResponse
 from django.urls import reverse
 from .forms import EnhancedLessonForm, LessonAttachmentFormSet, QuickLessonForm
 from .models import Course, CourseModule, CourseLesson, LessonAttachment
+from .forms import EnhancedLessonForm, LessonAttachmentFormSet
 
+
+# courses/views.py - REPLACE create_lesson view
 
 @login_required
 def create_lesson(request, course_id, module_id):
-    """Enhanced lesson creation with multiple content types"""
+    """Create a new lesson with AUTO ORDER"""
     
     course = get_object_or_404(Course, id=course_id)
     module = get_object_or_404(CourseModule, id=module_id, course=course)
     
     # Check permissions
     if request.user.role == 'instructor' and course.instructor != request.user:
-        messages.error(request, "You can only create lessons for your own courses!")
-        return redirect('courses:manage_courses')
+        messages.error(request, "You don't have permission to edit this course")
+        return redirect('courses:course_detail', course_id=course.id)
     
     if request.method == 'POST':
         form = EnhancedLessonForm(request.POST, request.FILES, module=module)
-        attachment_formset = LessonAttachmentFormSet(request.POST, request.FILES)
+        
+        attachment_formset = LessonAttachmentFormSet(
+            request.POST, 
+            request.FILES,
+            prefix='attachments',
+            queryset=LessonAttachment.objects.none()
+        )
         
         if form.is_valid() and attachment_formset.is_valid():
             lesson = form.save(commit=False)
             lesson.module = module
             
-            # Auto-set order
-            last_lesson = module.lessons.order_by('-order').first()
-            lesson.order = (last_lesson.order + 1) if last_lesson else 1
+            # 🔥 AUTO-SET ORDER - THIS FIXES THE ERROR!
+            from django.db.models import Max
+            max_order = module.lessons.aggregate(Max('order'))['order__max'] or 0
+            lesson.order = max_order + 1
             
             lesson.save()
             
             # Save attachments
-            attachment_formset.instance = lesson
-            attachment_formset.save()
+            attachments = attachment_formset.save(commit=False)
+            for attachment in attachments:
+                attachment.lesson = lesson
+                attachment.save()
             
             messages.success(request, f'Lesson "{lesson.title}" created successfully!')
-            return redirect('courses:lesson_detail', 
-                          course_id=course.id, module_id=module.id, lesson_id=lesson.id)
+            
+            if 'save_and_continue' in request.POST:
+                return redirect('courses:create_lesson', course_id=course.id, module_id=module.id)
+            else:
+                return redirect('courses:module_lessons', course_id=course.id, module_id=module.id)
         else:
-            messages.error(request, 'Please fix the errors below.')
-    
+            if not form.is_valid():
+                messages.error(request, 'Please correct the errors in the lesson form.')
+            if not attachment_formset.is_valid():
+                messages.error(request, 'There was an issue with attachments.')
     else:
         form = EnhancedLessonForm(module=module)
-        attachment_formset = LessonAttachmentFormSet()
+        attachment_formset = LessonAttachmentFormSet(
+            prefix='attachments',
+            queryset=LessonAttachment.objects.none()
+        )
     
     context = {
-        'course': course,
-        'module': module,
         'form': form,
         'attachment_formset': attachment_formset,
-        'title': f'Create New Lesson - {module.title}',
-        'button_text': 'Create Lesson'
+        'course': course,
+        'module': module,
+        'title': 'Create Lesson',
+        'button_text': 'Create Lesson',
+        'is_edit': False,
     }
     
     return render(request, 'courses/enhanced_lesson_form.html', context)
 
+# Alternative: Simple debugging view
+
+
+@login_required
+def module_lessons(request, course_id, module_id):
+    """View to list all lessons in a module"""
+    
+    course = get_object_or_404(Course, id=course_id)
+    module = get_object_or_404(CourseModule, id=module_id, course=course)
+    
+    # Check permissions
+    can_edit = False
+    if request.user.is_authenticated:
+        if request.user.role == 'admin' or (request.user.role == 'instructor' and course.instructor == request.user):
+            can_edit = True
+    
+    # Get all lessons ordered
+    lessons = module.lessons.all().order_by('order')
+    
+    # Debug: Print lesson count
+    print(f"Module: {module.title}")
+    print(f"Total lessons: {lessons.count()}")
+    for lesson in lessons:
+        print(f"- {lesson.title} (Order: {lesson.order})")
+    
+    context = {
+        'course': course,
+        'module': module,
+        'lessons': lessons,
+        'can_edit': can_edit,
+    }
+    
+    return render(request, 'courses/module_lessons.html', context)
 
 @login_required
 def edit_lesson(request, course_id, module_id, lesson_id):
@@ -747,9 +849,11 @@ def quick_create_lesson(request, course_id, module_id):
     
     return render(request, 'courses/quick_lesson_form.html', context)
 
+# courses/views.py - UPDATE existing lesson_detail view
 
+@login_required
 def lesson_detail(request, course_id, module_id, lesson_id):
-    """Detailed lesson view with all content"""
+    """Detailed lesson view with progress tracking"""
     
     course = get_object_or_404(Course, id=course_id)
     module = get_object_or_404(CourseModule, id=module_id, course=course)
@@ -773,21 +877,29 @@ def lesson_detail(request, course_id, module_id, lesson_id):
     
     if not can_access and not lesson.is_free_preview:
         messages.error(request, "You need to enroll in this course to access lessons.")
-        return redirect('courses:course_detail', slug=course.slug)
+        return redirect('courses:course_detail', course_id=course.id)
     
-    # Get lesson progress for student
+    # 🔥 TRACK PROGRESS - THIS IS THE KEY PART
     lesson_progress = None
     if request.user.is_authenticated and request.user.role == 'student' and is_enrolled:
-        from .models import LessonProgress
         lesson_progress, created = LessonProgress.objects.get_or_create(
             student=request.user,
             lesson=lesson
         )
         # Mark as started if first time
-        if created:
+        if created or lesson_progress.status == 'not_started':
             lesson_progress.mark_as_started()
+        
+        # Update last accessed
+        lesson_progress.last_accessed = timezone.now()
+        lesson_progress.save(update_fields=['last_accessed'])
+        
+        # Also update enrollment last_accessed
+        enrollment = course.enrollments.get(student=request.user, is_active=True)
+        enrollment.last_accessed = timezone.now()
+        enrollment.save(update_fields=['last_accessed'])
     
-    # Get other lessons in module for navigation
+    # Get navigation lessons
     other_lessons = module.lessons.filter(is_active=True).exclude(id=lesson.id)
     prev_lesson = other_lessons.filter(order__lt=lesson.order).order_by('-order').first()
     next_lesson = other_lessons.filter(order__gt=lesson.order).order_by('order').first()
@@ -2959,3 +3071,1072 @@ def instructor_delete_batch_lesson(request, course_id, batch_id, module_id, less
     }
     
     return render(request, 'instructor/confirm_delete.html', context)
+
+
+
+from .models import (
+    Course, CourseCategory, CourseModule, CourseLesson,
+    Enrollment, CourseReview, CourseFAQ,
+    Batch, BatchModule, BatchLesson, BatchEnrollment,
+    StudentSubscription, DeviceSession, StudentLoginLog  # <-- YEH ADD KARO
+)
+# courses/views.py - ADD AT THE END
+
+# courses/views.py - ADD THESE AT THE VERY END
+
+# ==================== SUBSCRIPTIONS ====================
+
+@login_required
+def subscription_list(request):
+    """List all student subscriptions"""
+    if request.user.role != 'superadmin':
+        messages.error(request, 'Only superadmin can access subscriptions.')
+        return redirect('courses:course_dashboard')
+    
+    subscriptions = StudentSubscription.objects.all().select_related('student', 'course').order_by('-subscribed_at')
+    
+    # Filters
+    search = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    
+    if search:
+        subscriptions = subscriptions.filter(
+            Q(student__username__icontains=search) |
+            Q(student__email__icontains=search) |
+            Q(course__title__icontains=search)
+        )
+    
+    if status_filter == 'active':
+        subscriptions = subscriptions.filter(is_active=True)
+    elif status_filter == 'expired':
+        subscriptions = subscriptions.filter(is_active=False)
+    
+    # Stats
+    total_subs = StudentSubscription.objects.count()
+    active_subs = StudentSubscription.objects.filter(is_active=True).count()
+    expired_subs = total_subs - active_subs
+    
+    # Pagination
+    paginator = Paginator(subscriptions, 20)
+    page = request.GET.get('page')
+    subscriptions = paginator.get_page(page)
+    
+    context = {
+        'subscriptions': subscriptions,
+        'search': search,
+        'status_filter': status_filter,
+        'total_subs': total_subs,
+        'active_subs': active_subs,
+        'expired_subs': expired_subs,
+    }
+    return render(request, 'courses/subscription_list.html', context)
+
+
+@login_required
+def remove_device_session(request, device_id):
+    """Remove a device session"""
+    
+    if request.user.role != 'superadmin':
+        return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+    
+    try:
+        device = get_object_or_404(DeviceSession, id=device_id)
+        subscription = device.subscription
+        
+        device.delete()
+        
+        # Update device count
+        subscription.current_devices = subscription.devices.filter(is_active=True).count()
+        subscription.save()
+        
+        return JsonResponse({'success': True, 'message': 'Device removed successfully'})
+        
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@login_required
+def create_subscription(request):
+    """Create new subscription via form"""
+    if request.user.role != 'superadmin':
+        messages.error(request, 'Access denied.')
+        return redirect('courses:course_dashboard')
+    
+    if request.method == 'POST':
+        try:
+            student_id = request.POST.get('student')
+            course_id = request.POST.get('course')
+            max_devices = int(request.POST.get('max_devices', 2))
+            expires_days = request.POST.get('expires_days', '')
+            
+            student = get_object_or_404(User, id=student_id, role='student')
+            course = get_object_or_404(Course, id=course_id)
+            
+            # Check if already exists
+            if StudentSubscription.objects.filter(student=student, course=course).exists():
+                messages.error(request, f'{student.username} already has subscription for {course.title}')
+                return redirect('courses:create_subscription')
+            
+            # Calculate expiry
+            expires_at = None
+            if expires_days:
+                from datetime import timedelta
+                expires_at = timezone.now() + timedelta(days=int(expires_days))
+            
+            # Create subscription
+            subscription = StudentSubscription.objects.create(
+                student=student,
+                course=course,
+                max_devices=max_devices,
+                current_devices=0,
+                expires_at=expires_at,
+                is_active=True
+            )
+            
+            messages.success(request, f'Subscription created for {student.username} - {course.title}')
+            return redirect('courses:subscription_list')
+            
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+            return redirect('courses:create_subscription')
+    
+    # GET request - show form
+    students = User.objects.filter(role='student', is_active=True).order_by('first_name', 'last_name')
+    courses = Course.objects.filter(is_active=True, status='published').order_by('title')
+    
+    context = {
+        'students': students,
+        'courses': courses,
+    }
+    return render(request, 'courses/create_subscription.html', context)
+
+
+@login_required
+def subscription_details(request, student_id):
+    """Detailed subscription info for a student"""
+    if request.user.role != 'superadmin':
+        messages.error(request, 'Access denied.')
+        return redirect('courses:course_dashboard')
+    
+    student = get_object_or_404(User, id=student_id, role='student')
+    subscriptions = student.course_subscriptions.all().select_related('course').order_by('-subscribed_at')
+    
+    # Get device sessions
+    devices = DeviceSession.objects.filter(
+        subscription__student=student
+    ).select_related('subscription__course').order_by('-last_login')
+    
+    # Stats
+    total_subs = subscriptions.count()
+    active_subs = subscriptions.filter(is_active=True).count()
+    total_devices = devices.filter(is_active=True).count()
+    
+    context = {
+        'student': student,
+        'subscriptions': subscriptions,
+        'devices': devices,
+        'total_subs': total_subs,
+        'active_subs': active_subs,
+        'total_devices': total_devices,
+    }
+    return render(request, 'courses/subscription_details.html', context)
+
+
+@login_required
+def edit_subscription(request, subscription_id):
+    """Edit existing subscription"""
+    if request.user.role != 'superadmin':
+        messages.error(request, 'Access denied.')
+        return redirect('courses:course_dashboard')
+    
+    subscription = get_object_or_404(StudentSubscription, id=subscription_id)
+    
+    if request.method == 'POST':
+        try:
+            subscription.max_devices = int(request.POST.get('max_devices', 2))
+            subscription.is_active = request.POST.get('is_active') == 'on'
+            
+            expires_days = request.POST.get('expires_days', '')
+            if expires_days:
+                from datetime import timedelta
+                subscription.expires_at = timezone.now() + timedelta(days=int(expires_days))
+            elif request.POST.get('remove_expiry'):
+                subscription.expires_at = None
+            
+            subscription.save()
+            
+            messages.success(request, 'Subscription updated successfully!')
+            return redirect('courses:subscription_details', student_id=subscription.student.id)
+            
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+    
+    context = {
+        'subscription': subscription,
+    }
+    return render(request, 'courses/edit_subscription.html', context)
+
+
+@login_required
+def delete_subscription(request, subscription_id):
+    """Delete subscription"""
+    if request.user.role != 'superadmin':
+        messages.error(request, 'Access denied.')
+        return redirect('courses:course_dashboard')
+    
+    subscription = get_object_or_404(StudentSubscription, id=subscription_id)
+    
+    if request.method == 'POST':
+        student_name = subscription.student.username
+        course_name = subscription.course.title
+        subscription.delete()
+        
+        messages.success(request, f'Subscription deleted: {student_name} - {course_name}')
+        return redirect('courses:subscription_list')
+    
+    context = {
+        'subscription': subscription,
+    }
+    return render(request, 'courses/delete_subscription.html', context)
+
+
+@login_required
+def device_restrictions(request):
+    """Manage device restrictions"""
+    if request.user.role != 'superadmin':
+        messages.error(request, 'Access denied.')
+        return redirect('courses:course_dashboard')
+    
+    subscriptions = StudentSubscription.objects.all().select_related('student', 'course').order_by('-subscribed_at')
+    
+    # Search
+    search = request.GET.get('search', '')
+    if search:
+        subscriptions = subscriptions.filter(
+            Q(student__username__icontains=search) |
+            Q(student__email__icontains=search) |
+            Q(course__title__icontains=search)
+        )
+    
+    context = {
+        'subscriptions': subscriptions,
+        'search': search,
+    }
+    return render(request, 'courses/device_restrictions.html', context)
+
+
+@login_required
+def update_device_restriction(request, subscription_id):
+    """Update device restriction for subscription"""
+    if request.user.role != 'superadmin':
+        return JsonResponse({'success': False, 'error': 'Access denied'})
+    
+    if request.method == 'POST':
+        try:
+            subscription = get_object_or_404(StudentSubscription, id=subscription_id)
+            max_devices = int(request.POST.get('max_devices', 2))
+            
+            subscription.max_devices = max_devices
+            subscription.save()
+            
+            messages.success(request, f'Device limit updated to {max_devices}')
+            return redirect('courses:device_restrictions')
+            
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+            return redirect('courses:device_restrictions')
+    
+    return redirect('courses:device_restrictions')
+
+
+# ==================== COURSE REVIEWS ====================
+
+@login_required
+def course_reviews(request):
+    """View all course reviews"""
+    if request.user.role not in ['superadmin', 'instructor']:
+        messages.error(request, 'Access denied.')
+        return redirect('courses:course_dashboard')
+    
+    if request.user.role == 'instructor':
+        reviews = CourseReview.objects.filter(course__instructor=request.user)
+    else:
+        reviews = CourseReview.objects.all()
+    
+    reviews = reviews.select_related('course', 'student').order_by('-created_at')
+    
+    # Filters
+    search = request.GET.get('search', '')
+    rating_filter = request.GET.get('rating', '')
+    approved_filter = request.GET.get('approved', '')
+    
+    if search:
+        reviews = reviews.filter(
+            Q(student__username__icontains=search) |
+            Q(course__title__icontains=search) |
+            Q(review_text__icontains=search)
+        )
+    
+    if rating_filter:
+        reviews = reviews.filter(rating=rating_filter)
+    
+    if approved_filter == 'yes':
+        reviews = reviews.filter(is_approved=True)
+    elif approved_filter == 'no':
+        reviews = reviews.filter(is_approved=False)
+    
+    # Stats
+    total_reviews = CourseReview.objects.count()
+    avg_rating = CourseReview.objects.aggregate(Avg('rating'))['rating__avg'] or 0
+    pending_reviews = CourseReview.objects.filter(is_approved=False).count()
+    
+    # Pagination
+    paginator = Paginator(reviews, 20)
+    page = request.GET.get('page')
+    reviews = paginator.get_page(page)
+    
+    context = {
+        'reviews': reviews,
+        'search': search,
+        'rating_filter': rating_filter,
+        'approved_filter': approved_filter,
+        'total_reviews': total_reviews,
+        'avg_rating': round(avg_rating, 1),
+        'pending_reviews': pending_reviews,
+    }
+    return render(request, 'courses/course_reviews.html', context)
+
+
+@login_required
+def course_review_detail(request, course_id):
+    """Reviews for specific course"""
+    if request.user.role not in ['superadmin', 'instructor']:
+        messages.error(request, 'Access denied.')
+        return redirect('courses:course_dashboard')
+    
+    course = get_object_or_404(Course, id=course_id)
+    
+    # Permission check for instructor
+    if request.user.role == 'instructor' and course.instructor != request.user:
+        messages.error(request, 'You can only view reviews for your courses.')
+        return redirect('courses:course_reviews')
+    
+    reviews = course.reviews.all().select_related('student').order_by('-created_at')
+    
+    # Stats
+    total_reviews = reviews.count()
+    avg_rating = reviews.aggregate(Avg('rating'))['rating__avg'] or 0
+    rating_distribution = {
+        5: reviews.filter(rating=5).count(),
+        4: reviews.filter(rating=4).count(),
+        3: reviews.filter(rating=3).count(),
+        2: reviews.filter(rating=2).count(),
+        1: reviews.filter(rating=1).count(),
+    }
+    
+    context = {
+        'course': course,
+        'reviews': reviews,
+        'total_reviews': total_reviews,
+        'avg_rating': round(avg_rating, 1),
+        'rating_distribution': rating_distribution,
+    }
+    return render(request, 'courses/course_review_detail.html', context)
+
+
+@login_required
+def approve_review(request, review_id):
+    """Approve/reject review"""
+    if request.user.role not in ['superadmin', 'instructor']:
+        return JsonResponse({'success': False, 'error': 'Access denied'})
+    
+    review = get_object_or_404(CourseReview, id=review_id)
+    
+    # Permission check
+    if request.user.role == 'instructor' and review.course.instructor != request.user:
+        return JsonResponse({'success': False, 'error': 'Access denied'})
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'approve':
+            review.is_approved = True
+            review.save()
+            messages.success(request, 'Review approved.')
+        elif action == 'reject':
+            review.is_approved = False
+            review.save()
+            messages.success(request, 'Review rejected.')
+        
+        return redirect('courses:course_reviews')
+    
+    return redirect('courses:course_reviews')
+
+
+# ==================== ATTENDANCE (LOGIN/LOGOUT) ====================
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.db.models import Q, Sum, Count
+from django.core.paginator import Paginator
+from django.utils import timezone
+from datetime import timedelta
+from courses.models import StudentLoginLog, Course
+from userss.models import AbstractUser
+
+# courses/views.py - REPLACE ATTENDANCE SECTION
+
+# ==================== ATTENDANCE (AUTOMATIC TRACKING) ====================
+
+@login_required
+def attendance_dashboard(request):
+    """Attendance dashboard with statistics"""
+    
+    if request.user.role != 'superadmin':
+        messages.error(request, 'Access denied.')
+        return redirect('courses:course_dashboard')
+    
+    # Date range (default: last 30 days)
+    from datetime import timedelta
+    end_date = timezone.now().date()
+    start_date = end_date - timedelta(days=30)
+    
+    date_from = request.GET.get('date_from', start_date)
+    date_to = request.GET.get('date_to', end_date)
+    
+    # Get logs
+    logs = StudentLoginLog.objects.filter(
+        login_time__date__gte=date_from,
+        login_time__date__lte=date_to
+    ).select_related('student', 'course')
+    
+    # Stats
+    total_sessions = logs.count()
+    active_sessions = logs.filter(logout_time__isnull=True).count()
+    unique_students = logs.values('student').distinct().count()
+    
+    # Total time
+    completed_logs = logs.filter(logout_time__isnull=False)
+    total_minutes = completed_logs.aggregate(Sum('session_duration'))['session_duration__sum'] or 0
+    total_hours = round(total_minutes / 60, 1)
+    
+    # Average session
+    avg_session = total_minutes / completed_logs.count() if completed_logs.count() > 0 else 0
+    
+    # Today's active
+    today = timezone.now().date()
+    today_active = logs.filter(
+        login_time__date=today,
+        logout_time__isnull=True
+    ).count()
+    
+    # Daily trend (last 7 days)
+    daily_stats = []
+    for i in range(7):
+        date = end_date - timedelta(days=i)
+        count = StudentLoginLog.objects.filter(login_time__date=date).count()
+        daily_stats.append({
+            'date': date.strftime('%b %d'),
+            'count': count
+        })
+    daily_stats.reverse()
+    
+    context = {
+        'total_sessions': total_sessions,
+        'active_sessions': active_sessions,
+        'unique_students': unique_students,
+        'total_hours': total_hours,
+        'avg_session_minutes': round(avg_session),
+        'today_active': today_active,
+        'daily_stats': daily_stats,
+        'date_from': date_from,
+        'date_to': date_to,
+    }
+    
+    return render(request, 'courses/attendance_dashboard.html', context)
+
+
+@login_required
+def attendance_status(request):
+    """Detailed attendance logs with filters"""
+    
+    if request.user.role != 'superadmin':
+        messages.error(request, 'Only superadmin can access attendance.')
+        return redirect('courses:course_dashboard')
+    
+    logs = StudentLoginLog.objects.all().select_related('student', 'course').order_by('-login_time')
+    
+    # Filters
+    date_filter = request.GET.get('date', '')
+    course_filter = request.GET.get('course', '')
+    search = request.GET.get('search', '')
+    status_filter = request.GET.get('status', '')
+    
+    if date_filter:
+        logs = logs.filter(login_time__date=date_filter)
+    
+    if course_filter:
+        logs = logs.filter(course_id=course_filter)
+    
+    if search:
+        logs = logs.filter(
+            Q(student__username__icontains=search) |
+            Q(student__email__icontains=search) |
+            Q(student__first_name__icontains=search) |
+            Q(student__last_name__icontains=search)
+        )
+    
+    if status_filter == 'active':
+        logs = logs.filter(logout_time__isnull=True)
+    elif status_filter == 'completed':
+        logs = logs.filter(logout_time__isnull=False)
+    
+    # Stats
+    total_logs = logs.count()
+    active_sessions = logs.filter(logout_time__isnull=True).count()
+    total_students = logs.values('student').distinct().count()
+    
+    # Pagination
+    paginator = Paginator(logs, 50)
+    page = request.GET.get('page')
+    logs = paginator.get_page(page)
+    
+    # Courses for filter
+    courses = Course.objects.filter(is_active=True).order_by('title')
+    
+    context = {
+        'logs': logs,
+        'date_filter': date_filter,
+        'course_filter': course_filter,
+        'search': search,
+        'status_filter': status_filter,
+        'total_logs': total_logs,
+        'active_sessions': active_sessions,
+        'total_students': total_students,
+        'courses': courses,
+    }
+    return render(request, 'courses/attendance_status.html', context)
+
+
+@login_required
+def student_attendance_detail(request, student_id):
+    """Detailed attendance for specific student"""
+    
+    if request.user.role != 'superadmin':
+        messages.error(request, 'Access denied.')
+        return redirect('courses:course_dashboard')
+    
+    student = get_object_or_404(User, id=student_id, role='student')
+    logs = student.login_logs.all().select_related('course').order_by('-login_time')
+    
+    # Date filters
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    if date_from:
+        logs = logs.filter(login_time__date__gte=date_from)
+    if date_to:
+        logs = logs.filter(login_time__date__lte=date_to)
+    
+    # Stats
+    total_logins = logs.count()
+    total_minutes = logs.aggregate(Sum('session_duration'))['session_duration__sum'] or 0
+    total_time_hours = round(total_minutes / 60, 1)
+    active_sessions = logs.filter(logout_time__isnull=True).count()
+    avg_session = total_minutes / total_logins if total_logins > 0 else 0
+    
+    # Course-wise breakdown
+    course_stats = logs.values('course__title').annotate(
+        total_sessions=Count('id'),
+        total_time=Sum('session_duration')
+    ).order_by('-total_sessions')[:5]
+    
+    # Pagination
+    paginator = Paginator(logs, 30)
+    page = request.GET.get('page')
+    logs = paginator.get_page(page)
+    
+    context = {
+        'student': student,
+        'logs': logs,
+        'total_logins': total_logins,
+        'total_time_hours': total_time_hours,
+        'active_sessions': active_sessions,
+        'avg_session_minutes': round(avg_session),
+        'course_stats': course_stats,
+        'date_from': date_from,
+        'date_to': date_to,
+    }
+    return render(request, 'courses/student_attendance_detail.html', context)
+
+
+@login_required
+def export_attendance(request):
+    """Export attendance to CSV"""
+    import csv
+    from django.http import HttpResponse
+    
+    if request.user.role != 'superadmin':
+        return redirect('courses:attendance_status')
+    
+    # Get filters
+    date_from = request.GET.get('date_from', '')
+    date_to = request.GET.get('date_to', '')
+    
+    logs = StudentLoginLog.objects.all().select_related('student', 'course')
+    
+    if date_from:
+        logs = logs.filter(login_time__date__gte=date_from)
+    if date_to:
+        logs = logs.filter(login_time__date__lte=date_to)
+    
+    # Create CSV
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="attendance.csv"'
+    
+    writer = csv.writer(response)
+    writer.writerow([
+        'Student', 'Email', 'Course', 'Login Time', 'Logout Time', 
+        'Duration (mins)', 'IP Address'
+    ])
+    
+    for log in logs:
+        writer.writerow([
+            log.student.get_full_name() or log.student.username,
+            log.student.email,
+            log.course.title if log.course else 'General',
+            log.login_time.strftime('%Y-%m-%d %H:%M:%S'),
+            log.logout_time.strftime('%Y-%m-%d %H:%M:%S') if log.logout_time else 'Active',
+            log.session_duration,
+            log.ip_address or 'N/A'
+        ])
+    
+    return response
+# courses/views.py - ADD AT THE END
+
+# ==================== STUDENT REVIEW SUBMISSION ====================
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.urls import reverse
+from .models import Course, CourseReview, Enrollment
+
+@login_required
+def submit_course_review(request, course_id):
+    """Submit a review for a course"""
+    course = get_object_or_404(Course, id=course_id)
+    
+    # Check if user is enrolled
+    try:
+        enrollment = Enrollment.objects.get(
+            student=request.user,
+            course=course,
+            is_active=True
+        )
+    except Enrollment.DoesNotExist:
+        messages.error(request, "You must be enrolled in this course to submit a review.")
+        return redirect('courses:course_detail', course_id=course_id)
+    
+    # Check if user already reviewed
+    existing_review = CourseReview.objects.filter(
+        student=request.user,
+        course=course
+    ).first()
+    
+    if request.method == 'POST':
+        rating = request.POST.get('rating')
+        review_text = request.POST.get('review')
+        
+        if not rating or not review_text:
+            messages.error(request, "Please provide both rating and review text.")
+            return render(request, 'courses/submit_review.html', {
+                'course': course,
+                'existing_review': existing_review
+            })
+        
+        try:
+            rating = int(rating)
+            if rating < 1 or rating > 5:
+                raise ValueError("Rating must be between 1 and 5")
+        except (ValueError, TypeError):
+            messages.error(request, "Invalid rating value.")
+            return render(request, 'courses/submit_review.html', {
+                'course': course,
+                'existing_review': existing_review
+            })
+        
+        # Create or update review
+        if existing_review:
+            existing_review.rating = rating
+            existing_review.review = review_text
+            existing_review.save()
+            messages.success(request, "Your review has been updated successfully!")
+        else:
+            CourseReview.objects.create(
+                student=request.user,
+                course=course,
+                rating=rating,
+                review=review_text
+            )
+            messages.success(request, "Thank you for your review!")
+        
+        # Redirect to student courses page - FIXED NAMESPACE
+        # Check which URL pattern exists in your project
+        try:
+            # Try common patterns
+            return redirect('student_courses')  # Without namespace
+        except:
+            try:
+                return redirect('userss:student_courses')  # With userss namespace
+            except:
+                # Fallback to course detail
+                return redirect('courses:course_detail', course_id=course_id)
+    
+    # GET request - show review form
+    context = {
+        'course': course,
+        'existing_review': existing_review,
+        'enrollment': enrollment
+    }
+    
+    return render(request, 'courses/submit_review.html', context)
+
+def update_course_rating(course):
+    """Update course average rating and total reviews"""
+    reviews = course.reviews.filter(is_approved=True)
+    total_reviews = reviews.count()
+    
+    if total_reviews > 0:
+        avg_rating = reviews.aggregate(Avg('rating'))['rating__avg']
+        course.average_rating = round(avg_rating, 2)
+        course.total_reviews = total_reviews
+    else:
+        course.average_rating = 0
+        course.total_reviews = 0
+    
+    course.save(update_fields=['average_rating', 'total_reviews'])
+
+
+@login_required
+def my_reviews(request):
+    """Student's submitted reviews"""
+    if request.user.role != 'student':
+        messages.error(request, 'Access denied.')
+        return redirect('user_login')
+    
+    reviews = CourseReview.objects.filter(
+        student=request.user
+    ).select_related('course').order_by('-created_at')
+    
+    context = {
+        'reviews': reviews,
+    }
+    
+    return render(request, 'courses/my_reviews.html', context)
+
+
+@login_required
+def edit_my_review(request, review_id):
+    """Edit student's own review"""
+    if request.user.role != 'student':
+        messages.error(request, 'Access denied.')
+        return redirect('user_login')
+    
+    review = get_object_or_404(CourseReview, id=review_id, student=request.user)
+    
+    if request.method == 'POST':
+        rating = request.POST.get('rating')
+        review_text = request.POST.get('review_text', '').strip()
+        
+        if not rating:
+            messages.error(request, 'Please select a rating.')
+            return redirect('courses:edit_my_review', review_id=review.id)
+        
+        try:
+            rating = int(rating)
+            if rating < 1 or rating > 5:
+                raise ValueError("Invalid rating")
+            
+            review.rating = rating
+            review.review_text = review_text
+            review.save()
+            
+            # Update course rating
+            update_course_rating(review.course)
+            
+            messages.success(request, 'Review updated successfully!')
+            return redirect('courses:my_reviews')
+            
+        except ValueError:
+            messages.error(request, 'Invalid rating value.')
+    
+    context = {
+        'review': review,
+    }
+    
+    return render(request, 'courses/edit_review.html', context)
+
+
+@login_required
+def delete_my_review(request, review_id):
+    """Delete student's own review"""
+    if request.user.role != 'student':
+        messages.error(request, 'Access denied.')
+        return redirect('user_login')
+    
+    review = get_object_or_404(CourseReview, id=review_id, student=request.user)
+    
+    if request.method == 'POST':
+        course = review.course
+        review.delete()
+        
+        # Update course rating
+        update_course_rating(course)
+        
+        messages.success(request, 'Review deleted successfully!')
+        return redirect('courses:my_reviews')
+    
+    context = {
+        'review': review,
+    }
+    
+    return render(request, 'courses/delete_review.html', context)
+
+
+
+
+# courses/views.py - ADD THIS VIEW
+
+@login_required
+def category_profile(request, category_id):
+    """Category profile with all courses and enrolled students"""
+    if request.user.role not in ['superadmin', 'instructor']:
+        messages.error(request, 'Access denied.')
+        return redirect('courses:course_dashboard')
+    
+    category = get_object_or_404(CourseCategory, id=category_id)
+    
+    # Get all courses in this category
+    courses = Course.objects.filter(
+        category=category,
+        is_active=True
+    ).annotate(
+        enrollment_count=Count('enrollments', filter=Q(enrollments__is_active=True)),
+        total_revenue=Sum('enrollments__amount_paid', filter=Q(enrollments__is_active=True))
+    ).order_by('-created_at')
+    
+    # Get all enrollments from these courses
+    enrollments = Enrollment.objects.filter(
+        course__category=category,
+        is_active=True
+    ).select_related('student', 'course').order_by('-enrolled_at')
+    
+    # Search functionality
+    search = request.GET.get('search', '')
+    if search:
+        enrollments = enrollments.filter(
+            Q(student__username__icontains=search) |
+            Q(student__first_name__icontains=search) |
+            Q(student__last_name__icontains=search) |
+            Q(student__email__icontains=search)
+        )
+    
+    # Filter by course
+    course_filter = request.GET.get('course', '')
+    if course_filter:
+        enrollments = enrollments.filter(course_id=course_filter)
+    
+    # Stats
+    total_courses = courses.count()
+    total_students = enrollments.values('student').distinct().count()
+    total_enrollments = enrollments.count()
+    
+    # Calculate total revenue
+    total_revenue = courses.aggregate(Sum('enrollments__amount_paid'))['enrollments__amount_paid__sum'] or 0
+    
+    # Status breakdown
+    status_breakdown = enrollments.values('status').annotate(count=Count('id'))
+    
+    # Course performance
+    course_performance = []
+    for course in courses:
+        course_enrollments = course.enrollments.filter(is_active=True)
+        course_performance.append({
+            'course': course,
+            'total_students': course_enrollments.count(),
+            'completed': course_enrollments.filter(status='completed').count(),
+            'active': course_enrollments.filter(status='enrolled').count(),
+            'revenue': course_enrollments.aggregate(Sum('amount_paid'))['amount_paid__sum'] or 0
+        })
+    
+    # Top students in this category
+    top_students = enrollments.values(
+        'student__id', 'student__username', 'student__first_name', 'student__last_name'
+    ).annotate(
+        total_courses=Count('id'),
+        completed_courses=Count('id', filter=Q(status='completed'))
+    ).order_by('-total_courses')[:10]
+    
+    # Pagination for enrollments
+    paginator = Paginator(enrollments, 20)
+    page = request.GET.get('page')
+    enrollments = paginator.get_page(page)
+    
+    context = {
+        'category': category,
+        'courses': courses,
+        'enrollments': enrollments,
+        'total_courses': total_courses,
+        'total_students': total_students,
+        'total_enrollments': total_enrollments,
+        'total_revenue': total_revenue,
+        'status_breakdown': status_breakdown,
+        'course_performance': course_performance,
+        'top_students': top_students,
+        'search': search,
+        'course_filter': course_filter,
+    }
+    
+    return render(request, 'courses/category_profile.html', context)
+
+# courses/views.py - ADD THIS NEW VIEW
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.utils import timezone
+from .models import Enrollment, CourseLesson, LessonProgress
+
+# courses/views.py - UPDATE THIS
+
+@login_required
+def continue_learning(request, course_id):
+    """Continue learning - redirect to STUDENT template"""
+    
+    if request.user.role != 'student':
+        messages.error(request, 'Only students can access course content.')
+        return redirect('courses:course_catalog')
+    
+    enrollment = get_object_or_404(
+        Enrollment,
+        student=request.user,
+        course_id=course_id,
+        is_active=True
+    )
+    
+    # Check lock
+    if hasattr(enrollment, 'is_locked') and enrollment.is_locked:
+        messages.error(request, 'This course is currently locked.')
+        return redirect('student_courses')
+    
+    # Update last accessed
+    enrollment.last_accessed = timezone.now()
+    enrollment.save(update_fields=['last_accessed'])
+    
+    # Find lesson
+    last_lesson = None
+    
+    # Try last accessed
+    last_progress = LessonProgress.objects.filter(
+        student=request.user,
+        lesson__module__course=enrollment.course
+    ).order_by('-last_accessed').first()
+    
+    if last_progress and last_progress.status != 'completed':
+        last_lesson = last_progress.lesson
+    else:
+        # Find first incomplete
+        all_lessons = CourseLesson.objects.filter(
+            module__course=enrollment.course,
+            is_active=True
+        ).order_by('module__order', 'order')
+        
+        for lesson in all_lessons:
+            progress = LessonProgress.objects.filter(
+                student=request.user,
+                lesson=lesson
+            ).first()
+            
+            if not progress or progress.status != 'completed':
+                last_lesson = lesson
+                break
+    
+    # Fallback to first lesson
+    if not last_lesson:
+        first_module = enrollment.course.modules.filter(is_active=True).order_by('order').first()
+        if first_module:
+            last_lesson = first_module.lessons.filter(is_active=True).order_by('order').first()
+    
+    # 🔥 REDIRECT TO STUDENT TEMPLATE!
+    if last_lesson:
+        return redirect('courses:student_lesson_view', 
+                       course_id=enrollment.course.id,
+                       module_id=last_lesson.module.id,
+                       lesson_id=last_lesson.id)
+    else:
+        messages.info(request, 'No lessons available yet.')
+        return redirect('courses:course_detail', course_id=enrollment.course.id)
+
+# courses/views.py - ADD THIS NEW VIEW
+
+@login_required
+def student_lesson_view(request, course_id, module_id, lesson_id):
+    """Student-specific lesson viewer - SIMPLE & CLEAN"""
+    
+    # Only for students
+    if request.user.role != 'student':
+        messages.error(request, 'This page is for students only.')
+        return redirect('courses:lesson_detail', course_id=course_id, module_id=module_id, lesson_id=lesson_id)
+    
+    course = get_object_or_404(Course, id=course_id)
+    module = get_object_or_404(CourseModule, id=module_id, course=course)
+    lesson = get_object_or_404(CourseLesson, id=lesson_id, module=module)
+    
+    # Check enrollment
+    enrollment = get_object_or_404(
+        Enrollment,
+        student=request.user,
+        course=course,
+        is_active=True
+    )
+    
+    # Check if locked
+    if hasattr(enrollment, 'is_locked') and enrollment.is_locked:
+        messages.error(request, 'This course is currently locked. Please contact admin.')
+        return redirect('student_courses')
+    
+    # Get/Create progress
+    lesson_progress, created = LessonProgress.objects.get_or_create(
+        student=request.user,
+        lesson=lesson
+    )
+    
+    # Mark as started
+    if created or lesson_progress.status == 'not_started':
+        lesson_progress.mark_as_started()
+    
+    # Update last accessed
+    lesson_progress.last_accessed = timezone.now()
+    lesson_progress.save(update_fields=['last_accessed'])
+    
+    enrollment.last_accessed = timezone.now()
+    enrollment.save(update_fields=['last_accessed'])
+    
+    # Navigation
+    other_lessons = module.lessons.filter(is_active=True).exclude(id=lesson.id)
+    prev_lesson = other_lessons.filter(order__lt=lesson.order).order_by('-order').first()
+    next_lesson = other_lessons.filter(order__gt=lesson.order).order_by('order').first()
+    
+    context = {
+        'course': course,
+        'module': module,
+        'lesson': lesson,
+        'enrollment': enrollment,
+        'lesson_progress': lesson_progress,
+        'prev_lesson': prev_lesson,
+        'next_lesson': next_lesson,
+        'attachments': lesson.attachments.filter(is_active=True),
+    }
+    
+    return render(request, 'courses/lesson_viewer.html', context)

@@ -21,6 +21,10 @@ urlpatterns = [
     path('sessions/<int:session_id>/join/', views.join_meeting, name='join_meeting'),
     path('session/<int:session_id>/end/', views.end_session, name='end_session'),
 
+    # 🔥 CALENDAR VIEWS - YEH ADD KARO
+    path('calendar/', views.session_calendar_view, name='session_calendar'),
+    path('api/calendar/data/', views.session_calendar_data, name='session_calendar_data'),
+
     # Recordings
     path('recordings/', views.recording_list, name='recording_list'),
     path('recordings/<int:recording_id>/play/', views.play_recording, name='play_recording'),
@@ -34,9 +38,9 @@ urlpatterns = [
 
     path('test-zoom/', views.test_zoom_config, name='test_zoom'),
 
-     path('student/sessions/', views.student_sessions_browse, name='student_sessions_browse'),
+    # Student Views
+    path('student/sessions/', views.student_sessions_browse, name='student_sessions_browse'),
     path('student/sessions/<int:session_id>/', views.student_session_detail, name='student_session_detail'),
     path('student/recordings/', views.student_recordings, name='student_recordings'),
     path('student/attendance/', views.student_attendance_history, name='student_attendance'),
-
 ]

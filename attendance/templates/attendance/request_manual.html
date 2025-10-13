@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Request Manual Attendance{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-warning text-white">
+                    <h4><i class="fas fa-hand-paper"></i> Request Manual Attendance</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Session Info -->
+                    <div class="alert alert-info">
+                        <h5>Session Details:</h5>
+                        <p class="mb-1"><strong>Batch:</strong> {{ session.batch.name }}</p>
+                        <p class="mb-1"><strong>Date:</strong> {{ session.date|date:"d M Y" }}</p>
+                        <p class="mb-1"><strong>Time:</strong> {{ session.start_time|time:"h:i A" }} - {{ session.end_time|time:"h:i A" }}</p>
+                        <p class="mb-0"><strong>Location:</strong> {{ session.classroom_location }}</p>
+                    </div>
+                    
+                    {% if existing_request %}
+                        {% if existing_request.status == 'pending' %}
+                            <div class="alert alert-warning">
+                                <i class="fas fa-clock"></i> <strong>Request Already Sent!</strong>
+                                <p class="mb-0 mt-2">Your request is pending approval from the instructor.</p>
+                                <p class="mb-0"><small>Requested at: {{ existing_request.created_at|date:"d M Y h:i A" }}</small></p>
+                            </div>
+                        {% elif existing_request.status == 'approved' %}
+                            <div class="alert alert-success">
+                                <i class="fas fa-check-circle"></i> <strong>Request Approved!</strong>
+                                <p class="mb-0 mt-2">Your attendance has been marked.</p>
+                            </div>
+                        {% elif existing_request.status == 'rejected' %}
+                            <div class="alert alert-danger">
+                                <i class="fas fa-times-circle"></i> <strong>Request Rejected</strong>
+                                <p class="mb-0 mt-2">You can submit a new request with a better explanation.</p>
+                            </div>
+                        {% endif %}
+                    {% endif %}
+                    
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        <div class="form-group">
+                            <label><strong>Why couldn't you scan the QR code? *</strong></label>
+                            <textarea name="reason" class="form-control" rows="5" required 
+                                      placeholder="Please explain your situation clearly. Example: Phone camera not working, was late and QR was removed, technical issue, etc.">{% if existing_request and existing_request.status == 'rejected' %}{{ existing_request.reason }}{% endif %}</textarea>
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle"></i> 
+                                Your instructor will review this request. Please be honest and specific.
+                            </small>
+                        </div>
+                        
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> <strong>Note:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>Manual attendance is subject to instructor approval</li>
+                                <li>Provide a genuine reason for best chance of approval</li>
+                                <li>False requests may affect your credibility</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="text-right">
+                            <a href="{% url 'dashboard' %}" class="btn btn-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-paper-plane"></i> Send Request to Instructor
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

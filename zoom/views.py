@@ -1787,3 +1787,91 @@ def student_attendance_history(request):
     }
     
     return render(request, 'zoom/student_attendance.html', context)
+
+# zoom/views.py
+
+@login_required
+def session_calendar_view(request):
+    """Calendar view for all sessions"""
+    
+    # Get batches for filter
+    if request.user.role == 'instructor':
+        batches = Batch.objects.filter(instructor=request.user, status='active')
+    else:
+        batches = Batch.objects.filter(status='active')
+    
+    # Get stats
+    sessions = BatchSession.objects.all()
+    
+    if request.user.role == 'instructor':
+        sessions = sessions.filter(batch__instructor=request.user)
+    
+    total_sessions = sessions.count()
+    live_sessions = sessions.filter(status='live').count()
+    scheduled_sessions = sessions.filter(status='scheduled').count()
+    completed_sessions = sessions.filter(status='completed').count()
+    
+    context = {
+        'batches': batches,
+        'total_sessions': total_sessions,
+        'live_sessions': live_sessions,
+        'scheduled_sessions': scheduled_sessions,
+        'completed_sessions': completed_sessions,
+    }
+    
+    return render(request, 'zoom/session_calendar.html', context)
+
+
+@login_required
+def session_calendar_data(request):
+    """API endpoint to get session data for calendar"""
+    
+    # Get sessions
+    sessions = BatchSession.objects.select_related(
+        'batch', 'batch__course', 'batch__instructor'
+    ).all()
+    
+    # Filter by user role
+    if request.user.role == 'instructor':
+        sessions = sessions.filter(batch__instructor=request.user)
+    elif request.user.role == 'student':
+        enrolled_batches = BatchEnrollment.objects.filter(
+            student=request.user,
+            is_active=True
+        ).values_list('batch_id', flat=True)
+        sessions = sessions.filter(batch_id__in=enrolled_batches)
+    
+    # Build session data
+    session_data = []
+    for session in sessions:
+        session_data.append({
+            'id': session.id,
+            'title': session.title,
+            'scheduled_date': session.scheduled_date.strftime('%Y-%m-%d'),
+            'start_time': session.start_time.strftime('%H:%M:%S'),
+            'end_time': session.end_time.strftime('%H:%M:%S'),
+            'status': session.status,
+            'session_type': session.session_type,
+            'batch_id': session.batch.id,
+            'batch_name': session.batch.name,
+            'course_name': session.batch.course.title,
+            'instructor_name': session.batch.instructor.get_full_name(),
+            'max_participants': session.max_participants,
+            'enrolled_count': session.batch.get_enrolled_count(),
+            'zoom_join_url': session.zoom_join_url or '',
+            'zoom_start_url': session.zoom_start_url or '',
+            'description': session.description or '',
+        })
+    
+    # Stats
+    stats = {
+        'total': sessions.count(),
+        'live': sessions.filter(status='live').count(),
+        'scheduled': sessions.filter(status='scheduled').count(),
+        'completed': sessions.filter(status='completed').count(),
+    }
+    
+    return JsonResponse({
+        'sessions': session_data,
+        'stats': stats
+    })

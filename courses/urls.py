@@ -16,12 +16,15 @@ urlpatterns = [
     path('<int:course_id>/detail/', views.course_detail, name='course_detail'),
     path('<int:course_id>/delete/', views.delete_course, name='delete_course'),
     path('<int:course_id>/toggle-status/', views.toggle_course_status, name='toggle_course_status'),
+        path('<int:course_id>/change-status/', views.change_course_status, name='change_course_status'),
+
     path('<int:course_id>/analytics/', views.course_specific_analytics, name='course_specific_analytics'),
     path('<int:course_id>/students/', views.course_students, name='course_students'),
     path('<int:course_id>/enrollments/', views.course_enrollments, name='course_enrollments'),
     
     # ==================== COURSE CATEGORIES ====================
     path('categories/', views.manage_categories, name='manage_categories'),
+    path('categories/<int:category_id>/profile/', views.category_profile, name='category_profile'),
     path('categories/create/', views.create_category, name='create_category'),
     path('categories/<int:category_id>/edit/', views.edit_category, name='edit_category'),
     path('categories/<int:category_id>/delete/', views.delete_category, name='delete_category'),
@@ -108,4 +111,37 @@ urlpatterns = [
     # Enrollment management (DIFFERENT NAME!)
     path('instructor/course/<int:course_id>/batch/<int:batch_id>/enrollments/', views.instructor_batch_enrollments, name='instructor_batch_enrollments'),
     path('instructor/course/<int:course_id>/batch/<int:batch_id>/enrollment/<int:enrollment_id>/toggle/', views.instructor_batch_enrollment_toggle, name='instructor_batch_enrollment_toggle'),
+
+
+    path('subscriptions/', views.subscription_list, name='subscription_list'),
+    path('subscriptions/create/', views.create_subscription, name='create_subscription'),
+    path('subscriptions/<int:student_id>/', views.subscription_details, name='subscription_details'),
+    path('subscriptions/<int:subscription_id>/edit/', views.edit_subscription, name='edit_subscription'),
+    path('subscriptions/<int:subscription_id>/delete/', views.delete_subscription, name='delete_subscription'),
+    path('subscriptions/device-restrictions/', views.device_restrictions, name='device_restrictions'),
+    path('subscriptions/<int:subscription_id>/update-devices/', views.update_device_restriction, name='update_device_restriction'),
+    
+    # ==================== COURSE REVIEWS ====================
+    path('reviews/', views.course_reviews, name='course_reviews'),
+    path('reviews/<int:course_id>/', views.course_review_detail, name='course_review_detail'),
+    path('reviews/<int:review_id>/approve/', views.approve_review, name='approve_review'),
+    
+    # ==================== ATTENDANCE ====================
+  path('attendance/dashboard/', views.attendance_dashboard, name='attendance_dashboard'),
+    path('attendance/status/', views.attendance_status, name='attendance_status'),
+    path('attendance/student/<int:student_id>/', views.student_attendance_detail, name='student_attendance_detail'),
+    path('attendance/export/', views.export_attendance, name='export_attendance'),
+
+
+     path('course/<int:course_id>/submit-review/', views.submit_course_review, name='submit_course_review'),
+    path('my-reviews/', views.my_reviews, name='my_reviews'),
+    path('my-reviews/<int:review_id>/edit/', views.edit_my_review, name='edit_my_review'),
+    path('my-reviews/<int:review_id>/delete/', views.delete_my_review, name='delete_my_review'),
+
+path('devices/<int:device_id>/remove/', views.remove_device_session, name='remove_device_session'),
+
+    
+    path('<int:course_id>/continue/', views.continue_learning, name='continue_learning'),
+path('<int:course_id>/modules/<int:module_id>/lessons/<int:lesson_id>/view/', 
+         views.student_lesson_view, name='student_lesson_view'),
 ]

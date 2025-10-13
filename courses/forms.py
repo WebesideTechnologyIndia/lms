@@ -10,6 +10,11 @@ from .models import (
   
 )
 
+from django.forms import inlineformset_factory
+
+# Create the formset factory
+
+
 User = get_user_model()
 
 class CourseForm(forms.ModelForm):
@@ -289,18 +294,43 @@ from django import forms
 from django.forms import inlineformset_factory
 from .models import CourseLesson, LessonAttachment, CourseModule
 
+# courses/forms.py
+
+from django import forms
+from .models import  LessonAttachment
+from django.forms import inlineformset_factory
+from ckeditor.widgets import CKEditorWidget
+
+# courses/forms.py - Simple version without CKEditor
+
+from django import forms
+from .models import CourseLesson, LessonAttachment
+from django.forms import inlineformset_factory
+
+
 class EnhancedLessonForm(forms.ModelForm):
-    """Enhanced form for lesson with multiple content types"""
+    """Enhanced form for creating/editing lessons"""
+    
+    LESSON_TYPE_CHOICES = [
+        ('text', 'Text Content'),
+        ('video', 'Video Content'),
+        ('pdf', 'PDF Document'),
+        ('mixed', 'Mixed Content'),
+    ]
+    
+    lesson_type = forms.ChoiceField(
+        choices=LESSON_TYPE_CHOICES,
+        widget=forms.Select(attrs={'class': 'form-select'}),
+        required=True
+    )
     
     class Meta:
         model = CourseLesson
         fields = [
             'title', 'description', 'lesson_type', 'duration_minutes',
             'text_content', 'video_file', 'youtube_url', 'vimeo_url',
-            'pdf_file', 'additional_notes', 'is_free_preview', 
-            'is_mandatory'
+            'pdf_file', 'additional_notes', 'is_free_preview', 'is_mandatory'
         ]
-        
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -309,18 +339,16 @@ class EnhancedLessonForm(forms.ModelForm):
             'description': forms.Textarea(attrs={
                 'class': 'form-control',
                 'rows': 3,
-                'placeholder': 'Brief description of this lesson'
-            }),
-            'lesson_type': forms.Select(attrs={'class': 'form-select'}),
-            'duration_minutes': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': 0,
-                'placeholder': 'Expected duration in minutes'
+                'placeholder': 'Brief description'
             }),
             'text_content': forms.Textarea(attrs={
                 'class': 'form-control',
-                'rows': 8,
-                'placeholder': 'Rich text content for the lesson (optional)'
+                'rows': 10,
+                'placeholder': 'Enter your lesson content here...'
+            }),
+            'duration_minutes': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 1
             }),
             'video_file': forms.FileInput(attrs={
                 'class': 'form-control',
@@ -336,118 +364,152 @@ class EnhancedLessonForm(forms.ModelForm):
             }),
             'pdf_file': forms.FileInput(attrs={
                 'class': 'form-control',
-                'accept': '.pdf'
+                'accept': 'application/pdf'
             }),
             'additional_notes': forms.Textarea(attrs={
                 'class': 'form-control',
-                'rows': 4,
-                'placeholder': 'Any additional notes or instructions (optional)'
+                'rows': 3
             }),
-            'is_free_preview': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
-            'is_mandatory': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+            'is_free_preview': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
+            'is_mandatory': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            }),
         }
-
-    def __init__(self, *args, module=None, **kwargs):
+    
+    def __init__(self, *args, **kwargs):
+        self.module = kwargs.pop('module', None)
         super().__init__(*args, **kwargs)
-        self.module = module
         
-        # Required fields
-        self.fields['title'].required = True
-        self.fields['description'].required = True
-        self.fields['lesson_type'].required = True
+        # Make text_content not required by default (validation happens in clean())
+        self.fields['text_content'].required = False
         
-        # Add help text
-        self.fields['lesson_type'].help_text = "Select the primary content type for this lesson"
-        self.fields['is_free_preview'].help_text = "Allow non-enrolled students to view this lesson"
-        self.fields['is_mandatory'].help_text = "Required for course completion"
-
+        # Debug: Print received data
+        if self.data:
+            print("\n=== FORM __init__ DEBUG ===")
+            print(f"POST Data Keys: {list(self.data.keys())}")
+            print(f"text_content in POST: {'text_content' in self.data}")
+            print(f"text_content value: '{self.data.get('text_content', 'NOT FOUND')}'")
+            print("========================\n")
+    
+    def clean_text_content(self):
+        """Clean and validate text_content field"""
+        # Get the raw value
+        text_content = self.cleaned_data.get('text_content', '')
+        
+        # Strip whitespace
+        text_content = text_content.strip() if text_content else ''
+        
+        print(f"\n=== clean_text_content DEBUG ===")
+        print(f"Raw value: '{text_content}'")
+        print(f"Length: {len(text_content)}")
+        print(f"Boolean: {bool(text_content)}")
+        print("================================\n")
+        
+        return text_content
+    
     def clean(self):
         cleaned_data = super().clean()
         lesson_type = cleaned_data.get('lesson_type')
+        text_content = cleaned_data.get('text_content', '').strip()
+        video_file = cleaned_data.get('video_file')
+        youtube_url = cleaned_data.get('youtube_url', '').strip()
+        vimeo_url = cleaned_data.get('vimeo_url', '').strip()
+        pdf_file = cleaned_data.get('pdf_file')
+        
+        # Debug output
+        print(f"\n=== FORM CLEAN DEBUG ===")
+        print(f"Lesson Type: {lesson_type}")
+        print(f"Text Content: '{text_content}'")
+        print(f"Text Content Length: {len(text_content)}")
+        print(f"Text Content Boolean: {bool(text_content)}")
+        print(f"Video File: {video_file}")
+        print(f"YouTube URL: '{youtube_url}'")
+        print(f"Vimeo URL: '{vimeo_url}'")
+        print(f"PDF File: {pdf_file}")
+        print("=======================\n")
         
         # Validate based on lesson type
-        if lesson_type == 'video':
-            video_file = cleaned_data.get('video_file')
-            youtube_url = cleaned_data.get('youtube_url')
-            vimeo_url = cleaned_data.get('vimeo_url')
-            
-            if not any([video_file, youtube_url, vimeo_url]):
-                raise forms.ValidationError(
-                    "Video lessons must have either a video file or a video URL"
-                )
-        
-        elif lesson_type == 'pdf':
-            pdf_file = cleaned_data.get('pdf_file')
-            if not pdf_file:
-                raise forms.ValidationError(
-                    "PDF lessons must have a PDF file uploaded"
-                )
-        
-        elif lesson_type == 'text':
-            text_content = cleaned_data.get('text_content')
+        if lesson_type == 'text':
             if not text_content:
+                self.add_error(
+                    'text_content', 
+                    'Text content is required for text lessons. Please enter some content.'
+                )
+                
+        elif lesson_type == 'video':
+            if not video_file and not youtube_url and not vimeo_url:
                 raise forms.ValidationError(
-                    "Text lessons must have text content"
+                    'Video lessons must have either a video file or a YouTube/Vimeo URL'
+                )
+                
+        elif lesson_type == 'pdf':
+            if not pdf_file:
+                self.add_error(
+                    'pdf_file', 
+                    'PDF file is required for PDF lessons'
+                )
+                
+        elif lesson_type == 'mixed':
+            has_content = any([
+                text_content,
+                video_file,
+                youtube_url,
+                vimeo_url,
+                pdf_file
+            ])
+            if not has_content:
+                raise forms.ValidationError(
+                    'Mixed lessons must have at least one type of content'
                 )
         
-        # Check video file size (max 500MB)
-        video_file = cleaned_data.get('video_file')
-        if video_file and video_file.size > 500 * 1024 * 1024:  # 500MB
-            raise forms.ValidationError(
-                "Video file size should not exceed 500MB"
-            )
+        return cleaned_data
+    
+class LessonAttachmentForm(forms.ModelForm):
+    class Meta:
+        model = LessonAttachment
+        fields = ['title', 'file', 'description']
+        widgets = {
+            'title': forms.TextInput(attrs={
+                'class': 'form-control form-control-sm',
+                'placeholder': 'Attachment title'
+            }),
+            'file': forms.FileInput(attrs={
+                'class': 'form-control form-control-sm'
+            }),
+            'description': forms.TextInput(attrs={
+                'class': 'form-control form-control-sm',
+                'placeholder': 'Brief description'
+            }),
+        }
+    
+    def clean(self):
+        """Only validate if any field has data"""
+        cleaned_data = super().clean()
+        title = cleaned_data.get('title')
+        file = cleaned_data.get('file')
+        description = cleaned_data.get('description')
         
-        # Check PDF file size (max 50MB)
-        pdf_file = cleaned_data.get('pdf_file')
-        if pdf_file and pdf_file.size > 50 * 1024 * 1024:  # 50MB
-            raise forms.ValidationError(
-                "PDF file size should not exceed 50MB"
-            )
+        # If all fields are empty, mark for deletion (don't save)
+        if not title and not file and not description:
+            # This is an empty form, skip it
+            return cleaned_data
+        
+        # If any field has data, require the file
+        if (title or description) and not file:
+            raise forms.ValidationError('Please upload a file for this attachment.')
         
         return cleaned_data
 
-
-class LessonAttachmentForm(forms.ModelForm):
-    """Form for lesson attachments"""
-    
-    class Meta:
-        model = LessonAttachment
-        fields = ['title', 'description', 'file']
-        widgets = {
-            'title': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Attachment title'
-            }),
-            'description': forms.Textarea(attrs={
-                'class': 'form-control',
-                'rows': 2,
-                'placeholder': 'Brief description (optional)'
-            }),
-            'file': forms.FileInput(attrs={
-                'class': 'form-control',
-                'accept': '.pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.zip,.rar,.txt,.jpg,.png,.gif'
-            })
-        }
-
-    def clean_file(self):
-        file = self.cleaned_data.get('file')
-        if file:
-            # Check file size (max 100MB)
-            if file.size > 100 * 1024 * 1024:  # 100MB
-                raise forms.ValidationError(
-                    "File size should not exceed 100MB"
-                )
-        return file
-
-
-# Inline formset for lesson attachments
+# Remove all duplicate definitions and keep only this ONE at the end of forms.py
 LessonAttachmentFormSet = inlineformset_factory(
-    CourseLesson, 
-    LessonAttachment, 
+    CourseLesson,
+    LessonAttachment,
     form=LessonAttachmentForm,
     extra=1,
     can_delete=True,
-    fields=['title', 'description', 'file']
+    fields=['title', 'file', 'description']
 )
 
 
@@ -610,20 +672,55 @@ class SimpleBatchModuleForm(forms.ModelForm):
             'order': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
         }
 
+from django import forms
+from .models import BatchLesson
 
 class SimpleBatchLessonForm(forms.ModelForm):
-    """Simple lesson form for batch"""
+    """Simple form for creating batch lessons"""
     
     class Meta:
         model = BatchLesson
-        fields = ['title', 'description', 'lesson_type', 'text_content', 'youtube_url', 'order']
+        fields = ['title', 'description', 'text_content', 'youtube_url', 'lesson_type', 'order']
         widgets = {
-            'title': forms.TextInput(attrs={'class': 'form-control'}),
-            'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-            'lesson_type': forms.Select(attrs={'class': 'form-select'}),
-            'text_content': forms.Textarea(attrs={'class': 'form-control', 'rows': 6}),
-            'youtube_url': forms.URLInput(attrs={'class': 'form-control', 'placeholder': 'YouTube URL (optional)'}),
-            'order': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'title': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter lesson title...',
+                'required': True
+            }),
+            'description': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Brief description of the lesson...'
+            }),
+            'text_content': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 8,
+                'placeholder': 'Lesson content, notes, or instructions...'
+            }),
+            'youtube_url': forms.URLInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'https://www.youtube.com/watch?v=...'
+            }),
+            'lesson_type': forms.Select(attrs={
+                'class': 'form-select'
+            }),
+            'order': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'min': 1
+            })
+        }
+        labels = {
+            'title': 'Lesson Title',
+            'description': 'Description',
+            'text_content': 'Text Content',
+            'youtube_url': 'YouTube URL (Optional)',
+            'lesson_type': 'Content Type',
+            'order': 'Lesson Order'
+        }
+        help_texts = {
+            'title': 'Enter a clear, descriptive title for the lesson',
+            'youtube_url': 'Paste YouTube video URL if applicable',
+            'order': 'Order in which this lesson appears (auto-set if empty)'
         }
 
 

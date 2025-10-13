@@ -494,7 +494,7 @@
                         <li>
                             <hr class="dropdown-divider">
                         </li>
-                        <li><a class="dropdown-item" href="{% url 'user_login' %}"><i
+                        <li><a class="dropdown-item" href="{% url 'user_logout' %}"><i
                                     class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
                     </ul>
                 </div>
@@ -526,16 +526,25 @@
                     <i class="fas fa-chevron-down"></i>
                 </div>
                 <div class="submenu-items">
-                    <a class="submenu-item {% if request.resolver_match.url_name == 'manage_users' %}active{% endif %}"
+                    <a class="submenu-item {% if request.resolver_match.url_name == 'manage_users' and not request.GET.role %}active{% endif %}"
                         href="{% url 'manage_users' %}">
-                        Manage Users
+                        <i class="fas fa-users-cog me-2"></i>All Users
+                    </a>
+                    <a class="submenu-item {% if request.GET.role == 'superadmin' %}active{% endif %}"
+                        href="{% url 'manage_users' %}?role=superadmin">
+                        <i class="fas fa-user-shield me-2"></i>Admins
+                    </a>
+                    <a class="submenu-item {% if request.GET.role == 'instructor' %}active{% endif %}"
+                        href="{% url 'manage_users' %}?role=instructor">
+                        <i class="fas fa-chalkboard-teacher me-2"></i>Instructors
+                    </a>
+                    <a class="submenu-item {% if request.GET.role == 'student' %}active{% endif %}"
+                        href="{% url 'manage_users' %}?role=student">
+                        <i class="fas fa-user-graduate me-2"></i>Students
                     </a>
                     <a class="submenu-item {% if request.resolver_match.url_name == 'create_user' %}active{% endif %}"
                         href="{% url 'create_user' %}">
-                        Add User
-                    </a>
-                    <a class="submenu-item" href="#">
-                        User Roles
+                        <i class="fas fa-user-plus me-2"></i>Add User
                     </a>
                 </div>
             </div>
@@ -562,30 +571,102 @@
 
             <!-- Course Management -->
             <div class="nav-section">Course Management</div>
-            <div class="submenu" data-submenu="courses">
-                <div class="submenu-toggle" onclick="toggleSubmenu('courses')">
-                    <span><i class="fas fa-book me-2"></i>Courses</span>
+
+            <!-- All Courses -->
+            <a class="nav-link {% if 'manage_courses' in request.resolver_match.url_name %}active{% endif %}"
+                href="{% url 'courses:course_dashboard' %}">
+                <i class="fas fa-book"></i>
+                Course Dashboard
+            </a>
+            <a class="nav-link {% if 'manage_courses' in request.resolver_match.url_name %}active{% endif %}"
+                href="{% url 'courses:manage_courses' %}">
+                <i class="fas fa-book"></i>
+                All Courses
+            </a>
+
+            <!-- Course Type Filters -->
+            <div class="submenu" data-submenu="course-types">
+                <div class="submenu-toggle" onclick="toggleSubmenu('course-types')">
+                    <span><i class="fas fa-filter me-2"></i>Filter by Type</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
                 <div class="submenu-items">
-                    <a class="submenu-item {% if request.resolver_match.url_name == 'course_dashboard' %}active{% endif %}"
-                        href="{% url 'courses:course_dashboard' %}">
-                        Course Dashboard
+                    <a class="submenu-item" href="{% url 'courses:manage_courses' %}?course_type=recorded">
+                        <i class="fas fa-video me-2"></i>Pre-Recorded
                     </a>
-                    <a class="submenu-item {% if 'manage_courses' in request.resolver_match.url_name %}active{% endif %}"
-                        href="{% url 'courses:manage_courses' %}">
-                        Manage Courses
+                    <a class="submenu-item" href="{% url 'courses:manage_courses' %}?course_type=live">
+                        <i class="fas fa-broadcast-tower me-2"></i>Live Classes
                     </a>
-                    <a class="submenu-item {% if 'create_course' in request.resolver_match.url_name %}active{% endif %}"
-                        href="{% url 'courses:create_course' %}">
-                        Create Course
-                    </a>
-                    <a class="submenu-item {% if 'course_analytics' in request.resolver_match.url_name %}active{% endif %}"
-                        href="{% url 'courses:course_analytics' %}">
-                        Course Analytics
+                    <a class="submenu-item" href="{% url 'courses:manage_courses' %}?course_type=hybrid">
+                        <i class="fas fa-laptop-house me-2"></i>Hybrid
                     </a>
                 </div>
             </div>
+
+            <!-- Categories -->
+            <div class="submenu" data-submenu="categories">
+                <div class="submenu-toggle" onclick="toggleSubmenu('categories')">
+                    <span><i class="fas fa-tags me-2"></i>Categories</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="submenu-items">
+                    <a class="submenu-item" href="{% url 'courses:manage_categories' %}">
+                        <i class="fas fa-cog me-2"></i>Manage Categories
+                    </a>
+                </div>
+            </div>
+
+            <!-- Create Course -->
+            <a class="nav-link {% if 'create_course' in request.resolver_match.url_name %}active{% endif %}"
+                href="{% url 'courses:create_course' %}">
+                <i class="fas fa-plus-circle"></i>
+                Create Course
+            </a>
+
+            <!-- Subscriptions (Superadmin Only) -->
+            {% if request.user.role == 'superadmin' %}
+            <div class="submenu" data-submenu="subscriptions">
+                <div class="submenu-toggle" onclick="toggleSubmenu('subscriptions')">
+                    <span><i class="fas fa-crown me-2"></i>Subscriptions</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="submenu-items">
+                    <a class="submenu-item" href="{% url 'courses:subscription_list' %}">
+                        <i class="fas fa-list me-2"></i>All Subscriptions
+                    </a>
+                    <a class="submenu-item" href="{% url 'courses:create_subscription' %}">
+                        <i class="fas fa-plus me-2"></i>Create Subscription
+                    </a>
+                    <a class="submenu-item" href="{% url 'courses:device_restrictions' %}">
+                        <i class="fas fa-mobile-alt me-2"></i>Device Restrictions
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Reviews -->
+            {% if request.user.role in 'superadmin,instructor' %}
+            <a class="nav-link {% if 'course_reviews' in request.resolver_match.url_name %}active{% endif %}"
+                href="{% url 'courses:course_reviews' %}">
+                <i class="fas fa-star"></i>
+                Course Reviews
+            </a>
+            {% endif %}
+
+            <!-- Attendance (Superadmin Only) -->
+            {% if request.user.role == 'superadmin' %}
+            <a class="nav-link {% if 'attendance' in request.resolver_match.url_name %}active{% endif %}"
+                href="{% url 'courses:attendance_dashboard' %}">
+                <i class="fas fa-clipboard-check"></i>
+                Login Activity Dashboard
+            </a>
+
+            <a class="nav-link {% if 'attendance' in request.resolver_match.url_name %}active{% endif %}"
+                href="{% url 'courses:attendance_status' %}">
+                <i class="fas fa-clipboard-check"></i>
+               Login Activity Stats
+            </a>
+            {% endif %}
 
             <!-- Batch Management -->
             <div class="submenu" data-submenu="batches">
@@ -602,24 +683,6 @@
                         {{ course.course_code }} Batches
                     </a>
                     {% endfor %}
-                </div>
-            </div>
-
-            <!-- Categories -->
-            <div class="submenu" data-submenu="categories">
-                <div class="submenu-toggle" onclick="toggleSubmenu('categories')">
-                    <span><i class="fas fa-tags me-2"></i>Categories</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="submenu-items">
-                    <a class="submenu-item {% if 'manage_categories' in request.resolver_match.url_name %}active{% endif %}"
-                        href="{% url 'courses:manage_categories' %}">
-                        Manage Categories
-                    </a>
-                    <a class="submenu-item {% if 'create_category' in request.resolver_match.url_name %}active{% endif %}"
-                        href="{% url 'courses:create_category' %}">
-                        Create Category
-                    </a>
                 </div>
             </div>
 
@@ -643,6 +706,111 @@
                     </a>
                 </div>
             </div>
+
+            <!-- ============================================ -->
+            <!-- CLASS MANAGEMENT SECTION -->
+            <!-- ============================================ -->
+            <div class="nav-section">Class Management</div>
+
+            <!-- Live Class Courses -->
+            <a class="nav-link" href="{% url 'courses:manage_courses' %}?course_type=live">
+                <i class="fas fa-chalkboard-teacher"></i>
+                All Live Class Courses
+            </a>
+
+            <!-- All Batches -->
+            <div class="submenu" data-submenu="all-batches">
+                <div class="submenu-toggle" onclick="toggleSubmenu('all-batches')">
+                    <span><i class="fas fa-layer-group me-2"></i>All Batches</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="submenu-items">
+                    <a class="submenu-item" href="{% url 'courses:manage_courses' %}">
+                        <i class="fas fa-th-large me-2"></i>View All Batches
+                    </a>
+                    {% for course in sidebar_courses %}
+                    <a class="submenu-item" href="{% url 'courses:batch_list' course.id %}">
+                        <i class="fas fa-graduation-cap me-2"></i>{{ course.course_code }} Batches
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Create Batch -->
+            <a class="nav-link" href="#">
+                <i class="fas fa-plus-circle"></i>
+                Create Batch
+            </a>
+
+            <!-- Schedule Session -->
+            <a class="nav-link {% if request.resolver_match.url_name == 'create_session' %}active{% endif %}"
+                href="{% url 'zoom:create_session' %}">
+                <i class="fas fa-calendar-plus"></i>
+                Schedule Session
+            </a>
+
+            <!-- Session Calendar -->
+            <a class="nav-link {% if request.resolver_match.url_name == 'session_calendar' %}active{% endif %}"
+                href="{% url 'zoom:session_calendar' %}">
+                <i class="fas fa-calendar-week"></i>
+                Session Calendar
+            </a>
+
+            <!-- Live Sessions Management -->
+            <div class="submenu" data-submenu="live-sessions">
+                <div class="submenu-toggle" onclick="toggleSubmenu('live-sessions')">
+                    <span><i class="fas fa-video me-2"></i>Live Sessions</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="submenu-items">
+                    <a class="submenu-item" href="{% url 'zoom:session_list' %}">
+                        <i class="fas fa-stream me-2"></i>All Sessions
+                    </a>
+                    <a class="submenu-item" href="{% url 'zoom:session_list' %}?status=live">
+                        <i class="fas fa-broadcast-tower me-2 text-danger"></i>Live Now
+                    </a>
+                    <a class="submenu-item" href="{% url 'zoom:session_list' %}?status=scheduled">
+                        <i class="fas fa-clock me-2 text-primary"></i>Upcoming Sessions
+                    </a>
+                    <a class="submenu-item" href="{% url 'zoom:session_list' %}?status=completed">
+                        <i class="fas fa-check-circle me-2 text-success"></i>Completed Sessions
+                    </a>
+                    <a class="submenu-item {% if request.resolver_match.url_name == 'recording_list' %}active{% endif %}"
+                        href="{% url 'zoom:recording_list' %}">
+                        <i class="fas fa-play-circle me-2"></i>Session Recordings
+                    </a>
+                </div>
+            </div>
+
+            <!-- Batch Content -->
+            <div class="submenu" data-submenu="batch-content">
+                <div class="submenu-toggle" onclick="toggleSubmenu('batch-content')">
+                    <span><i class="fas fa-folder-open me-2"></i>Batch Content</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="submenu-items">
+                    <a class="submenu-item" href="#">
+                        <i class="fas fa-graduation-cap me-2"></i>Content by Course
+                    </a>
+                    <a class="submenu-item" href="#">
+                        <i class="fas fa-users me-2"></i>Content by Batch
+                    </a>
+                    <a class="submenu-item" href="#">
+                        <i class="fas fa-video me-2"></i>Content by Session
+                    </a>
+                </div>
+            </div>
+
+            <!-- Live Class Reviews -->
+            {% if request.user.role in 'superadmin,instructor' %}
+            <a class="nav-link" href="{% url 'courses:course_reviews' %}">
+                <i class="fas fa-star"></i>
+                Live Class Reviews
+            </a>
+            {% endif %}
+            <!-- ============================================ -->
+            <!-- END CLASS MANAGEMENT SECTION -->
+            <!-- ============================================ -->
 
             <!-- Exam Management -->
             <div class="nav-section">Exam Management</div>
@@ -672,7 +840,49 @@
             </div>
 
 
-            <!-- Webinar Management -->
+            <div class="nav-section">Attendance Management</div>
+
+<!-- All Sessions -->
+<a class="nav-link {% if 'attendance' in request.resolver_match.url_name %}active{% endif %}"
+    href="{% url 'attendance:session_list' %}">
+    <i class="fas fa-clipboard-list"></i>
+    All Attendance Sessions
+</a>
+
+<!-- Attendance Submenu -->
+<div class="submenu" data-submenu="attendance">
+    <div class="submenu-toggle" onclick="toggleSubmenu('attendance')">
+        <span><i class="fas fa-qrcode me-2"></i>Attendance System</span>
+        <i class="fas fa-chevron-down"></i>
+    </div>
+    <div class="submenu-items">
+        <a class="submenu-item {% if request.resolver_match.url_name == 'instructor_sessions' %}active{% endif %}"
+            href="{% url 'attendance:instructor_sessions' %}">
+            <i class="fas fa-calendar-check me-2"></i>All Sessions
+        </a>
+        <a class="submenu-item {% if request.resolver_match.url_name == 'create_session' %}active{% endif %}"
+            href="{% url 'attendance:create_session' %}">
+            <i class="fas fa-plus-circle me-2"></i>Create Session
+        </a>
+        <a class="submenu-item {% if request.resolver_match.url_name == 'pending_requests' %}active{% endif %}"
+            href="{% url 'attendance:pending_requests' %}">
+            <i class="fas fa-clock me-2 text-warning"></i>Pending Requests
+        </a>
+        <a class="submenu-item {% if request.resolver_match.url_name == 'attendance_reports' %}active{% endif %}"
+            href="{% url 'attendance:attendance_reports' %}">
+            <i class="fas fa-chart-bar me-2"></i>Reports & Analytics
+        </a>
+    </div>
+</div>
+
+<!-- Quick Stats Widget (Optional - can add in dashboard) -->
+<a class="nav-link" href="{% url 'attendance:attendance_analytics' %}">
+    <i class="fas fa-chart-pie"></i>
+    Attendance Analytics
+</a>
+
+
+
             <!-- Webinar Management -->
             <div class="nav-section">Webinar Management</div>
             <div class="submenu" data-submenu="webinars">
@@ -701,13 +911,11 @@
                         href="{% url 'webinars:admin_all_registrations' %}">
                         View Registrations
                     </a>
-                    <!-- YEH ADD KAR -->
                     <a class="submenu-item" href="{% url 'webinars:admin_all_registrations' %}?payment_status=pending">
                         <i class="fas fa-credit-card me-2"></i>Pending Payments
                     </a>
                 </div>
             </div>
-
 
             <!-- Fees Management -->
             <div class="nav-section">Fees Management</div>
@@ -747,7 +955,6 @@
                     </a>
                 </div>
             </div>
-
 
             <div class="nav-section">Student Access Control</div>
             <a class="nav-link {% if request.resolver_match.url_name == 'student_course_management' %}active{% endif %}"
@@ -822,9 +1029,6 @@
                 </div>
             </div>
 
-
-
-
             <!-- System -->
             <div class="nav-section">System</div>
             <a class="nav-link" href="#">
@@ -840,43 +1044,22 @@
                 Security
             </a>
 
-
             <!-- Zoom Integration -->
             <div class="nav-section">Zoom Integration</div>
-            <div class="submenu" data-submenu="zoom">
-                <div class="submenu-toggle" onclick="toggleSubmenu('zoom')">
-                    <span><i class="fas fa-video me-2"></i>Zoom Management</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="submenu-items">
-                    <a class="submenu-item {% if request.resolver_match.url_name == 'zoom_dashboard' %}active{% endif %}"
-                        href="{% url 'zoom:dashboard' %}">
-                        <i class="fas fa-tachometer-alt me-2"></i>Zoom Dashboard
-                    </a>
-                    <a class="submenu-item {% if request.resolver_match.url_name == 'zoom_config_setup' %}active{% endif %}"
-                        href="{% url 'zoom:config_setup' %}">
-                        <i class="fas fa-cog me-2"></i>Zoom Configuration
-                    </a>
-                    <a class="submenu-item {% if request.resolver_match.url_name == 'session_list' %}active{% endif %}"
-                        href="{% url 'zoom:session_list' %}">
-                        <i class="fas fa-calendar-alt me-2"></i>All Sessions
-                    </a>
-                    <a class="submenu-item {% if request.resolver_match.url_name == 'create_session' %}active{% endif %}"
-                        href="{% url 'zoom:create_session' %}">
-                        <i class="fas fa-plus-circle me-2"></i>Create Session
-                    </a>
-                    <a class="submenu-item {% if request.resolver_match.url_name == 'recording_list' %}active{% endif %}"
-                        href="{% url 'zoom:recording_list' %}">
-                        <i class="fas fa-play-circle me-2"></i>Session Recordings
-                    </a>
-                    <a class="submenu-item" href="{% url 'zoom:session_list' %}?status=live">
-                        <i class="fas fa-broadcast-tower me-2 text-success"></i>Live Sessions
-                    </a>
-                    <a class="submenu-item" href="{% url 'zoom:session_list' %}?status=scheduled">
-                        <i class="fas fa-clock me-2 text-primary"></i>Scheduled Sessions
-                    </a>
-                </div>
-            </div>
+            
+            <!-- Zoom Dashboard -->
+            <a class="nav-link {% if request.resolver_match.url_name == 'zoom_dashboard' %}active{% endif %}"
+                href="{% url 'zoom:dashboard' %}">
+                <i class="fas fa-tachometer-alt"></i>
+                Zoom Dashboard
+            </a>
+
+            <!-- Zoom Configuration -->
+            <a class="nav-link {% if request.resolver_match.url_name == 'zoom_config_setup' %}active{% endif %}"
+                href="{% url 'zoom:config_setup' %}">
+                <i class="fas fa-cog"></i>
+                Zoom Configuration
+            </a>
 
             <!-- Zoom Quick Status -->
             <a class="nav-link {% if request.resolver_match.url_name == 'zoom_config_status' %}active{% endif %}"
@@ -910,43 +1093,43 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-<script>
-// Zoom Status Checker
-function checkZoomStatus() {
-    fetch('/zoom/api/config/status/')
-        .then(response => response.json())
-        .then(data => {
-            const indicator = document.getElementById('zoom-status-indicator');
-            if (!indicator) return;
-            
-            if (data.configured) {
-                indicator.className = 'badge bg-success ms-2';
-                indicator.innerHTML = '<i class="fas fa-circle"></i>';
-                indicator.title = `Connected - ${data.organization || 'Zoom Ready'}`;
-            } else {
-                indicator.className = 'badge bg-danger ms-2';
-                indicator.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
-                indicator.title = data.message || 'Zoom Not Configured';
-            }
-        })
-        .catch(error => {
-            const indicator = document.getElementById('zoom-status-indicator');
-            if (indicator) {
-                indicator.className = 'badge bg-warning ms-2';
-                indicator.innerHTML = '<i class="fas fa-question"></i>';
-                indicator.title = 'Status Unknown';
-            }
-        });
-}
+    <script>
+        // Zoom Status Checker
+        function checkZoomStatus() {
+            fetch('/zoom/api/config/status/')
+                .then(response => response.json())
+                .then(data => {
+                    const indicator = document.getElementById('zoom-status-indicator');
+                    if (!indicator) return;
 
-// Check status on page load
-document.addEventListener('DOMContentLoaded', function() {
-    checkZoomStatus();
-    
-    // Check every 5 minutes
-    setInterval(checkZoomStatus, 300000);
-});
-</script>
+                    if (data.configured) {
+                        indicator.className = 'badge bg-success ms-2';
+                        indicator.innerHTML = '<i class="fas fa-circle"></i>';
+                        indicator.title = `Connected - ${data.organization || 'Zoom Ready'}`;
+                    } else {
+                        indicator.className = 'badge bg-danger ms-2';
+                        indicator.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                        indicator.title = data.message || 'Zoom Not Configured';
+                    }
+                })
+                .catch(error => {
+                    const indicator = document.getElementById('zoom-status-indicator');
+                    if (indicator) {
+                        indicator.className = 'badge bg-warning ms-2';
+                        indicator.innerHTML = '<i class="fas fa-question"></i>';
+                        indicator.title = 'Status Unknown';
+                    }
+                });
+        }
+
+        // Check status on page load
+        document.addEventListener('DOMContentLoaded', function () {
+            checkZoomStatus();
+
+            // Check every 5 minutes
+            setInterval(checkZoomStatus, 300000);
+        });
+    </script>
     <script>
         function toggleSubmenu(submenuId) {
             const submenu = document.querySelector(`[data-submenu="${submenuId}"]`);
@@ -985,6 +1168,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         });
+
+        // Auto-refresh pending requests count
+    function updatePendingRequestsCount() {
+        fetch('{% url "attendance:pending_requests" %}?ajax=1')
+            .then(response => response.json())
+            .then(data => {
+                const badge = document.getElementById('pending-requests-count');
+                if (badge && data.count > 0) {
+                    badge.textContent = data.count;
+                    badge.style.display = 'inline';
+                } else if (badge) {
+                    badge.style.display = 'none';
+                }
+            })
+            .catch(error => console.error('Error fetching pending requests:', error));
+    }
+
+    // Check every 2 minutes
+    document.addEventListener('DOMContentLoaded', function() {
+        updatePendingRequestsCount();
+        setInterval(updatePendingRequestsCount, 120000);
+    });
     </script>
 
     {% block extra_js %}{% endblock %}

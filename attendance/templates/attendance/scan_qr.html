@@ -1,0 +1,132 @@
+<!-- templates/attendance/scan_qr.html -->
+
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h4><i class="fas fa-qrcode"></i> Scan QR Code for Attendance</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Camera Preview -->
+                    <div id="camera-container" class="mb-3">
+                        <video id="camera-preview" width="100%" autoplay></video>
+                    </div>
+                    
+                    <!-- Status -->
+                    <div id="status" class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> Point camera at QR code
+                    </div>
+                    
+                    <!-- Location Permission -->
+                    <button id="enable-location" class="btn btn-success btn-block">
+                        <i class="fas fa-map-marker-alt"></i> Enable Location
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Include QR Scanner Library -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+
+<script>
+let video = document.getElementById('camera-preview');
+let canvasElement = document.createElement('canvas');
+let canvas = canvasElement.getContext('2d');
+let userLocation = null;
+
+// Request camera permission
+navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+    .then(function(stream) {
+        video.srcObject = stream;
+        video.setAttribute("playsinline", true);
+        video.play();
+        requestAnimationFrame(tick);
+    });
+
+// Request location permission
+document.getElementById('enable-location').addEventListener('click', function() {
+    navigator.geolocation.getCurrentPosition(
+        function(position) {
+            userLocation = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+            };
+            document.getElementById('status').innerHTML = 
+                '<i class="fas fa-check-circle"></i> Location enabled. Scan QR code now!';
+            document.getElementById('status').classList.remove('alert-info');
+            document.getElementById('status').classList.add('alert-success');
+        },
+        function(error) {
+            alert('Location permission denied!');
+        }
+    );
+});
+
+function tick() {
+    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvasElement.height = video.videoHeight;
+        canvasElement.width = video.videoWidth;
+        canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+        
+        var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+        var code = jsQR(imageData.data, imageData.width, imageData.height, {
+            inversionAttempts: "dontInvert",
+        });
+        
+        if (code) {
+            markAttendance(code.data);
+            return; // Stop scanning
+        }
+    }
+    requestAnimationFrame(tick);
+}
+
+function markAttendance(qrData) {
+    if (!userLocation) {
+        alert('Please enable location first!');
+        requestAnimationFrame(tick);
+        return;
+    }
+    
+    fetch('{% url "attendance:scan_attendance_qr" %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            qr_data: qrData,
+            latitude: userLocation.latitude,
+            longitude: userLocation.longitude
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            document.getElementById('status').innerHTML = 
+                '<i class="fas fa-check-circle"></i> ' + data.message;
+            document.getElementById('status').classList.remove('alert-info');
+            document.getElementById('status').classList.add('alert-success');
+            
+            // Stop camera
+            video.srcObject.getTracks().forEach(track => track.stop());
+        } else {
+            document.getElementById('status').innerHTML = 
+                '<i class="fas fa-exclamation-triangle"></i> ' + data.message;
+            document.getElementById('status').classList.remove('alert-info');
+            document.getElementById('status').classList.add('alert-danger');
+            
+            // Continue scanning
+            requestAnimationFrame(tick);
+        }
+    });
+}
+</script>
+{% endblock %}

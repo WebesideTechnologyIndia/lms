@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -43,8 +44,20 @@ INSTALLED_APPS = [
     'webinars',
     'fees',
     'zoom',
+    'django_crontab',
+    'ckeditor',
+    'ckeditor_uploader',
+    'attendance',
 
 ]
+
+CKEDITOR_UPLOAD_PATH = "uploads/"
+CKEDITOR_CONFIGS = {
+    'default': {
+        'toolbar': 'full',
+        'height': 300,
+    },
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -54,7 +67,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'courses.middleware.AttendanceTrackingMiddleware',
+    'courses.middleware.DeviceTrackingMiddleware',
 ]
+
 
 ROOT_URLCONF = 'lms.urls'
 
@@ -68,6 +84,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.media',  # ✅ ADD THIS
                 'lms.context_processors.sidebar_context',
                 'lms.context_processors.instructor_permissions',
                 'userss.context_processors.instructor_navigation',
@@ -117,17 +134,29 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 
 USE_TZ = True
 
 
+# ==================== STATIC FILES ====================
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-STATIC_URL = 'static/'
+# Additional locations of static files
+STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'static'),
+]
+
+
+# ==================== MEDIA FILES (QR CODES, UPLOADS) ====================
+# CRITICAL: This is what makes QR codes visible
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -170,7 +199,7 @@ LOGGING = {
         },
     },
     'loggers': {
-        'lms.views': {  # Replace 'lms' with your app name
+        'lms.views': {
             'handlers': ['file', 'console'],
             'level': 'INFO',
             'propagate': True,
@@ -180,12 +209,8 @@ LOGGING = {
 
 # Email Limits Configuration
 EMAIL_DAILY_LIMIT_DEFAULT = 5
-EMAIL_DAILY_LIMIT_MAX = 50  # Maximum limit an admin can set
+EMAIL_DAILY_LIMIT_MAX = 50
 
-# Time Zone (Important for daily limits)
-USE_TZ = True
-TIME_ZONE = 'Asia/Kolkata'  # Set your timezone
-
-
+# File Upload Settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024  # 50MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100MB

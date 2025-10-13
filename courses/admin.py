@@ -748,3 +748,59 @@ class BatchEnrollmentAdmin(admin.ModelAdmin):
 admin.site.site_header = "Course Management System"
 admin.site.site_title = "CMS Admin"
 admin.site.index_title = "Welcome to Course Management System"
+
+
+# courses/admin.py
+
+from django.contrib import admin
+from .models import (
+    Course, CourseCategory, CourseModule, CourseLesson,
+    Enrollment, CourseReview, CourseFAQ,
+    Batch, BatchModule, BatchLesson, BatchEnrollment,
+    StudentSubscription, DeviceSession, StudentLoginLog  # <-- IMPORT
+)
+
+# ... existing admin registrations ...
+
+# YEH ADD KARO:
+
+@admin.register(StudentSubscription)
+class StudentSubscriptionAdmin(admin.ModelAdmin):
+    list_display = ['student', 'course', 'max_devices', 'current_devices', 'is_active', 'subscribed_at']
+    list_filter = ['is_active', 'subscribed_at']
+    search_fields = ['student__username', 'student__email', 'course__title']
+    raw_id_fields = ['student', 'course']
+    
+    fieldsets = (
+        ('Basic Info', {
+            'fields': ('student', 'course')
+        }),
+        ('Device Settings', {
+            'fields': ('max_devices', 'current_devices')
+        }),
+        ('Subscription Period', {
+            'fields': ('subscribed_at', 'expires_at', 'is_active')
+        }),
+    )
+
+
+@admin.register(DeviceSession)
+class DeviceSessionAdmin(admin.ModelAdmin):
+    list_display = ['subscription', 'device_name', 'device_id', 'is_active', 'last_login']
+    list_filter = ['is_active', 'last_login']
+    search_fields = ['device_id', 'device_name']
+
+
+from django.contrib import admin
+from .models import StudentLoginLog
+
+@admin.register(StudentLoginLog)
+class StudentLoginLogAdmin(admin.ModelAdmin):
+    list_display = ['student', 'login_time', 'logout_time', 'session_duration', 'ip_address']
+    list_filter = ['login_time', 'student']
+    search_fields = ['student__username', 'student__email']
+    readonly_fields = ['login_time', 'session_duration']
+    date_hierarchy = 'login_time'
+    
+    def has_add_permission(self, request):
+        return False  # Don't allow manual addition

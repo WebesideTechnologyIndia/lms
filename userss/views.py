@@ -1,7 +1,7 @@
 # views.py - Updated with admin user management
 
 from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login ,logout
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from .models import CustomUser, UserActivityLog
@@ -17,6 +17,11 @@ def get_client_ip(request):
     else:
         ip = request.META.get('REMOTE_ADDR')
     return ip
+from django.contrib.auth import authenticate, login
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from courses.models import StudentSubscription, DeviceSession
+import hashlib
 
 def user_login(request):
     if request.method == "POST":
@@ -24,8 +29,74 @@ def user_login(request):
         password = request.POST.get("password")
         print(username)
         print(password)
+        
         user = authenticate(request, username=username, password=password)
+        
         if user is not None:
+            
+            # ========== DEVICE LIMIT CHECK FOR STUDENTS ==========
+            if user.role == "student":
+                # Generate device ID for this login attempt
+                user_agent = request.META.get('HTTP_USER_AGENT', '')
+                ip_address = get_client_ip(request)
+                device_id = hashlib.md5(f"{user_agent}{ip_address}".encode()).hexdigest()
+                
+                print(f"🔍 Checking device limit for {username}")
+                print(f"   Device ID: {device_id[:16]}...")
+                
+                # Check all active subscriptions
+                subscriptions = StudentSubscription.objects.filter(
+                    student=user,
+                    is_active=True
+                )
+                
+                if subscriptions.exists():
+                    device_blocked = False
+                    blocked_course = None
+                    max_allowed = 0
+                    
+                    for subscription in subscriptions:
+                        # Check if this device is already registered
+                        existing_device = DeviceSession.objects.filter(
+                            subscription=subscription,
+                            device_id=device_id,
+                            is_active=True
+                        ).exists()
+                        
+                        if existing_device:
+                            # Device already registered - ALLOW
+                            print(f"   ✅ Device already registered for {subscription.course.title}")
+                            continue
+                        
+                        # NEW DEVICE - Check if limit reached
+                        active_devices_count = subscription.devices.filter(is_active=True).count()
+                        
+                        print(f"   📱 {subscription.course.title}: {active_devices_count}/{subscription.max_devices} devices")
+                        
+                        if active_devices_count >= subscription.max_devices:
+                            # LIMIT REACHED - BLOCK LOGIN
+                            device_blocked = True
+                            blocked_course = subscription.course.title
+                            max_allowed = subscription.max_devices
+                            print(f"   ❌ Device limit reached for {blocked_course}!")
+                            break
+                    
+                    if device_blocked:
+                        # BLOCK LOGIN
+                        error_msg = (
+                            f'❌ Device Limit Reached!\n\n'
+                            f'Course: {blocked_course}\n'
+                            f'Maximum devices allowed: {max_allowed}\n\n'
+                            f'Please remove an existing device from your account or contact admin.'
+                        )
+                        print(f"🚫 LOGIN BLOCKED: {error_msg}")
+                        return render(request, "login.html", {
+                            "error": error_msg,
+                            "username": username
+                        })
+            # ========== END DEVICE CHECK ==========
+            
+            # ALL CHECKS PASSED - LOGIN ALLOWED
             login(request, user)
             
             # Log the login activity
@@ -37,20 +108,108 @@ def user_login(request):
                 user_agent=request.META.get('HTTP_USER_AGENT', '')
             )
             
+            print(f"✅ LOGIN SUCCESS: {username}")
+            
+            # Redirect based on role
             if user.role == "superadmin":
                 return redirect("admin_dashboard")
             elif user.role == "instructor":
                 return redirect("instructor_dashboard")
             elif user.role == "student":
                 return redirect("student_dashboard")
-            elif user.role == "webinar_user":  # Add webinar_user redirect
-                return redirect("webinars:webinar_landing")  # Redirect to webinar landing page
+            elif user.role == "webinar_user":
+                return redirect("webinars:webinar_landing")
             else:
                 return render(request, "login.html", {"error": "Role not match please login again"})
         else:
+            print(f"❌ LOGIN FAILED: Invalid credentials for {username}")
             return render(request, "login.html", {"error": "Invalid Credentials"})
     
     return render(request, 'login.html')
+
+# userss/views.py - ADD THIS AT TOP
+from courses.models import StudentLoginLog
+from django.utils import timezone
+
+# THEN FIND AND REPLACE user_logout function:
+
+@login_required
+def user_logout(request):
+    """Enhanced logout with attendance tracking"""
+    
+    print(f"🚪 Logout request from: {request.user.username if request.user.is_authenticated else 'Anonymous'}")
+    
+    # CRITICAL: Track attendance BEFORE logout
+    if request.user.is_authenticated:
+        # Store username before logout clears it
+        username = request.user.username
+        user_role = request.user.role
+        
+        print(f"User: {username}, Role: {user_role}")
+        
+        if user_role == 'student':
+            try:
+                # Method 1: Try from session
+                log_id = request.session.get('attendance_log_id')
+                print(f"Session log_id: {log_id}")
+                
+                if log_id:
+                    log = StudentLoginLog.objects.get(id=log_id)
+                    if not log.logout_time:
+                        log.logout_time = timezone.now()
+                        log.calculate_duration()
+                        print(f"✅ Session Logout: {username} - Session {log.id} - Duration: {log.session_duration} min")
+                
+                # Method 2: Close any other active sessions
+                active_sessions = StudentLoginLog.objects.filter(
+                    student=request.user,
+                    logout_time__isnull=True
+                )
+                
+                if active_sessions.exists():
+                    print(f"Found {active_sessions.count()} active sessions to close")
+                    
+                    for session in active_sessions:
+                        session.logout_time = timezone.now()
+                        session.calculate_duration()
+                        session.save()
+                        print(f"✅ Auto Logout: {username} - Session {session.id} - Duration: {session.session_duration} min")
+                
+            except StudentLoginLog.DoesNotExist:
+                print(f"⚠️ No active session found")
+            except Exception as e:
+                print(f"❌ Logout tracking error: {e}")
+                import traceback
+                traceback.print_exc()
+    
+    # Now perform Django logout
+    logout(request)
+    print(f"🔓 Django logout completed")
+    
+    return redirect('user_login')
+
+
+
+def check_device_limit(user, course):
+    """Check if student has reached device limit for course"""
+    
+    try:
+        subscription = StudentSubscription.objects.get(
+            student=user,
+            course=course,
+            is_active=True
+        )
+        
+        # Count active devices
+        active_devices = subscription.devices.filter(is_active=True).count()
+        
+        if active_devices >= subscription.max_devices:
+            return False, f"Device limit reached ({subscription.max_devices} devices max)"
+        
+        return True, "OK"
+        
+    except StudentSubscription.DoesNotExist:
+        return True, "No subscription found"
 
 
 
@@ -88,6 +247,8 @@ def manage_users(request):
     # Search functionality
     search_query = request.GET.get('search', '')
     role_filter = request.GET.get('role', '')
+    course_filter = request.GET.get('course', '')
+    batch_type_filter = request.GET.get('batch_type', '')
     
     users = CustomUser.objects.all()
     
@@ -102,16 +263,60 @@ def manage_users(request):
     if role_filter:
         users = users.filter(role=role_filter)
     
+    # Course filter for students
+    if course_filter and role_filter == 'student':
+        users = users.filter(enrollments__course_id=course_filter, enrollments__is_active=True).distinct()
+    
+    # Batch type filter for students
+    if batch_type_filter and role_filter == 'student':
+        users = users.filter(batch_enrollments__batch__batch_type=batch_type_filter, batch_enrollments__is_active=True).distinct()
+    
     users = users.order_by('-date_joined')
+    
+    # Get student details with courses and batches
+    students_data = []
+    if role_filter == 'student' or not role_filter:
+        for user in users:
+            if user.role == 'student':
+                # Get enrollments
+                enrollments = Enrollment.objects.filter(
+                    student=user, 
+                    is_active=True
+                ).select_related('course', 'course__category')
+                
+                # Get batch enrollments
+                batch_enrollments = BatchEnrollment.objects.filter(
+                    student=user,
+                    is_active=True
+                ).select_related('batch', 'batch__course', 'batch__instructor')
+                
+                students_data.append({
+                    'user': user,
+                    'enrollments': enrollments,
+                    'batch_enrollments': batch_enrollments,
+                })
+    
+    # Get all courses for filter dropdown
+    all_courses = Course.objects.filter(is_active=True).order_by('title')
     
     context = {
         'users': users,
+        'students_data': students_data,
         'search_query': search_query,
         'role_filter': role_filter,
+        'course_filter': course_filter,
+        'batch_type_filter': batch_type_filter,
         'role_choices': CustomUser.ROLE_CHOICES,
+        'all_courses': all_courses,
+        'batch_type_choices': [
+            ('online', 'Online'),
+            ('offline', 'Offline'),
+            ('hybrid', 'Hybrid'),
+        ],
     }
     return render(request, 'manage_users.html', context)
 
+    
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -184,13 +389,341 @@ def delete_user(request, user_id):
     
     return render(request, 'delete_user.html', {'user': user})
 
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.db.models import Count, Q, Sum
+from datetime import date, timedelta
+from userss.models import CustomUser, EmailLog, EmailLimitSet
+from courses.models import Course, Batch, Enrollment, BatchEnrollment
+from exams.models import Exam, ExamAttempt
+from zoom.models import BatchSession
+
 @login_required
 def user_details(request, user_id):
     if request.user.role != 'superadmin':
         return redirect('user_login')
     
     user = get_object_or_404(CustomUser, id=user_id)
-    return render(request, 'user_details.html', {'user': user})
+    
+    # Common data for all users
+    context = {
+        'user': user,
+    }
+    
+    # Email Statistics (for all users)
+    today = date.today()
+    email_limit = EmailLimitSet.objects.filter(is_active=True).first()
+    daily_limit = email_limit.email_limit_per_day if email_limit else 50
+    
+    # Emails sent TO this user
+    today_emails = EmailLog.objects.filter(
+        recipient_user=user,
+        sent_date=today
+    ).count()
+    
+    total_emails = EmailLog.objects.filter(
+        recipient_user=user
+    ).count()
+    
+    remaining_emails = max(0, daily_limit - today_emails)
+    can_receive_email = remaining_emails > 0
+    
+    # Recent emails
+    recent_emails = EmailLog.objects.filter(
+        recipient_user=user
+    ).select_related('sent_by', 'template_used').order_by('-sent_time')[:10]
+    
+    # Add email data to context
+    context.update({
+        'today_emails': today_emails,
+        'total_emails': total_emails,
+        'remaining_emails': remaining_emails,
+        'can_receive_email': can_receive_email,
+        'daily_limit': daily_limit,
+        'recent_emails': recent_emails,
+    })
+    
+    # Role-specific data
+    if user.role == 'instructor':
+        # Instructor Statistics
+        instructor_data = get_instructor_statistics(user)
+        context.update(instructor_data)
+        
+    elif user.role == 'student':
+        # Student Statistics
+        student_data = get_student_statistics(user)
+        context.update(student_data)
+    
+    # Emails SENT by this user (if instructor or admin)
+    if user.role in ['instructor', 'superadmin']:
+        emails_sent_by_user = EmailLog.objects.filter(
+            sent_by=user
+        ).count()
+        
+        emails_sent_today = EmailLog.objects.filter(
+            sent_by=user,
+            sent_date=today
+        ).count()
+        
+        context.update({
+            'emails_sent_by_user': emails_sent_by_user,
+            'emails_sent_today': emails_sent_today,
+        })
+    
+    return render(request, 'user_details.html', context)
+
+
+def get_instructor_statistics(user):
+    """Get comprehensive statistics for instructor"""
+    
+    # Courses
+    total_courses = Course.objects.filter(
+        Q(instructor=user) | Q(co_instructors=user),
+        is_active=True
+    ).distinct().count()
+    
+    active_courses = Course.objects.filter(
+        Q(instructor=user) | Q(co_instructors=user),
+        status='published',
+        is_active=True
+    ).distinct().count()
+    
+    # Get all courses (main + co-instructor)
+    all_courses = Course.objects.filter(
+        Q(instructor=user) | Q(co_instructors=user),
+        is_active=True
+    ).distinct().select_related('category')[:5]  # Recent 5
+    
+    # Batches
+    total_batches = Batch.objects.filter(
+        instructor=user,
+        is_active=True
+    ).count()
+    
+    active_batches = Batch.objects.filter(
+        instructor=user,
+        status='active',
+        is_active=True
+    ).count()
+    
+    recent_batches = Batch.objects.filter(
+        instructor=user,
+        is_active=True
+    ).select_related('course').order_by('-created_at')[:5]
+    
+    # Students (enrolled in instructor's courses)
+    total_students = Enrollment.objects.filter(
+        course__instructor=user,
+        is_active=True
+    ).values('student').distinct().count()
+    
+    # Get recent students
+    recent_students = Enrollment.objects.filter(
+        course__instructor=user,
+        is_active=True
+    ).select_related('student', 'course').order_by('-enrolled_at')[:10]
+    
+    # Sessions (from batches) - DETAILED
+    total_sessions = BatchSession.objects.filter(
+        batch__instructor=user
+    ).count()
+    
+    upcoming_sessions = BatchSession.objects.filter(
+        batch__instructor=user,
+        status='scheduled',
+        scheduled_date__gte=date.today()
+    ).count()
+    
+    completed_sessions = BatchSession.objects.filter(
+        batch__instructor=user,
+        status='completed'
+    ).count()
+    
+    live_sessions = BatchSession.objects.filter(
+        batch__instructor=user,
+        status='live'
+    ).count()
+    
+    # ALL Sessions with details
+    all_sessions = BatchSession.objects.filter(
+        batch__instructor=user
+    ).select_related('batch', 'batch__course').order_by('-scheduled_date', '-start_time')[:20]
+    
+    # Session stats by status
+    session_stats = BatchSession.objects.filter(
+        batch__instructor=user
+    ).values('status').annotate(count=Count('id'))
+    
+    recent_sessions = BatchSession.objects.filter(
+        batch__instructor=user
+    ).select_related('batch').order_by('-scheduled_date', '-start_time')[:5]
+    
+    # Exams
+    total_exams = Exam.objects.filter(
+        created_by=user,
+        is_active=True
+    ).count()
+    
+    active_exams = Exam.objects.filter(
+        created_by=user,
+        status='published',
+        is_active=True
+    ).count()
+    
+    recent_exams = Exam.objects.filter(
+        created_by=user,
+        is_active=True
+    ).order_by('-created_at')[:5]
+    
+    # Exam attempts on instructor's exams
+    total_attempts = ExamAttempt.objects.filter(
+        exam__created_by=user
+    ).count()
+    
+    # Permissions (if applicable)
+    instructor_permissions = []
+    if hasattr(user, 'instructor_profile'):
+        instructor_permissions = user.get_instructor_permissions()
+    
+    return {
+        'total_courses': total_courses,
+        'active_courses': active_courses,
+        'all_courses': all_courses,
+        
+        'total_batches': total_batches,
+        'active_batches': active_batches,
+        'recent_batches': recent_batches,
+        
+        'total_students': total_students,
+        'recent_students': recent_students,
+        
+        'total_sessions': total_sessions,
+        'upcoming_sessions': upcoming_sessions,
+        'completed_sessions': completed_sessions,
+        'live_sessions': live_sessions,
+        'all_sessions': all_sessions,
+        'session_stats': session_stats,
+        'recent_sessions': recent_sessions,
+        
+        'total_exams': total_exams,
+        'active_exams': active_exams,
+        'recent_exams': recent_exams,
+        'total_attempts': total_attempts,
+        
+        'instructor_permissions': instructor_permissions,
+    }
+
+
+def get_student_statistics(user):
+    """Get comprehensive statistics for student"""
+    
+    # Enrollments
+    total_enrollments = Enrollment.objects.filter(
+        student=user,
+        is_active=True
+    ).count()
+    
+    active_enrollments = Enrollment.objects.filter(
+        student=user,
+        status='enrolled',
+        is_active=True
+    ).count()
+    
+    completed_enrollments = Enrollment.objects.filter(
+        student=user,
+        status='completed',
+        is_active=True
+    ).count()
+    
+    # Get enrolled courses
+    enrolled_courses = Enrollment.objects.filter(
+        student=user,
+        is_active=True
+    ).select_related('course', 'course__instructor').order_by('-enrolled_at')
+    
+    # Batch Enrollments
+    total_batch_enrollments = BatchEnrollment.objects.filter(
+        student=user,
+        is_active=True
+    ).count()
+    
+    active_batch_enrollments = BatchEnrollment.objects.filter(
+        student=user,
+        status='enrolled',
+        is_active=True
+    ).count()
+    
+    enrolled_batches = BatchEnrollment.objects.filter(
+        student=user,
+        is_active=True
+    ).select_related('batch', 'batch__course', 'batch__instructor').order_by('-enrolled_at')
+    
+    # Exam Attempts
+    total_exam_attempts = ExamAttempt.objects.filter(
+        student=user
+    ).count()
+    
+    completed_exams = ExamAttempt.objects.filter(
+        student=user,
+        status__in=['submitted', 'auto_submitted']
+    ).count()
+    
+    passed_exams = ExamAttempt.objects.filter(
+        student=user,
+        is_passed=True
+    ).count()
+    
+    # Average percentage
+    avg_percentage = ExamAttempt.objects.filter(
+        student=user,
+        status__in=['submitted', 'auto_submitted']
+    ).aggregate(avg=Sum('percentage'))['avg'] or 0
+    
+    recent_exam_attempts = ExamAttempt.objects.filter(
+        student=user
+    ).select_related('exam').order_by('-started_at')[:5]
+    
+    # Session Attendance
+    from zoom.models import SessionAttendance
+    
+    total_sessions_attended = SessionAttendance.objects.filter(
+        student=user,
+        is_present=True
+    ).count()
+    
+    total_sessions_assigned = SessionAttendance.objects.filter(
+        student=user
+    ).count()
+    
+    attendance_percentage = 0
+    if total_sessions_assigned > 0:
+        attendance_percentage = round((total_sessions_attended / total_sessions_assigned) * 100, 2)
+    
+    recent_attendance = SessionAttendance.objects.filter(
+        student=user
+    ).select_related('session', 'session__batch').order_by('-created_at')[:5]
+    
+    return {
+        'total_enrollments': total_enrollments,
+        'active_enrollments': active_enrollments,
+        'completed_enrollments': completed_enrollments,
+        'enrolled_courses': enrolled_courses,
+        
+        'total_batch_enrollments': total_batch_enrollments,
+        'active_batch_enrollments': active_batch_enrollments,
+        'enrolled_batches': enrolled_batches,
+        
+        'total_exam_attempts': total_exam_attempts,
+        'completed_exams': completed_exams,
+        'passed_exams': passed_exams,
+        'avg_percentage': round(avg_percentage, 2) if avg_percentage else 0,
+        'recent_exam_attempts': recent_exam_attempts,
+        
+        'total_sessions_attended': total_sessions_attended,
+        'total_sessions_assigned': total_sessions_assigned,
+        'attendance_percentage': attendance_percentage,
+        'recent_attendance': recent_attendance,
+    }
 
 
 # student dashborad views 
@@ -799,7 +1332,6 @@ def student_batches(request):
     
     return render(request, 'students/student_batches.html', context)
 
-
 @login_required
 def browse_courses(request):
     """Browse available courses for enrollment with enrollment status"""
@@ -897,6 +1429,17 @@ def browse_courses(request):
         
         print(f"Final Status - Enrolled: {course.is_student_enrolled}, Locked: {course.is_course_locked}")
     
+    # ========== NEW ADDON: GROUP BY CATEGORY ==========
+    from collections import OrderedDict
+    category_courses = OrderedDict()
+    
+    for course in courses:
+        cat = course.category
+        if cat not in category_courses:
+            category_courses[cat] = []
+        category_courses[cat].append(course)
+    # ========== END NEW ADDON ==========
+    
     # Pagination
     paginator = Paginator(courses, 12)
     page = request.GET.get('page')
@@ -913,10 +1456,11 @@ def browse_courses(request):
         'search': search,
         'sort': sort,
         'total_courses': Course.objects.count(),
+        'category_courses': category_courses,  # NEW: Category-wise grouped
+        'total_categories': len(category_courses),  # NEW: Total categories count
     }
     
     return render(request, 'students/browse_courses.html', context)
-
 
 @login_required
 def student_progress(request):
@@ -3489,10 +4033,11 @@ def assignExam(request):
 def exam_submission(request):
     return render(request,"exam/exam_submissions.html")
 
+from django.core.mail import send_mail
+from django.conf import settings
 
 @login_required
 def send_email_to_user(request, user_id):
-    """Send email to individual user"""
     if request.user.role != 'superadmin':
         return redirect('user_login')
     
@@ -3501,22 +4046,67 @@ def send_email_to_user(request, user_id):
     if request.method == 'POST':
         subject = request.POST.get('subject')
         message = request.POST.get('message')
+        email_type = request.POST.get('email_type', 'general')
+        priority = request.POST.get('priority', 'normal')
+        send_copy = request.POST.get('send_copy')
         
-        if subject and message:
-            try:
+        # Check email limit
+        today = date.today()
+        email_limit = EmailLimitSet.objects.filter(is_active=True).first()
+        daily_limit = email_limit.email_limit_per_day if email_limit else 50
+        
+        today_emails = EmailLog.objects.filter(
+            recipient_user=user,
+            sent_date=today
+        ).count()
+        
+        if today_emails >= daily_limit:
+            messages.warning(request, f'User has reached daily email limit ({daily_limit}). Email not sent.')
+            return redirect('user_details', user_id=user_id)
+        
+        try:
+            # Send email
+            send_mail(
+                subject=subject,
+                message=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+                fail_silently=False,
+            )
+            
+            # Log email
+            EmailLog.objects.create(
+                recipient_user=user,
+                sent_by=request.user,
+                subject=subject,
+                email_body=message,
+                is_sent_successfully=True,
+                sent_date=today,
+            )
+            
+            # Send copy to self if requested
+            if send_copy:
                 send_mail(
-                    subject=subject,
+                    subject=f"Copy: {subject}",
                     message=message,
                     from_email=settings.DEFAULT_FROM_EMAIL,
-                    recipient_list=[user.email],
-                    fail_silently=False
+                    recipient_list=[request.user.email],
+                    fail_silently=True,
                 )
-                messages.success(request, f'Email sent successfully to {user.email}!')
-            except Exception as e:
-                messages.error(request, f'Failed to send email: {str(e)}')
-        else:
-            messages.error(request, 'Subject and message are required!')
-        
-        return redirect('manage_users')
+            
+            messages.success(request, f'Email sent successfully to {user.get_full_name()}!')
+            return redirect('user_details', user_id=user_id)
+            
+        except Exception as e:
+            # Log failed email
+            EmailLog.objects.create(
+                recipient_user=user,
+                sent_by=request.user,
+                subject=subject,
+                email_body=message,
+                is_sent_successfully=False,
+                sent_date=today,
+            )
+            messages.error(request, f'Failed to send email: {str(e)}')
     
     return render(request, 'send_email_to_user.html', {'user': user})

@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Device Restrictions{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="fas fa-mobile-alt me-2"></i>Device Restrictions</h4>
+                    <a href="{% url 'courses:course_dashboard' %}" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-arrow-left"></i> Back
+                    </a>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle"></i>
+                        Manage maximum devices allowed per student for each course subscription.
+                    </div>
+
+                    <!-- Search -->
+                    <form method="get" class="row g-3 mb-4">
+                        <div class="col-md-8">
+                            <input type="text" name="search" class="form-control" 
+                                   placeholder="Search student/course..." value="{{ search }}">
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-search"></i> Search
+                            </button>
+                            <a href="{% url 'courses:device_restrictions' %}" class="btn btn-secondary">
+                                <i class="fas fa-redo"></i> Reset
+                            </a>
+                        </div>
+                    </form>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Course</th>
+                                    <th>Current Devices</th>
+                                    <th>Max Devices</th>
+                                    <th>Can Add Device</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for sub in subscriptions %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ sub.student.get_full_name|default:sub.student.username }}</strong><br>
+                                        <small class="text-muted">{{ sub.student.email }}</small>
+                                    </td>
+                                    <td>
+                                        <strong>{{ sub.course.title }}</strong><br>
+                                        <small class="text-muted">{{ sub.course.course_code }}</small>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ sub.current_devices }}</span>
+                                    </td>
+                                    <td>
+                                        <form method="post" action="{% url 'courses:update_device_restriction' sub.id %}" 
+                                              class="d-inline" onsubmit="return confirm('Update device limit?');">
+                                            {% csrf_token %}
+                                            <div class="input-group" style="width: 150px;">
+                                                <input type="number" name="max_devices" value="{{ sub.max_devices }}" 
+                                                       min="1" max="10" class="form-control form-control-sm">
+                                                <button type="submit" class="btn btn-sm btn-primary">
+                                                    <i class="fas fa-save"></i>
+                                                </button>
+                                            </div>
+                                        </form>
+                                    </td>
+                                    <td>
+                                        {% if sub.can_add_device %}
+                                            <span class="badge bg-success">Yes ({{ sub.max_devices|add:"-"|add:sub.current_devices }} slots free)</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Limit Reached</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <a href="{% url 'courses:subscription_details' sub.student.id %}" 
+                                           class="btn btn-sm btn-info">
+                                            <i class="fas fa-eye"></i> View All
+                                        </a>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="6" class="text-center py-4">
+                                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                                        <p class="text-muted">No subscriptions found</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

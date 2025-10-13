@@ -1,0 +1,413 @@
+
+{% extends base_template %}
+
+{% load static %}
+
+{% block title %}Create Attendance Session{% endblock %}
+
+{% block extra_css %}
+<style>
+    #map {
+        height: 450px;
+        width: 100%;
+        border-radius: 8px;
+        border: 2px solid #e5e7eb;
+        margin: 20px 0;
+    }
+    .location-info {
+        background: #f0f9ff;
+        padding: 15px;
+        border-radius: 8px;
+        margin: 10px 0;
+        border-left: 4px solid #3b82f6;
+    }
+    .form-section {
+        background: white;
+        padding: 25px;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+    .search-box {
+        position: relative;
+        margin-bottom: 15px;
+    }
+    .search-box input {
+        width: 100%;
+        padding: 12px 40px 12px 15px;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+    .search-box input:focus {
+        outline: none;
+        border-color: #3b82f6;
+    }
+    .search-icon {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9ca3af;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <div class="mb-6">
+            <h1 class="text-3xl font-bold text-gray-800">📍 Create Attendance Session</h1>
+            <p class="text-gray-600 mt-2">Set up QR-based attendance with location verification</p>
+        </div>
+
+        <form method="POST" id="sessionForm">
+            {% csrf_token %}
+
+            <!-- Batch Selection -->
+            <div class="form-section">
+                <h3 class="text-xl font-semibold mb-4">1️⃣ Select Batch</h3>
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2">Batch *</label>
+                    <select name="batch" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="">-- Select Batch --</option>
+                        {% for batch in batches %}
+                        <option value="{{ batch.id }}">{{ batch.name }} - {{ batch.course.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Date & Time -->
+            <div class="form-section">
+                <h3 class="text-xl font-semibold mb-4">2️⃣ Schedule</h3>
+                <div class="grid md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Date *</label>
+                        <input type="date" name="date" value="{{ today|date:'Y-m-d' }}" required 
+                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">Start Time *</label>
+                        <input type="time" name="start_time" required 
+                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div>
+                        <label class="block text-gray-700 font-medium mb-2">End Time *</label>
+                        <input type="time" name="end_time" required 
+                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Location Setup -->
+            <div class="form-section">
+                <h3 class="text-xl font-semibold mb-4">3️⃣ Classroom Location</h3>
+                
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2">Location Name *</label>
+                    <input type="text" name="classroom_location" id="locationInput" 
+                           placeholder="e.g., Room 101, Building A" required
+                           class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <!-- Search Box -->
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="🔍 Search for location...">
+                    <span class="search-icon">🔍</span>
+                </div>
+
+                <div class="flex gap-3 mb-4">
+                    <button type="button" onclick="getCurrentLocation()" 
+                            class="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 font-semibold">
+                        📍 Use My Current Location
+                    </button>
+                    <button type="button" onclick="setDefaultLocation()" 
+                            class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 font-semibold">
+                        🏫 Use Default Location
+                    </button>
+                </div>
+
+                <div id="map"></div>
+
+                <div id="locationInfo" class="location-info" style="display: none;">
+                    <p class="font-semibold text-blue-800">📌 Selected Location:</p>
+                    <p id="coordsDisplay" class="text-sm text-gray-700 mt-1"></p>
+                    <p class="text-xs text-gray-500 mt-2">💡 Drag the marker to adjust position</p>
+                </div>
+
+                <input type="hidden" name="latitude" id="latitude" required>
+                <input type="hidden" name="longitude" id="longitude" required>
+
+                <div class="mt-4">
+                    <label class="block text-gray-700 font-medium mb-2">Allowed Radius (meters)</label>
+                    <input type="range" name="allowed_radius_meters" id="radiusSlider" 
+                           value="50" min="10" max="500" step="10"
+                           class="w-full" onchange="updateRadius()">
+                    <div class="flex justify-between text-sm text-gray-600 mt-1">
+                        <span>10m</span>
+                        <span id="radiusValue" class="font-bold text-blue-600">50m</span>
+                        <span>500m</span>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-2">Students must be within this distance to mark attendance</p>
+                </div>
+            </div>
+
+            <!-- Submit -->
+            <div class="flex gap-4">
+                <button type="submit" class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-semibold">
+                    ✅ Create Session
+                </button>
+                <a href="{% url 'attendance:instructor_sessions' %}" 
+                   class="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg hover:bg-gray-300 font-semibold">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Google Maps API - Load at the end -->
+<script>
+// Global variables
+let map;
+let marker;
+let circle;
+let searchBox;
+let selectedLat = null;
+let selectedLng = null;
+
+// Initialize map function
+function initMap() {
+    // Default location (Delhi, India)
+    const defaultLocation = { lat: 28.6139, lng: 77.2090 };
+    
+    try {
+        // Create map
+        map = new google.maps.Map(document.getElementById('map'), {
+            center: defaultLocation,
+            zoom: 15,
+            mapTypeControl: true,
+            fullscreenControl: true,
+            streetViewControl: false,
+            zoomControl: true
+        });
+
+        console.log('Map initialized successfully');
+
+        // Setup search box
+        const input = document.getElementById('search-input');
+        searchBox = new google.maps.places.SearchBox(input);
+        
+        map.addListener('bounds_changed', function() {
+            searchBox.setBounds(map.getBounds());
+        });
+
+        // Listen for place selection
+        searchBox.addListener('places_changed', function() {
+            const places = searchBox.getPlaces();
+            if (places.length === 0) return;
+            
+            const place = places[0];
+            if (!place.geometry || !place.geometry.location) return;
+            
+            const location = place.geometry.location;
+            placeMarker({ lat: location.lat(), lng: location.lng() });
+            map.setCenter(location);
+            map.setZoom(17);
+        });
+
+        // Add click listener to map
+        map.addListener('click', function(event) {
+            placeMarker({ lat: event.latLng.lat(), lng: event.latLng.lng() });
+        });
+
+        // Try to get current location automatically
+        getCurrentLocation();
+
+    } catch (error) {
+        console.error('Map initialization error:', error);
+        alert('Error loading map. Please refresh the page.');
+    }
+}
+
+function placeMarker(location) {
+    // Remove existing marker
+    if (marker) {
+        marker.setMap(null);
+    }
+    
+    // Remove existing circle
+    if (circle) {
+        circle.setMap(null);
+    }
+
+    // Create new marker
+    marker = new google.maps.Marker({
+        position: location,
+        map: map,
+        draggable: true,
+        animation: google.maps.Animation.DROP,
+        title: 'Classroom Location'
+    });
+
+    // Make marker draggable
+    marker.addListener('dragend', function(event) {
+        updateLocation(event.latLng.lat(), event.latLng.lng());
+    });
+
+    // Update location
+    updateLocation(location.lat, location.lng);
+    
+    // Center map on marker
+    map.panTo(location);
+}
+
+function updateLocation(lat, lng) {
+    selectedLat = lat;
+    selectedLng = lng;
+
+    // Update form fields
+    document.getElementById('latitude').value = lat.toFixed(6);
+    document.getElementById('longitude').value = lng.toFixed(6);
+
+    // Update display
+    document.getElementById('coordsDisplay').textContent = 
+        `Latitude: ${lat.toFixed(6)}, Longitude: ${lng.toFixed(6)}`;
+    document.getElementById('locationInfo').style.display = 'block';
+
+    // Draw radius circle
+    drawCircle();
+}
+
+function drawCircle() {
+    if (!selectedLat || !selectedLng) return;
+    
+    // Remove existing circle
+    if (circle) {
+        circle.setMap(null);
+    }
+
+    const radius = parseInt(document.getElementById('radiusSlider').value);
+
+    // Create new circle
+    circle = new google.maps.Circle({
+        map: map,
+        center: { lat: selectedLat, lng: selectedLng },
+        radius: radius,
+        fillColor: '#3b82f6',
+        fillOpacity: 0.2,
+        strokeColor: '#3b82f6',
+        strokeOpacity: 0.8,
+        strokeWeight: 2,
+        editable: false
+    });
+}
+
+function updateRadius() {
+    const radius = document.getElementById('radiusSlider').value;
+    document.getElementById('radiusValue').textContent = radius + 'm';
+    drawCircle();
+}
+
+function getCurrentLocation() {
+    if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const pos = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                };
+                placeMarker(pos);
+                map.setCenter(pos);
+                map.setZoom(17);
+                console.log('Current location found:', pos);
+            },
+            function(error) {
+                console.error('Geolocation error:', error);
+                alert('Could not get your location. Please click on the map to set location manually.');
+            }
+        );
+    } else {
+        alert('Geolocation is not supported by this browser. Please click on the map to set location.');
+    }
+}
+
+function setDefaultLocation() {
+    // Set to a default location (you can customize this)
+    const defaultPos = { lat: 28.6139, lng: 77.2090 }; // Delhi
+    placeMarker(defaultPos);
+    map.setCenter(defaultPos);
+    map.setZoom(15);
+}
+
+// Form validation
+document.getElementById('sessionForm').addEventListener('submit', function(e) {
+    if (!selectedLat || !selectedLng) {
+        e.preventDefault();
+        alert('⚠️ Please select a location on the map before creating the session!');
+        return false;
+    }
+});
+
+// Load Google Maps API
+function loadGoogleMaps() {
+    // Replace YOUR_API_KEY with actual key, or remove &key parameter for testing
+    const script = document.createElement('script');
+    script.src = 'https://maps.googleapis.com/maps/api/js?libraries=places&callback=initMap';
+    script.async = true;
+    script.defer = true;
+    script.onerror = function() {
+        console.error('Failed to load Google Maps');
+        document.getElementById('map').innerHTML = `
+            <div style="height: 450px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 8px;">
+                <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 48px; margin-bottom: 15px;">🗺️</div>
+                    <h3 style="color: #374151; margin-bottom: 10px;">Google Maps Not Available</h3>
+                    <p style="color: #6b7280;">Please add Google Maps API key to enable map functionality.</p>
+                    <p style="color: #9ca3af; font-size: 14px; margin-top: 10px;">You can still create sessions by entering coordinates manually:</p>
+                    <div style="margin-top: 15px;">
+                        <input type="number" step="0.000001" placeholder="Latitude" id="manualLat" 
+                               style="width: 200px; padding: 8px; margin: 5px; border: 1px solid #d1d5db; border-radius: 4px;">
+                        <input type="number" step="0.000001" placeholder="Longitude" id="manualLng" 
+                               style="width: 200px; padding: 8px; margin: 5px; border: 1px solid #d1d5db; border-radius: 4px;">
+                        <button onclick="useManualCoords()" type="button"
+                                style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">
+                            Set Location
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    };
+    document.head.appendChild(script);
+}
+
+// Manual coordinate entry fallback
+function useManualCoords() {
+    const lat = parseFloat(document.getElementById('manualLat').value);
+    const lng = parseFloat(document.getElementById('manualLng').value);
+    
+    if (isNaN(lat) || isNaN(lng)) {
+        alert('Please enter valid coordinates');
+        return;
+    }
+    
+    selectedLat = lat;
+    selectedLng = lng;
+    document.getElementById('latitude').value = lat;
+    document.getElementById('longitude').value = lng;
+    document.getElementById('coordsDisplay').textContent = `Latitude: ${lat}, Longitude: ${lng}`;
+    document.getElementById('locationInfo').style.display = 'block';
+    alert('✅ Location set successfully!');
+}
+
+// Load map when page is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadGoogleMaps);
+} else {
+    loadGoogleMaps();
+}
+</script>
+{% endblock %}

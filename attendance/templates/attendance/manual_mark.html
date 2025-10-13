@@ -1,0 +1,225 @@
+{% extends 'base.html' %}
+
+{% block title %}Manual Mark Attendance{% endblock %}
+
+{% block extra_css %}
+<style>
+    .student-card {
+        border-left: 4px solid #007bff;
+        transition: all 0.3s;
+    }
+    
+    .student-card:hover {
+        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .session-info {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+    }
+    
+    .status-badge {
+        font-size: 0.9rem;
+        padding: 5px 15px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-user-check"></i> Manual Mark Attendance</h2>
+            <p class="text-muted mb-0">Mark attendance for individual student</p>
+        </div>
+        <a href="{% url 'attendance:session_detail' session.id %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Session
+        </a>
+    </div>
+    
+    <!-- Session Info Card -->
+    <div class="session-info mb-4">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h4 class="mb-2"><i class="fas fa-chalkboard-teacher"></i> {{ session.batch.name }}</h4>
+                <p class="mb-1"><i class="fas fa-calendar"></i> {{ session.date|date:"d M Y" }}</p>
+                <p class="mb-0"><i class="fas fa-clock"></i> {{ session.start_time|time:"h:i A" }} - {{ session.end_time|time:"h:i A" }}</p>
+            </div>
+            <div class="col-md-4 text-right">
+                <div class="bg-white text-dark rounded p-3">
+                    <h5 class="mb-0">{{ stats.present }}/{{ stats.total }}</h5>
+                    <small>Students Present</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Student Info & Form -->
+    <div class="row">
+        <div class="col-md-6 mb-4">
+            <div class="card student-card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-user"></i> Student Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-3">
+                        <div class="bg-light rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 100px; height: 100px;">
+                            <i class="fas fa-user fa-3x text-primary"></i>
+                        </div>
+                    </div>
+                    
+                    <h4 class="text-center mb-3">{{ student.get_full_name }}</h4>
+                    
+                    <table class="table table-borderless">
+                        <tr>
+                            <td><strong><i class="fas fa-envelope"></i> Email:</strong></td>
+                            <td>{{ student.email }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong><i class="fas fa-id-card"></i> Student ID:</strong></td>
+                            <td>{{ student.id }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong><i class="fas fa-graduation-cap"></i> Batch:</strong></td>
+                            <td>{{ session.batch.name }}</td>
+                        </tr>
+                    </table>
+                    
+                    <!-- Current Status -->
+                    {% if existing_attendance %}
+                        <div class="alert alert-info mt-3">
+                            <h6><i class="fas fa-info-circle"></i> Current Status</h6>
+                            <p class="mb-1">
+                                Status: 
+                                {% if existing_attendance.is_present %}
+                                    <span class="badge badge-success">Present</span>
+                                    {% if existing_attendance.is_late %}
+                                        <span class="badge badge-warning">Late</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge badge-danger">Absent</span>
+                                {% endif %}
+                            </p>
+                            <p class="mb-0">
+                                <small>Marked at: {{ existing_attendance.marked_at|date:"d M Y, h:i A" }}</small>
+                            </p>
+                            <p class="mb-0">
+                                <small>Method: {{ existing_attendance.get_marking_method_display }}</small>
+                            </p>
+                        </div>
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> Attendance not marked yet
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="fas fa-check-circle"></i> Mark Attendance</h5>
+                </div>
+                <div class="card-body">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="form-group">
+                            <label for="status"><strong>Attendance Status *</strong></label>
+                            <select name="status" id="status" class="form-control form-control-lg" required>
+                                <option value="">-- Select Status --</option>
+                                <option value="present" {% if existing_attendance.is_present %}selected{% endif %}>
+                                    ✓ Present
+                                </option>
+                                <option value="absent" {% if existing_attendance and not existing_attendance.is_present %}selected{% endif %}>
+                                    ✗ Absent
+                                </option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="is_late"><strong>Late Arrival?</strong></label>
+                            <select name="is_late" id="is_late" class="form-control">
+                                <option value="no" {% if existing_attendance and not existing_attendance.is_late %}selected{% endif %}>No - On Time</option>
+                                <option value="yes" {% if existing_attendance.is_late %}selected{% endif %}>Yes - Late</option>
+                            </select>
+                            <small class="form-text text-muted">Mark if student arrived after start time</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="notes"><strong>Notes (Optional)</strong></label>
+                            <textarea name="notes" id="notes" class="form-control" rows="4" placeholder="Add any relevant notes or comments...">{% if existing_attendance %}{{ existing_attendance.notes }}{% endif %}</textarea>
+                            <small class="form-text text-muted">Example: Valid reason for absence, medical leave, etc.</small>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> This will override any existing attendance record for this student.
+                        </div>
+                        
+                        <div class="form-group mb-0">
+                            <button type="submit" class="btn btn-success btn-lg btn-block">
+                                <i class="fas fa-save"></i> 
+                                {% if existing_attendance %}Update{% else %}Mark{% endif %} Attendance
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <!-- Quick Actions -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h6>
+                </div>
+                <div class="card-body">
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="status" value="present">
+                        <input type="hidden" name="is_late" value="no">
+                        <button type="submit" class="btn btn-sm btn-success btn-block mb-2">
+                            <i class="fas fa-check"></i> Mark Present (On Time)
+                        </button>
+                    </form>
+                    
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="status" value="present">
+                        <input type="hidden" name="is_late" value="yes">
+                        <button type="submit" class="btn btn-sm btn-warning btn-block mb-2">
+                            <i class="fas fa-clock"></i> Mark Present (Late)
+                        </button>
+                    </form>
+                    
+                    <form method="post" class="d-inline">
+                        {% csrf_token %}
+                        <input type="hidden" name="status" value="absent">
+                        <button type="submit" class="btn btn-sm btn-danger btn-block">
+                            <i class="fas fa-times"></i> Mark Absent
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-disable late option when absent is selected
+    document.getElementById('status').addEventListener('change', function() {
+        const lateSelect = document.getElementById('is_late');
+        if (this.value === 'absent') {
+            lateSelect.value = 'no';
+            lateSelect.disabled = true;
+        } else {
+            lateSelect.disabled = false;
+        }
+    });
+</script>
+{% endblock %}

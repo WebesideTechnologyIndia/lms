@@ -374,7 +374,7 @@
                 {% else %}
                     <p class="text-muted">No students have enrolled in courses yet.</p>
                     {% if request.user.role == 'superadmin' %}
-                    <a href="{% url 'courses:manual_enrollment' %}" class="btn btn-primary">
+                    <a href="{% url 'courses:admin_manual_enrollment' %}" class="btn btn-primary">
                         <i class="fas fa-user-plus me-2"></i>Add First Enrollment
                     </a>
                     {% endif %}

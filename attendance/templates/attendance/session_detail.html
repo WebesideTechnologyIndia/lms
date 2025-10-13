@@ -1,0 +1,259 @@
+{% extends base_template %}
+
+{% block title %}Session Detail - {{ session.batch.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .qr-display {
+        max-width: 300px;
+        border: 3px solid #007bff;
+        border-radius: 10px;
+        padding: 10px;
+        background: white;
+    }
+    
+    .stat-card {
+        border-radius: 10px;
+        padding: 20px;
+        text-align: center;
+    }
+    
+    .student-row:hover {
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-clipboard-check"></i> {{ session.batch.name }}</h2>
+            <p class="text-muted mb-0">
+                {{ session.date|date:"d M Y" }} | {{ session.start_time|time:"h:i A" }} - {{ session.end_time|time:"h:i A" }}
+            </p>
+        </div>
+        <a href="{% url 'attendance:instructor_sessions' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back
+        </a>
+    </div>
+    
+    <!-- Stats Row -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card bg-primary text-white">
+                <h3>{{ stats.total }}</h3>
+                <p class="mb-0">Total Students</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-success text-white">
+                <h3>{{ stats.present }}</h3>
+                <p class="mb-0">Present</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-danger text-white">
+                <h3>{{ stats.absent }}</h3>
+                <p class="mb-0">Absent</p>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card bg-info text-white">
+                <h3>{{ stats.percentage }}%</h3>
+                <p class="mb-0">Attendance</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Left Column - QR Code & Info -->
+        <div class="col-md-4">
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-qrcode"></i> QR Code</h5>
+                </div>
+                <div class="card-body text-center">
+                    {% if session.qr_code %}
+                        <img src="{{ session.qr_code.url }}" class="qr-display mb-3" alt="QR Code">
+                        <p class="text-muted">Students scan this code to mark attendance</p>
+                        <a href="{{ session.qr_code.url }}" download class="btn btn-primary btn-block">
+                            <i class="fas fa-download"></i> Download QR Code
+                        </a>
+                    {% else %}
+                        <p>QR Code not generated</p>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="fas fa-map-marker-alt"></i> Location Info</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Location:</strong> {{ session.classroom_location }}</p>
+                    <p><strong>Coordinates:</strong><br>{{ session.latitude }}, {{ session.longitude }}</p>
+                    <p><strong>Allowed Radius:</strong> {{ session.allowed_radius_meters }}m</p>
+                    
+                    {% if is_instructor %}
+                        <small class="text-muted">
+                            Students must be within {{ session.allowed_radius_meters }} meters to mark attendance
+                        </small>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Column - Student List -->
+        <div class="col-md-8">
+            <!-- Pending Requests Alert -->
+            {% if pending_requests %}
+                <div class="alert alert-warning">
+                    <h5><i class="fas fa-exclamation-triangle"></i> {{ pending_requests.count }} Pending Request(s)</h5>
+                    <a href="{% url 'attendance:pending_requests' %}" class="btn btn-warning btn-sm">
+                        View Requests
+                    </a>
+                </div>
+            {% endif %}
+            
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-users"></i> Student Attendance</h5>
+                    {% if is_instructor %}
+                        <div>
+                            <button class="btn btn-sm btn-success" data-toggle="modal" data-target="#bulkMarkModal">
+                                <i class="fas fa-check-double"></i> Bulk Mark
+                            </button>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="thead-light">
+                                <tr>
+                                    <th>Student</th>
+                                    <th>Status</th>
+                                    <th>Time</th>
+                                    <th>Distance</th>
+                                    <th>Method</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in student_list %}
+                                <tr class="student-row">
+                                    <td>
+                                        <strong>{{ item.student.get_full_name }}</strong><br>
+                                        <small class="text-muted">{{ item.student.email }}</small>
+                                    </td>
+                                    <td>
+                                        {% if item.has_attendance %}
+                                            {% if item.status == 'Present' %}
+                                                <span class="badge badge-success">
+                                                    <i class="fas fa-check-circle"></i> Present
+                                                    {% if item.is_late %}<br><small>(Late)</small>{% endif %}
+                                                </span>
+                                            {% else %}
+                                                <span class="badge badge-danger">
+                                                    <i class="fas fa-times-circle"></i> Absent
+                                                </span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="badge badge-secondary">
+                                                <i class="fas fa-minus-circle"></i> Not Marked
+                                            </span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.marked_at %}
+                                            {{ item.marked_at|time:"h:i A" }}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.distance %}
+                                            {{ item.distance }}m
+                                            {% if item.distance <= session.allowed_radius_meters %}
+                                                <i class="fas fa-check text-success"></i>
+                                            {% else %}
+                                                <i class="fas fa-exclamation-triangle text-danger"></i>
+                                            {% endif %}
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if item.method %}
+                                            <small>{{ item.method }}</small>
+                                        {% else %}
+                                            -
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        <i class="fas fa-user-slash fa-3x mb-3"></i>
+                                        <p>No students enrolled in this batch</p>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk Mark Modal -->
+{% if is_instructor %}
+<div class="modal fade" id="bulkMarkModal" tabindex="-1" role="dialog">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-check-double"></i> Bulk Mark Attendance</h5>
+                <button type="button" class="close" data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+            <form method="post" action="{% url 'attendance:bulk_mark_attendance' session.id %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Mark all unmarked students as:</label>
+                        <select name="status" class="form-control" required>
+                            <option value="">-- Select Status --</option>
+                            <option value="Present">Present</option>
+                            <option value="Absent">Absent</option>
+                        </select>
+                    </div>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i> This will only affect students who haven't been marked yet.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Mark Attendance</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-refresh page every 30 seconds to show real-time updates
+    {% if is_instructor %}
+    setTimeout(function(){
+        location.reload();
+    }, 30000);
+    {% endif %}
+</script>
+{% endblock %}
