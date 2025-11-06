@@ -3022,15 +3022,47 @@ def instructor_dashboard(request):
         is_active=True
     ).select_related('student', 'course').order_by('-enrolled_at')[:5]
     
-    # Get instructor permissions for display
+    # Get instructor permissions
     permissions = instructor.get_instructor_permissions()
+    
+    # ⭐ EXACT DATABASE CODE MAPPING ⭐
+    permission_mapping = {
+        # Basic
+        'course_management': 'has_course_permission',
+        'batch_management': 'has_batch_permission',
+        'content_management': 'has_content_permission',
+        
+        # Exam
+        'exam_dashboard': 'has_exam_permission',
+        'create_exam': 'has_create_exam_permission',
+        'my_exams': 'has_my_exams_permission',
+        'assign_exam': 'has_assign_exam_permission',
+        
+        # Attendance
+        'attendance_dashboard': 'has_attendance_dashboard_permission',
+        'createsession': 'has_createsession_permission',  # ⭐ NO UNDERSCORE
+        'all_sessions': 'has_all_sessions_permission',    # ⭐ PLURAL
+        'attendance_pending': 'has_attendance_pending_permission',  # ⭐ SHORTER
+        'attendance_reports': 'has_attendance_reports_permission',
+        
+        # Other
+        'student_management': 'has_student_permission',
+        'email_marketing': 'has_email_permission',
+        'profile_setting': 'has_profile_setting_permission',
+    }
+    
+    # Generate flags
+    permission_flags = {}
+    for perm_code, template_var in permission_mapping.items():
+        permission_flags[template_var] = instructor.has_instructor_permission(perm_code)
     
     context = {
         'total_courses': total_courses,
         'total_students': total_students,
         'recent_enrollments': recent_enrollments,
-        'instructor_courses': instructor_courses[:5],  # Show recent 5
+        'instructor_courses': instructor_courses[:5],
         'permissions': permissions,
+        **permission_flags,
     }
     
     return render(request, 'instructor/instructor_dashboard.html', context)
@@ -3181,8 +3213,6 @@ def check_permission(request):
     })
 from courses.models import *
 
-def instructor_course_management(request):
-    return render(request,'instructor/course_management.html')
 
 
 # userss/views.py (ya jahan aapka instructor views hain)

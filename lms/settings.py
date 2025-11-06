@@ -89,6 +89,7 @@ TEMPLATES = [
                 'lms.context_processors.instructor_permissions',
                 'userss.context_processors.instructor_navigation',
                 'userss.context_processors.student_context',
+                'userss.context_processors.instructor_permissions',
             ],
         },
     },

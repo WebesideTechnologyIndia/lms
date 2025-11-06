@@ -52,10 +52,11 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
+                        <!-- Course Management -->
                         <div class="col-md-4 mb-3">
                             <div class="permission-item {% if has_course_permission %}granted{% else %}denied{% endif %}">
                                 <i class="fas fa-book me-2"></i>
-                                Course Management
+                                My Courses
                                 {% if has_course_permission %}
                                 <span class="badge bg-success ms-2">Granted</span>
                                 {% else %}
@@ -63,17 +64,8 @@
                                 {% endif %}
                             </div>
                         </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="permission-item {% if has_content_permission %}granted{% else %}denied{% endif %}">
-                                <i class="fas fa-file-alt me-2"></i>
-                                Content Management
-                                {% if has_content_permission %}
-                                <span class="badge bg-success ms-2">Granted</span>
-                                {% else %}
-                                <span class="badge bg-danger ms-2">Not Granted</span>
-                                {% endif %}
-                            </div>
-                        </div>
+
+                        <!-- Batch Management -->
                         <div class="col-md-4 mb-3">
                             <div class="permission-item {% if has_batch_permission %}granted{% else %}denied{% endif %}">
                                 <i class="fas fa-layer-group me-2"></i>
@@ -85,10 +77,142 @@
                                 {% endif %}
                             </div>
                         </div>
+
+                        <!-- Content Management -->
+                        <div class="col-md-4 mb-3">
+                            <div class="permission-item {% if has_content_permission %}granted{% else %}denied{% endif %}">
+                                <i class="fas fa-file-alt me-2"></i>
+                                Content Management
+                                {% if has_content_permission %}
+                                <span class="badge bg-success ms-2">Granted</span>
+                                {% else %}
+                                <span class="badge bg-danger ms-2">Not Granted</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Exam Dashboard -->
+                        <div class="col-md-4 mb-3">
+                            <div class="permission-item {% if has_exam_permission %}granted{% else %}denied{% endif %}">
+                                <i class="fas fa-clipboard-list me-2"></i>
+                                Exam Dashboard
+                                {% if has_exam_permission %}
+                                <span class="badge bg-success ms-2">Granted</span>
+                                {% else %}
+                                <span class="badge bg-danger ms-2">Not Granted</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Create Exam -->
+                        <div class="col-md-4 mb-3">
+                            <div class="permission-item {% if has_create_exam_permission %}granted{% else %}denied{% endif %}">
+                                <i class="fas fa-plus-circle me-2"></i>
+                                Create Exam
+                                {% if has_create_exam_permission %}
+                                <span class="badge bg-success ms-2">Granted</span>
+                                {% else %}
+                                <span class="badge bg-danger ms-2">Not Granted</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- My Exams -->
+                        <div class="col-md-4 mb-3">
+                            <div class="permission-item {% if has_my_exams_permission %}granted{% else %}denied{% endif %}">
+                                <i class="fas fa-list-alt me-2"></i>
+                                My Exams
+                                {% if has_my_exams_permission %}
+                                <span class="badge bg-success ms-2">Granted</span>
+                                {% else %}
+                                <span class="badge bg-danger ms-2">Not Granted</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Assign Exam -->
+                        <div class="col-md-4 mb-3">
+                            <div class="permission-item {% if has_assign_exam_permission %}granted{% else %}denied{% endif %}">
+                                <i class="fas fa-user-plus me-2"></i>
+                                Assign Exam
+                                {% if has_assign_exam_permission %}
+                                <span class="badge bg-success ms-2">Granted</span>
+                                {% else %}
+                                <span class="badge bg-danger ms-2">Not Granted</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Attendance Dashboard -->
+                        <div class="col-md-4 mb-3">
+                            <div class="permission-item {% if has_attendance_dashboard_permission %}granted{% else %}denied{% endif %}">
+                                <i class="fas fa-clipboard-check me-2"></i>
+                                Attendance Dashboard
+                                {% if has_attendance_dashboard_permission %}
+                                <span class="badge bg-success ms-2">Granted</span>
+                                {% else %}
+                                <span class="badge bg-danger ms-2">Not Granted</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Create Session -->
+                        <div class="col-md-4 mb-3">
+                            <div class="permission-item {% if has_createsession_permission %}granted{% else %}denied{% endif %}">
+                                <i class="fas fa-calendar-plus me-2"></i>
+                                Create Session
+                                {% if has_createsession_permission %}
+                                <span class="badge bg-success ms-2">Granted</span>
+                                {% else %}
+                                <span class="badge bg-danger ms-2">Not Granted</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- All Sessions -->
+                        <div class="col-md-4 mb-3">
+                            <div class="permission-item {% if has_all_sessions_permission %}granted{% else %}denied{% endif %}">
+                                <i class="fas fa-list-alt me-2"></i>
+                                All Sessions
+                                {% if has_all_sessions_permission %}
+                                <span class="badge bg-success ms-2">Granted</span>
+                                {% else %}
+                                <span class="badge bg-danger ms-2">Not Granted</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Attendance Pending Request -->
+                        <div class="col-md-4 mb-3">
+                            <div class="permission-item {% if has_attendance_pending_permission %}granted{% else %}denied{% endif %}">
+                                <i class="fas fa-clock me-2"></i>
+                                Pending Requests
+                                {% if has_attendance_pending_permission %}
+                                <span class="badge bg-success ms-2">Granted</span>
+                                {% else %}
+                                <span class="badge bg-danger ms-2">Not Granted</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Attendance Reports -->
+                        <div class="col-md-4 mb-3">
+                            <div class="permission-item {% if has_attendance_reports_permission %}granted{% else %}denied{% endif %}">
+                                <i class="fas fa-chart-bar me-2"></i>
+                                Attendance Reports
+                                {% if has_attendance_reports_permission %}
+                                <span class="badge bg-success ms-2">Granted</span>
+                                {% else %}
+                                <span class="badge bg-danger ms-2">Not Granted</span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- My Students -->
                         <div class="col-md-4 mb-3">
                             <div class="permission-item {% if has_student_permission %}granted{% else %}denied{% endif %}">
                                 <i class="fas fa-user-graduate me-2"></i>
-                                Student Management
+                                My Students
                                 {% if has_student_permission %}
                                 <span class="badge bg-success ms-2">Granted</span>
                                 {% else %}
@@ -96,6 +220,8 @@
                                 {% endif %}
                             </div>
                         </div>
+
+                        <!-- Email Marketing -->
                         <div class="col-md-4 mb-3">
                             <div class="permission-item {% if has_email_permission %}granted{% else %}denied{% endif %}">
                                 <i class="fas fa-envelope me-2"></i>
@@ -107,11 +233,13 @@
                                 {% endif %}
                             </div>
                         </div>
+
+                        <!-- Profile Setting -->
                         <div class="col-md-4 mb-3">
-                            <div class="permission-item {% if has_analytics_permission %}granted{% else %}denied{% endif %}">
-                                <i class="fas fa-chart-bar me-2"></i>
-                                Analytics View
-                                {% if has_analytics_permission %}
+                            <div class="permission-item {% if has_profile_setting_permission %}granted{% else %}denied{% endif %}">
+                                <i class="fas fa-user-cog me-2"></i>
+                                Profile Setting
+                                {% if has_profile_setting_permission %}
                                 <span class="badge bg-success ms-2">Granted</span>
                                 {% else %}
                                 <span class="badge bg-danger ms-2">Not Granted</span>
@@ -119,7 +247,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     {% if not has_course_permission and not has_content_permission and not has_batch_permission %}
                     <div class="alert alert-warning mt-3">
                         <i class="fas fa-exclamation-triangle me-2"></i>
@@ -140,36 +268,36 @@
                 </div>
                 <div class="card-body">
                     {% if has_course_permission %}
-<a href="{% url 'instructor_courses' %}" class="btn btn-primary btn-sm mb-2 me-2">
+                    <a href="{% url 'instructor_courses' %}" class="btn btn-primary btn-sm mb-2 me-2">
                         <i class="fas fa-book me-1"></i>Manage Courses
                     </a>
                     {% endif %}
-                    
+
                     {% if has_content_permission %}
-<a href="{% url 'content_management' %}" class="btn btn-success btn-sm mb-2 me-2">
+                    <a href="{% url 'content_management' %}" class="btn btn-success btn-sm mb-2 me-2">
                         <i class="fas fa-file-alt me-1"></i>Manage Content
                     </a>
                     {% endif %}
-                    
+
                     {% if has_student_permission %}
                     <a href="{% url 'student_management' %}" class="btn btn-info btn-sm mb-2 me-2">
-
+                        <i class="fas fa-user-graduate me-1"></i>Manage Students
+                    </a>
                     {% endif %}
-                    
-                    {% if has_email_permission %}
-                   <a href="{% url 'email_marketing' %}" class="btn btn-warning btn-sm mb-2 me-2">
 
+                    {% if has_email_permission %}
+                    <a href="{% url 'email_marketing' %}" class="btn btn-warning btn-sm mb-2 me-2">
                         <i class="fas fa-envelope me-1"></i>Send Emails
                     </a>
                     {% endif %}
-                    
+
                     {% if not has_course_permission and not has_content_permission and not has_student_permission and not has_email_permission %}
                     <p class="text-muted mb-0">No quick actions available. Contact admin for permissions.</p>
                     {% endif %}
                 </div>
             </div>
         </div>
-        
+
         <div class="col-md-6">
             <div class="card">
                 <div class="card-header">
@@ -246,68 +374,68 @@
 </div>
 
 <style>
-.welcome-card {
-    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-    color: white;
-    border-radius: 20px;
-    padding: 40px;
-    box-shadow: 0 15px 40px rgba(16, 185, 129, 0.3);
-}
+    .welcome-card {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        border-radius: 20px;
+        padding: 40px;
+        box-shadow: 0 15px 40px rgba(16, 185, 129, 0.3);
+    }
 
-.stats-card {
-    background: white;
-    border-radius: 16px;
-    padding: 25px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-    transition: transform 0.3s ease;
-}
+    .stats-card {
+        background: white;
+        border-radius: 16px;
+        padding: 25px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
 
-.stats-card:hover {
-    transform: translateY(-5px);
-}
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
 
-.stats-number {
-    font-size: 2.5rem;
-    font-weight: 800;
-    color: var(--primary-color);
-    margin-bottom: 8px;
-}
+    .stats-number {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: var(--primary-color);
+        margin-bottom: 8px;
+    }
 
-.stats-label {
-    color: #6b7280;
-    font-size: 0.9rem;
-    text-transform: uppercase;
-    font-weight: 600;
-}
+    .stats-label {
+        color: #6b7280;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        font-weight: 600;
+    }
 
-.permission-item {
-    padding: 10px;
-    border-radius: 8px;
-    background: #f8fafc;
-    border-left: 4px solid #e5e7eb;
-}
+    .permission-item {
+        padding: 10px;
+        border-radius: 8px;
+        background: #f8fafc;
+        border-left: 4px solid #e5e7eb;
+    }
 
-.permission-item.granted {
-    background: #f0fdf4;
-    border-left-color: #10b981;
-}
+    .permission-item.granted {
+        background: #f0fdf4;
+        border-left-color: #10b981;
+    }
 
-.permission-item.denied {
-    background: #fef2f2;
-    border-left-color: #ef4444;
-}
+    .permission-item.denied {
+        background: #fef2f2;
+        border-left-color: #ef4444;
+    }
 
-.avatar-circle {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    background: var(--primary-color);
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: 0.8rem;
-}
+    .avatar-circle {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: var(--primary-color);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        font-size: 0.8rem;
+    }
 </style>
 {% endblock %}

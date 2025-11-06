@@ -211,7 +211,7 @@
                                             </span>
                                         {% else %}
                                             <div>
-                                                <strong>${{ course.get_effective_price }}</strong>
+                                                <strong>{{ course.get_effective_price }}</strong>
                                                 {% if course.discounted_price and course.price != course.discounted_price %}
                                                     <small class="text-muted text-decoration-line-through">${{ course.price }}</small>
                                                     <span class="badge bg-danger ms-1">{{ course.get_discount_percentage }}% OFF</span>

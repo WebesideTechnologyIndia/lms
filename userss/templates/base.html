@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}LMS Dashboard{% endblock %}</title>
 
-    <!-- CSS Files - NO DUPLICATES -->
+    <!-- CSS Files -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
 
@@ -112,6 +112,7 @@
             justify-content: space-between;
             align-items: center;
             transition: all 0.3s ease;
+            user-select: none;
         }
 
         .submenu-toggle:hover {
@@ -134,7 +135,7 @@
         }
 
         .submenu.open .submenu-items {
-            max-height: 500px;
+            max-height: 1000px;
         }
 
         .submenu-item {
@@ -277,12 +278,9 @@
         }
 
         @keyframes shimmer {
-
-            0%,
-            100% {
+            0%, 100% {
                 transform: rotate(0deg);
             }
-
             50% {
                 transform: rotate(180deg);
             }
@@ -322,34 +320,6 @@
             font-weight: 600;
         }
 
-        .quick-actions {
-            background: white;
-            border-radius: 16px;
-            padding: 25px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            margin-bottom: 30px;
-        }
-
-        .action-btn {
-            display: block;
-            padding: 15px;
-            background: var(--primary-color);
-            color: white;
-            text-decoration: none;
-            border-radius: 12px;
-            transition: all 0.3s ease;
-            text-align: center;
-            margin-bottom: 10px;
-        }
-
-        .action-btn:hover {
-            background: var(--secondary-color);
-            color: white;
-            text-decoration: none;
-            transform: translateY(-2px);
-        }
-
-        /* Table improvements */
         .table-responsive {
             border-radius: 12px;
             overflow: hidden;
@@ -374,75 +344,12 @@
             background-color: #f8fafc;
         }
 
-        /* Badge improvements */
         .badge {
             padding: 6px 12px;
             border-radius: 20px;
             font-weight: 500;
         }
 
-        .badge.bg-success {
-            background-color: #10b981 !important;
-        }
-
-        .badge.bg-warning {
-            background-color: #f59e0b !important;
-        }
-
-        .badge.bg-info {
-            background-color: #06b6d4 !important;
-        }
-
-        /* Button groups */
-        .btn-group .btn {
-            border-radius: 8px;
-            margin: 0 2px;
-        }
-
-        .btn-sm {
-            padding: 6px 12px;
-            font-size: 0.8rem;
-        }
-
-        /* Empty state */
-        .empty-state {
-            text-align: center;
-            padding: 60px 20px;
-            color: #6b7280;
-        }
-
-        .empty-state i {
-            font-size: 4rem;
-            margin-bottom: 20px;
-            opacity: 0.5;
-        }
-
-        .empty-state h6 {
-            margin-bottom: 10px;
-            color: #374151;
-        }
-
-        .empty-state p {
-            margin-bottom: 20px;
-            font-size: 0.9rem;
-        }
-
-        /* Category items */
-        .category-item {
-            background: #f8fafc;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px;
-            border-left: 4px solid var(--primary-color);
-            transition: all 0.3s ease;
-        }
-
-        .category-item:hover {
-            background: #f1f5f9;
-            transform: translateX(5px);
-        }
-
-        /* Responsive improvements */
         @media (max-width: 576px) {
             .welcome-card {
                 padding: 20px;
@@ -456,10 +363,6 @@
 
             .stats-number {
                 font-size: 2rem;
-            }
-
-            .action-btn {
-                margin-bottom: 15px;
             }
         }
     </style>
@@ -491,11 +394,8 @@
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Profile</a></li>
                         <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
-                        <li>
-                            <hr class="dropdown-divider">
-                        </li>
-                        <li><a class="dropdown-item" href="{% url 'user_logout' %}"><i
-                                    class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'user_logout' %}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
                     </ul>
                 </div>
             </div>
@@ -521,7 +421,7 @@
             <!-- User Management -->
             <div class="nav-section">User Management</div>
             <div class="submenu" data-submenu="users">
-                <div class="submenu-toggle" onclick="toggleSubmenu('users')">
+                <div class="submenu-toggle">
                     <span><i class="fas fa-users me-2"></i>Users</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
@@ -550,7 +450,7 @@
             </div>
 
             <div class="submenu" data-submenu="instructor-management">
-                <div class="submenu-toggle" onclick="toggleSubmenu('instructor-management')">
+                <div class="submenu-toggle">
                     <span><i class="fas fa-chalkboard-teacher me-2"></i>Instructor Management</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
@@ -563,17 +463,12 @@
                         href="{% url 'create_instructor_permission' %}">
                         Create Permission
                     </a>
-                    <a class="submenu-item" href="#">
-                        Permission Analytics
-                    </a>
                 </div>
             </div>
 
             <!-- Course Management -->
             <div class="nav-section">Course Management</div>
-
-            <!-- All Courses -->
-            <a class="nav-link {% if 'manage_courses' in request.resolver_match.url_name %}active{% endif %}"
+            <a class="nav-link {% if 'course_dashboard' in request.resolver_match.url_name %}active{% endif %}"
                 href="{% url 'courses:course_dashboard' %}">
                 <i class="fas fa-book"></i>
                 Course Dashboard
@@ -584,9 +479,8 @@
                 All Courses
             </a>
 
-            <!-- Course Type Filters -->
             <div class="submenu" data-submenu="course-types">
-                <div class="submenu-toggle" onclick="toggleSubmenu('course-types')">
+                <div class="submenu-toggle">
                     <span><i class="fas fa-filter me-2"></i>Filter by Type</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
@@ -603,9 +497,8 @@
                 </div>
             </div>
 
-            <!-- Categories -->
             <div class="submenu" data-submenu="categories">
-                <div class="submenu-toggle" onclick="toggleSubmenu('categories')">
+                <div class="submenu-toggle">
                     <span><i class="fas fa-tags me-2"></i>Categories</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
@@ -616,17 +509,15 @@
                 </div>
             </div>
 
-            <!-- Create Course -->
             <a class="nav-link {% if 'create_course' in request.resolver_match.url_name %}active{% endif %}"
                 href="{% url 'courses:create_course' %}">
                 <i class="fas fa-plus-circle"></i>
                 Create Course
             </a>
 
-            <!-- Subscriptions (Superadmin Only) -->
             {% if request.user.role == 'superadmin' %}
             <div class="submenu" data-submenu="subscriptions">
-                <div class="submenu-toggle" onclick="toggleSubmenu('subscriptions')">
+                <div class="submenu-toggle">
                     <span><i class="fas fa-crown me-2"></i>Subscriptions</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
@@ -644,7 +535,6 @@
             </div>
             {% endif %}
 
-            <!-- Reviews -->
             {% if request.user.role in 'superadmin,instructor' %}
             <a class="nav-link {% if 'course_reviews' in request.resolver_match.url_name %}active{% endif %}"
                 href="{% url 'courses:course_reviews' %}">
@@ -653,24 +543,22 @@
             </a>
             {% endif %}
 
-            <!-- Attendance (Superadmin Only) -->
             {% if request.user.role == 'superadmin' %}
-            <a class="nav-link {% if 'attendance' in request.resolver_match.url_name %}active{% endif %}"
+            <a class="nav-link {% if 'attendance_dashboard' in request.resolver_match.url_name %}active{% endif %}"
                 href="{% url 'courses:attendance_dashboard' %}">
                 <i class="fas fa-clipboard-check"></i>
                 Login Activity Dashboard
             </a>
 
-            <a class="nav-link {% if 'attendance' in request.resolver_match.url_name %}active{% endif %}"
+            <a class="nav-link {% if 'attendance_status' in request.resolver_match.url_name %}active{% endif %}"
                 href="{% url 'courses:attendance_status' %}">
                 <i class="fas fa-clipboard-check"></i>
-               Login Activity Stats
+                Login Activity Stats
             </a>
             {% endif %}
 
-            <!-- Batch Management -->
             <div class="submenu" data-submenu="batches">
-                <div class="submenu-toggle" onclick="toggleSubmenu('batches')">
+                <div class="submenu-toggle">
                     <span><i class="fas fa-layer-group me-2"></i>Batch Management</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
@@ -686,9 +574,8 @@
                 </div>
             </div>
 
-            <!-- Enrollments -->
             <div class="submenu" data-submenu="enrollments">
-                <div class="submenu-toggle" onclick="toggleSubmenu('enrollments')">
+                <div class="submenu-toggle">
                     <span><i class="fas fa-user-graduate me-2"></i>Enrollments</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
@@ -701,64 +588,30 @@
                         href="{% url 'courses:admin_manual_enrollment' %}">
                         Manual Enrollment
                     </a>
-                    <a class="submenu-item" href="#">
-                        Export Data
-                    </a>
                 </div>
             </div>
 
-            <!-- ============================================ -->
-            <!-- CLASS MANAGEMENT SECTION -->
-            <!-- ============================================ -->
+            <!-- Class Management -->
             <div class="nav-section">Class Management</div>
-
-            <!-- Live Class Courses -->
             <a class="nav-link" href="{% url 'courses:manage_courses' %}?course_type=live">
                 <i class="fas fa-chalkboard-teacher"></i>
                 All Live Class Courses
             </a>
 
-            <!-- All Batches -->
-            <div class="submenu" data-submenu="all-batches">
-                <div class="submenu-toggle" onclick="toggleSubmenu('all-batches')">
-                    <span><i class="fas fa-layer-group me-2"></i>All Batches</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="submenu-items">
-                    <a class="submenu-item" href="{% url 'courses:manage_courses' %}">
-                        <i class="fas fa-th-large me-2"></i>View All Batches
-                    </a>
-                    {% for course in sidebar_courses %}
-                    <a class="submenu-item" href="{% url 'courses:batch_list' course.id %}">
-                        <i class="fas fa-graduation-cap me-2"></i>{{ course.course_code }} Batches
-                    </a>
-                    {% endfor %}
-                </div>
-            </div>
-
-            <!-- Create Batch -->
-            <a class="nav-link" href="#">
-                <i class="fas fa-plus-circle"></i>
-                Create Batch
-            </a>
-
-            <!-- Schedule Session -->
             <a class="nav-link {% if request.resolver_match.url_name == 'create_session' %}active{% endif %}"
                 href="{% url 'zoom:create_session' %}">
                 <i class="fas fa-calendar-plus"></i>
                 Schedule Session
             </a>
 
-            <!-- Session Calendar -->
             <a class="nav-link {% if request.resolver_match.url_name == 'session_calendar' %}active{% endif %}"
                 href="{% url 'zoom:session_calendar' %}">
                 <i class="fas fa-calendar-week"></i>
                 Session Calendar
             </a>
 
-            <!-- Live Sessions Management -->
             <div class="submenu" data-submenu="live-sessions">
-                <div class="submenu-toggle" onclick="toggleSubmenu('live-sessions')">
+                <div class="submenu-toggle">
                     <span><i class="fas fa-video me-2"></i>Live Sessions</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
@@ -782,40 +635,10 @@
                 </div>
             </div>
 
-            <!-- Batch Content -->
-            <div class="submenu" data-submenu="batch-content">
-                <div class="submenu-toggle" onclick="toggleSubmenu('batch-content')">
-                    <span><i class="fas fa-folder-open me-2"></i>Batch Content</span>
-                    <i class="fas fa-chevron-down"></i>
-                </div>
-                <div class="submenu-items">
-                    <a class="submenu-item" href="#">
-                        <i class="fas fa-graduation-cap me-2"></i>Content by Course
-                    </a>
-                    <a class="submenu-item" href="#">
-                        <i class="fas fa-users me-2"></i>Content by Batch
-                    </a>
-                    <a class="submenu-item" href="#">
-                        <i class="fas fa-video me-2"></i>Content by Session
-                    </a>
-                </div>
-            </div>
-
-            <!-- Live Class Reviews -->
-            {% if request.user.role in 'superadmin,instructor' %}
-            <a class="nav-link" href="{% url 'courses:course_reviews' %}">
-                <i class="fas fa-star"></i>
-                Live Class Reviews
-            </a>
-            {% endif %}
-            <!-- ============================================ -->
-            <!-- END CLASS MANAGEMENT SECTION -->
-            <!-- ============================================ -->
-
             <!-- Exam Management -->
             <div class="nav-section">Exam Management</div>
             <div class="submenu" data-submenu="exam">
-                <div class="submenu-toggle" onclick="toggleSubmenu('exam')">
+                <div class="submenu-toggle">
                     <span><i class="fas fa-clipboard-check me-2"></i>Exams</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
@@ -839,54 +662,48 @@
                 </div>
             </div>
 
-
+            <!-- Attendance Management -->
             <div class="nav-section">Attendance Management</div>
+            <a class="nav-link {% if 'session_list' in request.resolver_match.url_name %}active{% endif %}"
+                href="{% url 'attendance:session_list' %}">
+                <i class="fas fa-clipboard-list"></i>
+                All Attendance Sessions
+            </a>
 
-<!-- All Sessions -->
-<a class="nav-link {% if 'attendance' in request.resolver_match.url_name %}active{% endif %}"
-    href="{% url 'attendance:session_list' %}">
-    <i class="fas fa-clipboard-list"></i>
-    All Attendance Sessions
-</a>
+            <div class="submenu" data-submenu="attendance">
+                <div class="submenu-toggle">
+                    <span><i class="fas fa-qrcode me-2"></i>Attendance System</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="submenu-items">
+                    <a class="submenu-item {% if request.resolver_match.url_name == 'instructor_sessions' %}active{% endif %}"
+                        href="{% url 'attendance:instructor_sessions' %}">
+                        <i class="fas fa-calendar-check me-2"></i>All Sessions
+                    </a>
+                    <a class="submenu-item {% if request.resolver_match.url_name == 'create_session' %}active{% endif %}"
+                        href="{% url 'attendance:create_session' %}">
+                        <i class="fas fa-plus-circle me-2"></i>Create Session
+                    </a>
+                    <a class="submenu-item {% if request.resolver_match.url_name == 'pending_requests' %}active{% endif %}"
+                        href="{% url 'attendance:pending_requests' %}">
+                        <i class="fas fa-clock me-2 text-warning"></i>Pending Requests
+                    </a>
+                    <a class="submenu-item {% if request.resolver_match.url_name == 'attendance_reports' %}active{% endif %}"
+                        href="{% url 'attendance:attendance_reports' %}">
+                        <i class="fas fa-chart-bar me-2"></i>Reports & Analytics
+                    </a>
+                </div>
+            </div>
 
-<!-- Attendance Submenu -->
-<div class="submenu" data-submenu="attendance">
-    <div class="submenu-toggle" onclick="toggleSubmenu('attendance')">
-        <span><i class="fas fa-qrcode me-2"></i>Attendance System</span>
-        <i class="fas fa-chevron-down"></i>
-    </div>
-    <div class="submenu-items">
-        <a class="submenu-item {% if request.resolver_match.url_name == 'instructor_sessions' %}active{% endif %}"
-            href="{% url 'attendance:instructor_sessions' %}">
-            <i class="fas fa-calendar-check me-2"></i>All Sessions
-        </a>
-        <a class="submenu-item {% if request.resolver_match.url_name == 'create_session' %}active{% endif %}"
-            href="{% url 'attendance:create_session' %}">
-            <i class="fas fa-plus-circle me-2"></i>Create Session
-        </a>
-        <a class="submenu-item {% if request.resolver_match.url_name == 'pending_requests' %}active{% endif %}"
-            href="{% url 'attendance:pending_requests' %}">
-            <i class="fas fa-clock me-2 text-warning"></i>Pending Requests
-        </a>
-        <a class="submenu-item {% if request.resolver_match.url_name == 'attendance_reports' %}active{% endif %}"
-            href="{% url 'attendance:attendance_reports' %}">
-            <i class="fas fa-chart-bar me-2"></i>Reports & Analytics
-        </a>
-    </div>
-</div>
-
-<!-- Quick Stats Widget (Optional - can add in dashboard) -->
-<a class="nav-link" href="{% url 'attendance:attendance_analytics' %}">
-    <i class="fas fa-chart-pie"></i>
-    Attendance Analytics
-</a>
-
-
+            <a class="nav-link" href="{% url 'attendance:attendance_analytics' %}">
+                <i class="fas fa-chart-pie"></i>
+                Attendance Analytics
+            </a>
 
             <!-- Webinar Management -->
             <div class="nav-section">Webinar Management</div>
             <div class="submenu" data-submenu="webinars">
-                <div class="submenu-toggle" onclick="toggleSubmenu('webinars')">
+                <div class="submenu-toggle">
                     <span><i class="fas fa-video me-2"></i>Webinars</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
@@ -911,16 +728,13 @@
                         href="{% url 'webinars:admin_all_registrations' %}">
                         View Registrations
                     </a>
-                    <a class="submenu-item" href="{% url 'webinars:admin_all_registrations' %}?payment_status=pending">
-                        <i class="fas fa-credit-card me-2"></i>Pending Payments
-                    </a>
                 </div>
             </div>
 
             <!-- Fees Management -->
             <div class="nav-section">Fees Management</div>
             <div class="submenu" data-submenu="fees">
-                <div class="submenu-toggle" onclick="toggleSubmenu('fees')">
+                <div class="submenu-toggle">
                     <span><i class="fas fa-money-bill-wave me-2"></i>Fees Management</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
@@ -966,7 +780,7 @@
             <!-- Email Management -->
             <div class="nav-section">Email Management</div>
             <div class="submenu" data-submenu="email">
-                <div class="submenu-toggle" onclick="toggleSubmenu('email')">
+                <div class="submenu-toggle">
                     <span><i class="fas fa-envelope me-2"></i>Email System</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
@@ -990,9 +804,8 @@
                 </div>
             </div>
 
-            <!-- Email Templates -->
             <div class="submenu" data-submenu="templates">
-                <div class="submenu-toggle" onclick="toggleSubmenu('templates')">
+                <div class="submenu-toggle">
                     <span><i class="fas fa-file-text me-2"></i>Email Templates</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
@@ -1012,9 +825,8 @@
                 </div>
             </div>
 
-            <!-- Email Settings -->
             <div class="submenu" data-submenu="email-settings">
-                <div class="submenu-toggle" onclick="toggleSubmenu('email-settings')">
+                <div class="submenu-toggle">
                     <span><i class="fas fa-cogs me-2"></i>Email Settings</span>
                     <i class="fas fa-chevron-down"></i>
                 </div>
@@ -1022,9 +834,6 @@
                     <a class="submenu-item {% if request.resolver_match.url_name == 'email_limit_settings' %}active{% endif %}"
                         href="{% url 'email_limit_settings' %}">
                         Email Limits
-                    </a>
-                    <a class="submenu-item" href="#">
-                        SMTP Settings
                     </a>
                 </div>
             </div>
@@ -1046,22 +855,18 @@
 
             <!-- Zoom Integration -->
             <div class="nav-section">Zoom Integration</div>
-            
-            <!-- Zoom Dashboard -->
             <a class="nav-link {% if request.resolver_match.url_name == 'zoom_dashboard' %}active{% endif %}"
                 href="{% url 'zoom:dashboard' %}">
                 <i class="fas fa-tachometer-alt"></i>
                 Zoom Dashboard
             </a>
 
-            <!-- Zoom Configuration -->
             <a class="nav-link {% if request.resolver_match.url_name == 'zoom_config_setup' %}active{% endif %}"
                 href="{% url 'zoom:config_setup' %}">
                 <i class="fas fa-cog"></i>
                 Zoom Configuration
             </a>
 
-            <!-- Zoom Quick Status -->
             <a class="nav-link {% if request.resolver_match.url_name == 'zoom_config_status' %}active{% endif %}"
                 href="{% url 'zoom:config_status' %}">
                 <i class="fas fa-satellite-dish"></i>
@@ -1092,7 +897,9 @@
     </div>
 
     <!-- Bootstrap JS -->
+   <!-- Bootstrap JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    
     <script>
         // Zoom Status Checker
         function checkZoomStatus() {
@@ -1122,20 +929,6 @@
                 });
         }
 
-        // Check status on page load
-        document.addEventListener('DOMContentLoaded', function () {
-            checkZoomStatus();
-
-            // Check every 5 minutes
-            setInterval(checkZoomStatus, 300000);
-        });
-    </script>
-    <script>
-        function toggleSubmenu(submenuId) {
-            const submenu = document.querySelector(`[data-submenu="${submenuId}"]`);
-            submenu.classList.toggle('open');
-        }
-
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.querySelector('.sidebar-overlay');
@@ -1150,49 +943,134 @@
             overlay.classList.remove('show');
         }
 
-        // Auto-open active submenu
+        // Save sidebar scroll position
+        function saveSidebarScroll() {
+            const sidebar = document.getElementById('sidebar');
+            if (sidebar) {
+                localStorage.setItem('sidebarScrollPosition', sidebar.scrollTop);
+            }
+        }
+
+        // Restore sidebar scroll position
+        function restoreSidebarScroll() {
+            const sidebar = document.getElementById('sidebar');
+            const savedPosition = localStorage.getItem('sidebarScrollPosition');
+            if (sidebar && savedPosition) {
+                sidebar.scrollTop = parseInt(savedPosition);
+            }
+        }
+
+        // Save open submenus
+        function saveOpenSubmenus() {
+            const openSubmenus = [];
+            document.querySelectorAll('.submenu.open').forEach(submenu => {
+                const submenuId = submenu.getAttribute('data-submenu');
+                if (submenuId) {
+                    openSubmenus.push(submenuId);
+                }
+            });
+            localStorage.setItem('openSubmenus', JSON.stringify(openSubmenus));
+        }
+
+        // Restore open submenus
+        function restoreOpenSubmenus() {
+            const savedSubmenus = localStorage.getItem('openSubmenus');
+            if (savedSubmenus) {
+                const openSubmenus = JSON.parse(savedSubmenus);
+                openSubmenus.forEach(submenuId => {
+                    const submenu = document.querySelector(`[data-submenu="${submenuId}"]`);
+                    if (submenu) {
+                        submenu.classList.add('open');
+                    }
+                });
+            }
+        }
+
+        // Auto-refresh pending requests count
+        function updatePendingRequestsCount() {
+            fetch('{% url "attendance:pending_requests" %}?ajax=1')
+                .then(response => response.json())
+                .then(data => {
+                    const badge = document.getElementById('pending-requests-count');
+                    if (badge && data.count > 0) {
+                        badge.textContent = data.count;
+                        badge.style.display = 'inline';
+                    } else if (badge) {
+                        badge.style.display = 'none';
+                    }
+                })
+                .catch(error => console.error('Error fetching pending requests:', error));
+        }
+
+        // DOMContentLoaded - Initialize everything
         document.addEventListener('DOMContentLoaded', function () {
+            const sidebar = document.getElementById('sidebar');
+
+            // Restore scroll position on page load
+            restoreSidebarScroll();
+            
+            // Restore open submenus
+            restoreOpenSubmenus();
+
+            // Check Zoom status
+            checkZoomStatus();
+            setInterval(checkZoomStatus, 300000);
+
+            // Auto-open active submenu
             document.querySelectorAll('.submenu-item.active').forEach(activeItem => {
                 const submenu = activeItem.closest('.submenu');
                 if (submenu) {
                     submenu.classList.add('open');
+                    saveOpenSubmenus();
                 }
             });
-        });
 
-        // Close sidebar on mobile when clicking links
-        document.querySelectorAll('.nav-link, .submenu-item').forEach(link => {
-            link.addEventListener('click', function () {
-                if (window.innerWidth <= 768) {
-                    closeSidebar();
-                }
+            // Add event listeners to all submenu toggles
+            document.querySelectorAll('.submenu-toggle').forEach(toggle => {
+                toggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const submenu = this.closest('.submenu');
+                    if (submenu) {
+                        submenu.classList.toggle('open');
+                        saveOpenSubmenus();
+                    }
+                });
             });
+
+            // Save scroll position on scroll
+            if (sidebar) {
+                sidebar.addEventListener('scroll', function() {
+                    saveSidebarScroll();
+                });
+            }
+
+            // Save scroll position before page unload
+            window.addEventListener('beforeunload', function() {
+                saveSidebarScroll();
+                saveOpenSubmenus();
+            });
+
+            // Save on link click
+            document.querySelectorAll('.nav-link, .submenu-item').forEach(link => {
+                link.addEventListener('click', function () {
+                    saveSidebarScroll();
+                    saveOpenSubmenus();
+                    
+                    if (window.innerWidth <= 768) {
+                        closeSidebar();
+                    }
+                });
+            });
+
+            // Update pending requests count
+            updatePendingRequestsCount();
+            setInterval(updatePendingRequestsCount, 120000);
         });
-
-        // Auto-refresh pending requests count
-    function updatePendingRequestsCount() {
-        fetch('{% url "attendance:pending_requests" %}?ajax=1')
-            .then(response => response.json())
-            .then(data => {
-                const badge = document.getElementById('pending-requests-count');
-                if (badge && data.count > 0) {
-                    badge.textContent = data.count;
-                    badge.style.display = 'inline';
-                } else if (badge) {
-                    badge.style.display = 'none';
-                }
-            })
-            .catch(error => console.error('Error fetching pending requests:', error));
-    }
-
-    // Check every 2 minutes
-    document.addEventListener('DOMContentLoaded', function() {
-        updatePendingRequestsCount();
-        setInterval(updatePendingRequestsCount, 120000);
-    });
     </script>
+
+
 
     {% block extra_js %}{% endblock %}
 </body>
-
 </html>

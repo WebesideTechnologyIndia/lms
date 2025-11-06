@@ -5,7 +5,7 @@
 
 {% block content %}
 <!-- Welcome Header -->
-<div class="welcome-card">
+<div class="welcome-card-manage-categories">
     <div class="row align-items-center">
         <div class="col-md-8">
             <h1 class="mb-2">
@@ -15,9 +15,8 @@
             <p class="mb-0 opacity-75">Organize and manage course categories for better content structure</p>
         </div>
         <div class="col-md-4 text-end">
-            <a href="{% url 'courses:create_category' %}" class="btn btn-success btn-lg">
-                <i class="fas fa-plus me-2"></i>
-                Add New Category
+          <a href="{% url 'courses:create_category' %}" class="btn btn-primary btn-lg">
+                <i class="fas fa-plus me-2"></i>Create First Category
             </a>
         </div>
     </div>
@@ -415,13 +414,16 @@
 
 {% block extra_css %}
 <style>
-    .welcome-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2rem;
-        border-radius: 0.5rem;
-        margin-bottom: 2rem;
-    }
+    .welcome-card-manage-categories{
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 15px 40px rgba(59, 130, 246, 0.3);
+            position: relative;
+            overflow: hidden;
+}
 
     .stats-card {
         background: white;
@@ -444,7 +446,7 @@
         width: 60px;
         height: 60px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
         display: flex;
         align-items: center;
         justify-content: center;

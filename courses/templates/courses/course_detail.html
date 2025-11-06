@@ -61,13 +61,13 @@
                     <a href="{% url 'courses:edit_course' course.id %}" class="btn btn-outline-primary">
                         <i class="fas fa-edit me-2"></i>Edit Course
                     </a>
-                    <button type="button" class="btn btn-outline-secondary" onclick="toggleCourseStatus({{ course.id }})">
+                    <!-- <button type="button" class="btn btn-outline-secondary" onclick="toggleCourseStatus({{ course.id }})">
                         {% if course.status == 'published' %}
                             <i class="fas fa-eye-slash me-2"></i>Unpublish
                         {% else %}
                             <i class="fas fa-eye me-2"></i>Publish
                         {% endif %}
-                    </button>
+                    </button> -->
                 </div>
             {% endif %}
             
@@ -554,7 +554,7 @@
 }
 
 .welcome-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
     color: white;
     padding: 2rem;
     border-radius: 0.5rem;
@@ -576,7 +576,7 @@
     width: 60px;
     height: 60px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
     display: flex;
     align-items: center;
     justify-content: center;
