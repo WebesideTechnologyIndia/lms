@@ -266,6 +266,10 @@ class Attendance(models.Model):
         return self.is_within_radius
 
 
+
+
+# attendance/models.py - ManualAttendanceRequest model
+
 class ManualAttendanceRequest(models.Model):
     """Student requests manual attendance if scan failed"""
     
@@ -289,6 +293,32 @@ class ManualAttendanceRequest(models.Model):
     reason = models.TextField(help_text="Why couldn't you scan QR?")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     
+    request_latitude = models.DecimalField(
+        max_digits=9, 
+        decimal_places=6, 
+        null=True, 
+        blank=True,
+        help_text="Student's latitude when requesting"
+    )
+    request_longitude = models.DecimalField(
+        max_digits=9, 
+        decimal_places=6, 
+        null=True, 
+        blank=True,
+        help_text="Student's longitude when requesting"
+    )
+    
+    admin_notes = models.TextField(
+        blank=True,
+        help_text="Admin/Instructor notes about approval/rejection"
+    )
+    
+    approved_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="When was this request processed"
+    )
+    
     created_at = models.DateTimeField(auto_now_add=True)
     approved_by = models.ForeignKey(
         User,
@@ -299,8 +329,13 @@ class ManualAttendanceRequest(models.Model):
     )
     
     class Meta:
-        unique_together = ['session', 'student']
+        # ❌ REMOVE unique_together - allow multiple requests
+        # unique_together = ['session', 'student']  # COMMENT OUT
         ordering = ['-created_at']
+        # ✅ ADD index for faster queries
+        indexes = [
+            models.Index(fields=['session', 'student', 'status']),
+        ]
     
     def __str__(self):
         return f"{self.student.get_full_name()} - {self.session.start_time.date()} - {self.status}"

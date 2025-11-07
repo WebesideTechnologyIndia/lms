@@ -1,4 +1,4 @@
-<!-- students/lesson_viewer.html - NEW FILE BANAO -->
+<!-- courses/lesson_viewer.html - COMPLETE BEAUTIFUL DESIGN -->
 
 {% extends 'students/student_base.html' %}
 {% load static %}
@@ -8,7 +8,7 @@
 {% block extra_css %}
 <style>
 .student-lesson-container {
-    max-width: 1200px;
+    max-width: 1400px;
     margin: 0 auto;
     padding: 20px;
 }
@@ -25,6 +25,18 @@
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     padding: 25px;
+}
+
+.breadcrumb-custom {
+    background: transparent;
+    color: rgba(255,255,255,0.8);
+    padding: 0;
+    margin-bottom: 10px;
+}
+
+.breadcrumb-custom a {
+    color: rgba(255,255,255,0.9);
+    text-decoration: none;
 }
 
 .video-container {
@@ -48,7 +60,7 @@
 }
 
 .progress-indicator {
-    background: #e9ecef;
+    background: rgba(255,255,255,0.2);
     height: 6px;
     border-radius: 10px;
     overflow: hidden;
@@ -88,43 +100,90 @@
     border-radius: 12px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
     padding: 20px;
+    max-height: 80vh;
+    overflow-y: auto;
     position: sticky;
     top: 20px;
 }
 
+.module-section {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 15px;
+}
+
+.module-section:last-child {
+    border-bottom: none;
+}
+
+.module-title {
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 10px;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+}
+
+.module-number {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+    font-size: 0.85rem;
+    font-weight: bold;
+}
+
 .lesson-item {
-    padding: 12px;
-    border-radius: 8px;
-    margin-bottom: 8px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    margin-bottom: 6px;
     transition: all 0.2s ease;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: #495057;
 }
 
 .lesson-item:hover {
     background: #f8f9fa;
+    transform: translateX(3px);
 }
 
 .lesson-item.active {
-    background: #e7f3ff;
-    border-left: 3px solid #007bff;
+    background: linear-gradient(135deg, #e7f3ff 0%, #e3f2fd 100%);
+    border-left: 3px solid #667eea;
+    font-weight: 600;
+    color: #667eea;
 }
 
-.lesson-item.completed {
-    opacity: 0.7;
+.lesson-icon {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+    font-size: 0.9rem;
 }
 
-.attachment-card {
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 10px;
-    transition: all 0.2s ease;
+.lesson-title-text {
+    flex: 1;
+    font-size: 0.9rem;
 }
 
-.attachment-card:hover {
-    background: #fff;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+.course-info-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 10px;
+    margin-top: 20px;
 }
 </style>
 {% endblock %}
@@ -137,10 +196,19 @@
             <div class="lesson-player">
                 <!-- Header -->
                 <div class="lesson-header">
+                    <!-- Breadcrumb -->
+                    <nav class="breadcrumb-custom">
+                        <a href="{% url 'student_courses' %}">My Courses</a>
+                        <span class="mx-2">/</span>
+                        <span>{{ module.title }}</span>
+                    </nav>
+                    
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
                             <h2 class="mb-2">{{ lesson.title }}</h2>
-                            <p class="mb-0 opacity-90">{{ module.title }}</p>
+                            <p class="mb-0 opacity-90">
+                                <i class="fas fa-book-open me-2"></i>{{ module.title }}
+                            </p>
                         </div>
                         {% if lesson_progress %}
                         <div class="text-end">
@@ -159,7 +227,7 @@
                 </div>
 
                 <!-- Video/Content Player -->
-                {% if lesson.has_video_content %}
+                {% if lesson.youtube_url or lesson.video_file %}
                 <div class="video-container">
                     {% if lesson.youtube_url %}
                         {% if "youtube.com/watch?v=" in lesson.youtube_url %}
@@ -181,53 +249,16 @@
                 </div>
                 {% endif %}
 
-                <!-- Lesson Description & Content -->
+                <!-- Lesson Content -->
                 <div class="lesson-content-area">
-                    <h4>About this lesson</h4>
+                    <h4><i class="fas fa-info-circle text-primary me-2"></i>About this lesson</h4>
                     <p class="text-muted">{{ lesson.description }}</p>
 
                     {% if lesson.text_content %}
                     <div class="mt-4">
                         <h5><i class="fas fa-book-open me-2 text-primary"></i>Lesson Notes</h5>
-                        <div class="mt-3">
+                        <div class="mt-3 p-3 bg-light rounded">
                             {{ lesson.text_content|linebreaks }}
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- PDF Viewer -->
-                    {% if lesson.pdf_file %}
-                    <div class="mt-4">
-                        <h5><i class="fas fa-file-pdf me-2 text-danger"></i>Study Material</h5>
-                        <div class="d-flex justify-content-between align-items-center mt-3 p-3 bg-light rounded">
-                            <span>{{ lesson.pdf_file.name|cut:"lesson_pdfs/" }}</span>
-                            <a href="{{ lesson.pdf_file.url }}" target="_blank" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-download me-1"></i>Download PDF
-                            </a>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    <!-- Attachments -->
-                    {% if attachments %}
-                    <div class="mt-4">
-                        <h5><i class="fas fa-paperclip me-2 text-info"></i>Downloads</h5>
-                        <div class="row mt-3">
-                            {% for attachment in attachments %}
-                            <div class="col-md-6 mb-3">
-                                <div class="attachment-card">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <div>
-                                            <h6 class="mb-1">{{ attachment.title }}</h6>
-                                            <small class="text-muted">{{ attachment.get_file_size_mb }} MB</small>
-                                        </div>
-                                        <a href="{{ attachment.file.url }}" download class="btn btn-sm btn-primary">
-                                            <i class="fas fa-download"></i>
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                            {% endfor %}
                         </div>
                     </div>
                     {% endif %}
@@ -240,10 +271,10 @@
                             Mark as Complete
                         </button>
                     </div>
-                    {% elif lesson_progress.status == 'completed' %}
+                    {% elif lesson_progress and lesson_progress.status == 'completed' %}
                     <div class="alert alert-success text-center mt-4">
                         <i class="fas fa-check-circle me-2"></i>
-                        <strong>Lesson Completed!</strong>
+                        <strong>Lesson Completed!</strong> 🎉
                     </div>
                     {% endif %}
                 </div>
@@ -254,7 +285,7 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         {% if prev_lesson %}
-                        <a href="{% url 'courses:student_lesson_view' course.id module.id prev_lesson.id %}" 
+                        <a href="{% url 'courses:student_lesson_view' course.id prev_lesson.module.id prev_lesson.id %}" 
                            class="btn btn-outline-secondary">
                             <i class="fas fa-chevron-left me-2"></i>Previous
                         </a>
@@ -271,7 +302,7 @@
 
                     <div>
                         {% if next_lesson %}
-                        <a href="{% url 'courses:student_lesson_view' course.id module.id next_lesson.id %}" 
+                        <a href="{% url 'courses:student_lesson_view' course.id next_lesson.module.id next_lesson.id %}" 
                            class="btn btn-primary">
                             Next<i class="fas fa-chevron-right ms-2"></i>
                         </a>
@@ -285,54 +316,48 @@
             </div>
         </div>
 
-        <!-- Sidebar: Module Lessons -->
+        <!-- Sidebar: ALL Modules & Lessons -->
         <div class="col-lg-4">
             <div class="module-sidebar">
                 <h5 class="mb-3">
-                    <i class="fas fa-list me-2 text-primary"></i>
-                    {{ module.title }}
+                    <i class="fas fa-list-ul me-2 text-primary"></i>
+                    Course Content
                 </h5>
 
-                <div class="lessons-list">
-                    {% for other_lesson in module.lessons.all %}
-                    <a href="{% url 'courses:student_lesson_view' course.id module.id other_lesson.id %}" 
-                       class="lesson-item {% if other_lesson.id == lesson.id %}active{% endif %} d-block text-decoration-none">
-                        <div class="d-flex align-items-center">
-                            <div class="me-3">
-                                {% for progress in other_lesson.progress_records.all %}
-                                    {% if progress.student == user %}
-                                        {% if progress.status == 'completed' %}
-                                            <i class="fas fa-check-circle text-success"></i>
-                                        {% elif progress.status == 'in_progress' %}
-                                            <i class="fas fa-play-circle text-warning"></i>
-                                        {% else %}
-                                            <i class="far fa-circle text-muted"></i>
-                                        {% endif %}
-                                    {% endif %}
-                                {% empty %}
+                <!-- Loop through ALL modules -->
+                {% for mod in all_modules %}
+                <div class="module-section">
+                    <div class="module-title">
+                        <span class="module-number">{{ forloop.counter }}</span>
+                        <span>{{ mod.title }}</span>
+                    </div>
+                    
+                    <div class="lessons-list">
+                        {% for other_lesson in mod.lessons.all %}
+                        <a href="{% url 'courses:student_lesson_view' course.id mod.id other_lesson.id %}" 
+                           class="lesson-item {% if other_lesson.id == lesson.id %}active{% endif %}">
+                            <div class="lesson-icon">
+                                {% if other_lesson.id == lesson.id %}
+                                    <i class="fas fa-play-circle text-primary"></i>
+                                {% else %}
                                     <i class="far fa-circle text-muted"></i>
-                                {% endfor %}
-                            </div>
-                            <div class="flex-grow-1">
-                                <div class="fw-semibold {% if other_lesson.id == lesson.id %}text-primary{% endif %}">
-                                    {{ other_lesson.title }}
-                                </div>
-                                {% if other_lesson.duration_minutes %}
-                                <small class="text-muted">
-                                    <i class="fas fa-clock me-1"></i>{{ other_lesson.duration_minutes }} min
-                                </small>
                                 {% endif %}
                             </div>
-                        </div>
-                    </a>
-                    {% endfor %}
+                            <div class="lesson-title-text">
+                                {{ other_lesson.title }}
+                            </div>
+                        </a>
+                        {% empty %}
+                        <div class="text-muted small px-3">No lessons yet</div>
+                        {% endfor %}
+                    </div>
                 </div>
+                {% endfor %}
 
-                <!-- Course Info -->
-                <div class="mt-4 pt-4 border-top">
-                    <h6 class="text-muted">Course</h6>
-                    <p class="mb-2">{{ course.title }}</p>
-                    <small class="text-muted">
+                <!-- Course Info Card -->
+                <div class="course-info-card">
+                    <h6 class="mb-2"><i class="fas fa-graduation-cap me-2"></i>{{ course.title }}</h6>
+                    <small class="opacity-75">
                         <i class="fas fa-user me-1"></i>
                         {{ course.instructor.get_full_name }}
                     </small>
@@ -362,17 +387,17 @@ document.getElementById('markCompleteBtn')?.addEventListener('click', function()
             btn.outerHTML = `
                 <div class="alert alert-success">
                     <i class="fas fa-check-circle me-2"></i>
-                    <strong>Great job!</strong> Lesson completed.
+                    <strong>Great job!</strong> Lesson completed. 🎉
                 </div>
             `;
             
-            // Update progress bar
-            document.querySelector('.progress-fill').style.width = '100%';
+            if (document.querySelector('.progress-fill')) {
+                document.querySelector('.progress-fill').style.width = '100%';
+            }
             
-            // Auto-advance to next lesson after 2 seconds
             {% if next_lesson %}
             setTimeout(() => {
-                window.location.href = "{% url 'courses:student_lesson_view' course.id module.id next_lesson.id %}";
+                window.location.href = "{% url 'courses:student_lesson_view' course.id next_lesson.module.id next_lesson.id %}";
             }, 2000);
             {% endif %}
         } else {

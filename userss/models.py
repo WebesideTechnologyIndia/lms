@@ -271,6 +271,39 @@ class EmailLimitSet(models.Model):
         verbose_name = "Email Limit Setting"
         verbose_name_plural = "Email Limit Settings"
 
+# models.py
+
+class EmailSMTPConfiguration(models.Model):
+    """SMTP Email Configuration - Admin sets email credentials"""
+    
+    # SMTP Settings
+    email_host = models.CharField(max_length=255, default='smtp.gmail.com')
+    email_port = models.IntegerField(default=587)
+    email_use_tls = models.BooleanField(default=True)
+    email_host_user = models.EmailField(help_text="Your Gmail address")
+    email_host_password = models.CharField(max_length=255, help_text="Gmail App Password")
+    default_from_email = models.EmailField(help_text="Display email for outgoing mails")
+    
+    # Meta
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"SMTP: {self.email_host_user}"
+
+    class Meta:
+        verbose_name = "Email SMTP Configuration"
+        verbose_name_plural = "Email SMTP Configurations"
+
+    def save(self, *args, **kwargs):
+        """Ensure only one active configuration exists"""
+        if self.is_active:
+            EmailSMTPConfiguration.objects.filter(is_active=True).update(is_active=False)
+        super().save(*args, **kwargs)
+
+
+
 
 class EmailTemplateType(models.Model):
     name = models.CharField(max_length=100, unique=True)

@@ -831,15 +831,15 @@
                     <i class="fas fa-chevron-down"></i>
                 </div>
                 <div class="submenu-items">
-                    <a class="submenu-item {% if request.resolver_match.url_name == 'email_limit_settings' %}active{% endif %}"
-                        href="{% url 'email_limit_settings' %}">
-                        Email Limits
-                    </a>
+                    <a href="{% url 'email_configuration_settings' %}" class="nav-link">
+    <i class="fas fa-envelope-open-text"></i>
+    <span>Email Configuration</span>
+</a>
                 </div>
             </div>
 
             <!-- System -->
-            <div class="nav-section">System</div>
+            <!-- <div class="nav-section">System</div>
             <a class="nav-link" href="#">
                 <i class="fas fa-chart-bar"></i>
                 Reports
@@ -851,14 +851,14 @@
             <a class="nav-link" href="#">
                 <i class="fas fa-shield-alt"></i>
                 Security
-            </a>
+            </a> -->
 
             <!-- Zoom Integration -->
             <div class="nav-section">Zoom Integration</div>
             <a class="nav-link {% if request.resolver_match.url_name == 'zoom_dashboard' %}active{% endif %}"
                 href="{% url 'zoom:dashboard' %}">
                 <i class="fas fa-tachometer-alt"></i>
-                Zoom Dashboard
+                Create Live Sessions
             </a>
 
             <a class="nav-link {% if request.resolver_match.url_name == 'zoom_config_setup' %}active{% endif %}"

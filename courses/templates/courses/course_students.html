@@ -1,0 +1,373 @@
+<!-- templates/courses/course_students.html -->
+{% extends 'instructor_base.html' %}
+{% load static %}
+
+{% block title %}Students - {{ course.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .course-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        padding: 25px;
+        border-radius: 15px;
+        margin-bottom: 30px;
+        box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+    }
+
+    .stats-card {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        text-align: center;
+        border: none;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        border-left: 4px solid var(--primary-color);
+    }
+
+    .stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .stats-number {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: var(--primary-color);
+        margin-bottom: 8px;
+    }
+
+    .stats-label {
+        color: #6b7280;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 600;
+    }
+
+    .students-table-container {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        margin-top: 20px;
+    }
+
+    .table-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #f1f5f9;
+    }
+
+    .table-header h5 {
+        font-weight: 700;
+        color: #1f2937;
+        margin: 0;
+    }
+
+    .search-box {
+        position: relative;
+        width: 300px;
+    }
+
+    .search-box input {
+        width: 100%;
+        padding: 10px 40px 10px 15px;
+        border: 2px solid #e5e7eb;
+        border-radius: 10px;
+        transition: all 0.3s ease;
+    }
+
+    .search-box input:focus {
+        outline: none;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+    }
+
+    .search-box i {
+        position: absolute;
+        right: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9ca3af;
+    }
+
+    .table thead th {
+        background: var(--primary-color);
+        color: white;
+        border: none;
+        font-weight: 600;
+        padding: 15px;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+    }
+
+    .table tbody td {
+        padding: 15px;
+        vertical-align: middle;
+        border-color: #f1f5f9;
+    }
+
+    .table tbody tr {
+        transition: all 0.3s ease;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8fafc;
+    }
+
+    .student-avatar {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.1rem;
+        margin-right: 12px;
+    }
+
+    .student-info {
+        display: flex;
+        align-items: center;
+    }
+
+    .student-name {
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 2px;
+    }
+
+    .student-email {
+        font-size: 0.85rem;
+        color: #6b7280;
+    }
+
+    .badge-active {
+        background: #d1fae5;
+        color: #065f46;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: 500;
+        font-size: 0.85rem;
+    }
+
+    .badge-inactive {
+        background: #fee2e2;
+        color: #991b1b;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: 500;
+        font-size: 0.85rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 15px;
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: #9ca3af;
+        margin-bottom: 20px;
+    }
+
+    @media (max-width: 768px) {
+        .search-box {
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .table-header {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .stats-card {
+            margin-bottom: 15px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Course Header -->
+    <div class="course-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center mb-3">
+                    <i class="fas fa-users me-3" style="font-size: 2rem;"></i>
+                    <div>
+                        <h2 class="mb-1">{{ course.title }} - Students</h2>
+                        <p class="mb-0 opacity-75">{{ course.course_code }} • Student List</p>
+                    </div>
+                </div>
+                
+                <div class="d-flex flex-wrap gap-3">
+                    <span class="badge bg-light text-dark fs-6">
+                        <i class="fas fa-user-graduate me-1"></i>{{ enrollments.count }} enrolled
+                    </span>
+                </div>
+            </div>
+            
+            <div class="col-md-4 text-end">
+                <a href="{% url 'instructor_content_management' %}" class="btn btn-light">
+                    <i class="fas fa-arrow-left me-2"></i>Back to Courses
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Navigation Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item">
+                <a href="{% url 'instructor_content_management' %}">
+                    <i class="fas fa-home me-1"></i>Content Management
+                </a>
+            </li>
+            <li class="breadcrumb-item">
+                <a href="{% url 'instructor_content_management' %}">My Courses</a>
+            </li>
+            <li class="breadcrumb-item active">{{ course.title }} Students</li>
+        </ol>
+    </nav>
+
+    <!-- Stats Card -->
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="stats-card">
+                <div class="stats-number">{{ enrollments.count }}</div>
+                <div class="stats-label">Total Enrolled Students</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Students Table -->
+    {% if enrollments %}
+    <div class="students-table-container">
+        <div class="table-header">
+            <h5><i class="fas fa-list me-2"></i>Enrolled Students</h5>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search students..." class="form-control">
+                <i class="fas fa-search"></i>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover" id="studentsTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Student</th>
+                        <th>Email</th>
+                        <th>Enrolled Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for enrollment in enrollments %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>
+                            <div class="student-info">
+                                <div class="student-avatar">
+                                    {{ enrollment.student.first_name|first|upper }}{{ enrollment.student.last_name|first|upper }}
+                                </div>
+                                <div>
+                                    <div class="student-name">
+                                        {{ enrollment.student.get_full_name|default:enrollment.student.username }}
+                                    </div>
+                                    <div class="student-email">
+                                        {{ enrollment.student.username }}
+                                    </div>
+                                </div>
+                            </div>
+                        </td>
+                        <td>
+                            <a href="mailto:{{ enrollment.student.email }}" class="text-decoration-none">
+                                <i class="fas fa-envelope me-1"></i>{{ enrollment.student.email }}
+                            </a>
+                        </td>
+                        <td>
+                            <div>
+                                <i class="fas fa-calendar me-1 text-muted"></i>
+                                {{ enrollment.enrolled_at|date:"M d, Y" }}
+                            </div>
+                            <small class="text-muted">{{ enrollment.enrolled_at|timesince }} ago</small>
+                        </td>
+                        <td>
+                            {% if enrollment.is_active %}
+                                <span class="badge-active">
+                                    <i class="fas fa-check-circle me-1"></i>Active
+                                </span>
+                            {% else %}
+                                <span class="badge-inactive">
+                                    <i class="fas fa-times-circle me-1"></i>Inactive
+                                </span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Summary -->
+        <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top">
+            <div class="text-muted">
+                Showing <strong>{{ enrollments.count }}</strong> student{{ enrollments.count|pluralize }}
+            </div>
+            <div>
+                <button class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-download me-1"></i>Export Student List
+                </button>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="empty-state">
+        <i class="fas fa-user-graduate"></i>
+        <h3 class="text-muted mt-3">No Students Enrolled Yet</h3>
+        <p class="text-muted mb-4">
+            Students will appear here once they enroll in this course.
+        </p>
+        <a href="{% url 'instructor_content_management' %}" class="btn btn-primary">
+            <i class="fas fa-arrow-left me-2"></i>Back to Courses
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Search Functionality
+    document.getElementById('searchInput')?.addEventListener('keyup', function() {
+        const searchValue = this.value.toLowerCase();
+        const tableRows = document.querySelectorAll('#studentsTable tbody tr');
+        
+        tableRows.forEach(row => {
+            const text = row.textContent.toLowerCase();
+            if (text.includes(searchValue)) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}

@@ -555,6 +555,41 @@ def create_module(request, course_id):
     
     return render(request, 'courses/module_form.html', context)
 
+@login_required
+def create_module_instructor(request, course_id):
+    """Create new course module"""
+    course = get_object_or_404(Course, id=course_id)
+    
+    # Check permissions
+    if request.user.role == 'instructor' and course.instructor != request.user:
+        messages.error(request, "You can only create modules for your own courses!")
+        return redirect('manage_courses')
+    elif request.user.role not in ['superadmin', 'instructor']:
+        return redirect('user_login')
+    
+    if request.method == 'POST':
+        form = CourseModuleForm(request.POST)
+        if form.is_valid():
+            module = form.save(commit=False)
+            module.course = course
+            module.save()
+            
+            messages.success(request, f'Module "{module.title}" created successfully!')
+            return redirect('courses:instructor_course_modules', course_id=course.id)
+    else:
+        # Auto-suggest next order number
+        next_order = course.modules.count() + 1
+        form = CourseModuleForm(initial={'order': next_order})
+    
+    context = {
+        'form': form,
+        'course': course,
+        'title': f'Create Module for {course.title}',
+        'button_text': 'Create Module'
+    }
+    
+    return render(request, 'courses/create_module_instructor.html', context)
+
 
 @login_required
 def edit_module(request, course_id, module_id):
@@ -720,6 +755,77 @@ def create_lesson(request, course_id, module_id):
     }
     
     return render(request, 'courses/enhanced_lesson_form.html', context)
+
+@login_required
+def create_lesson_instructor(request, course_id, module_id):
+    """Create a new lesson with AUTO ORDER"""
+    
+    course = get_object_or_404(Course, id=course_id)
+    module = get_object_or_404(CourseModule, id=module_id, course=course)
+    
+    # Check permissions
+    if request.user.role == 'instructor' and course.instructor != request.user:
+        messages.error(request, "You don't have permission to edit this course")
+        return redirect('courses:course_detail', course_id=course.id)
+    
+    if request.method == 'POST':
+        form = EnhancedLessonForm(request.POST, request.FILES, module=module)
+        
+        attachment_formset = LessonAttachmentFormSet(
+            request.POST, 
+            request.FILES,
+            prefix='attachments',
+            queryset=LessonAttachment.objects.none()
+        )
+        
+        if form.is_valid() and attachment_formset.is_valid():
+            lesson = form.save(commit=False)
+            lesson.module = module
+            
+            # 🔥 AUTO-SET ORDER - THIS FIXES THE ERROR!
+            from django.db.models import Max
+            max_order = module.lessons.aggregate(Max('order'))['order__max'] or 0
+            lesson.order = max_order + 1
+            
+            lesson.save()
+            
+            # Save attachments
+            attachments = attachment_formset.save(commit=False)
+            for attachment in attachments:
+                attachment.lesson = lesson
+                attachment.save()
+            
+            messages.success(request, f'Lesson "{lesson.title}" created successfully!')
+            
+            if 'save_and_continue' in request.POST:
+                return redirect('courses:create_lesson', course_id=course.id, module_id=module.id)
+            else:
+                return redirect('courses:module_lessons', course_id=course.id, module_id=module.id)
+        else:
+            if not form.is_valid():
+                messages.error(request, 'Please correct the errors in the lesson form.')
+            if not attachment_formset.is_valid():
+                messages.error(request, 'There was an issue with attachments.')
+    else:
+        form = EnhancedLessonForm(module=module)
+        attachment_formset = LessonAttachmentFormSet(
+            prefix='attachments',
+            queryset=LessonAttachment.objects.none()
+        )
+    
+    context = {
+        'form': form,
+        'attachment_formset': attachment_formset,
+        'course': course,
+        'module': module,
+        'title': 'Create Lesson',
+        'button_text': 'Create Lesson',
+        'is_edit': False,
+    }
+    
+    return render(request, 'courses/lesson_instrtctor_create.html', context)
+
+
 
 # Alternative: Simple debugging view
 
@@ -918,6 +1024,75 @@ def lesson_detail(request, course_id, module_id, lesson_id):
     
     return render(request, 'courses/lesson_detail.html', context)
 
+@login_required
+def lesson_detail_instructor(request, course_id, module_id, lesson_id):
+    """Detailed lesson view with progress tracking"""
+    
+    course = get_object_or_404(Course, id=course_id)
+    module = get_object_or_404(CourseModule, id=module_id, course=course)
+    lesson = get_object_or_404(CourseLesson, id=lesson_id, module=module)
+    
+    # Check access permissions
+    can_access = False
+    is_enrolled = False
+    
+    if request.user.is_authenticated:
+        if request.user.role == 'instructor' and course.instructor == request.user:
+            can_access = True
+        elif request.user.role == 'superadmin':
+            can_access = True
+        elif request.user.role == 'student':
+            is_enrolled = course.enrollments.filter(
+                student=request.user, is_active=True
+            ).exists()
+            if is_enrolled or lesson.is_free_preview:
+                can_access = True
+    
+    if not can_access and not lesson.is_free_preview:
+        messages.error(request, "You need to enroll in this course to access lessons.")
+        return redirect('courses:course_detail', course_id=course.id)
+    
+    # 🔥 TRACK PROGRESS - THIS IS THE KEY PART
+    lesson_progress = None
+    if request.user.is_authenticated and request.user.role == 'student' and is_enrolled:
+        lesson_progress, created = LessonProgress.objects.get_or_create(
+            student=request.user,
+            lesson=lesson
+        )
+        # Mark as started if first time
+        if created or lesson_progress.status == 'not_started':
+            lesson_progress.mark_as_started()
+        
+        # Update last accessed
+        lesson_progress.last_accessed = timezone.now()
+        lesson_progress.save(update_fields=['last_accessed'])
+        
+        # Also update enrollment last_accessed
+        enrollment = course.enrollments.get(student=request.user, is_active=True)
+        enrollment.last_accessed = timezone.now()
+        enrollment.save(update_fields=['last_accessed'])
+    
+    # Get navigation lessons
+    other_lessons = module.lessons.filter(is_active=True).exclude(id=lesson.id)
+    prev_lesson = other_lessons.filter(order__lt=lesson.order).order_by('-order').first()
+    next_lesson = other_lessons.filter(order__gt=lesson.order).order_by('order').first()
+    
+    context = {
+        'course': course,
+        'module': module,
+        'lesson': lesson,
+        'can_access': can_access,
+        'is_enrolled': is_enrolled,
+        'lesson_progress': lesson_progress,
+        'prev_lesson': prev_lesson,
+        'next_lesson': next_lesson,
+        'attachments': lesson.attachments.filter(is_active=True),
+    }
+    
+    return render(request, 'courses/lesson_detail_instructor.html', context)
+
+
+
 
 @login_required
 def delete_lesson(request, course_id, module_id, lesson_id):
@@ -947,41 +1122,6 @@ def delete_lesson(request, course_id, module_id, lesson_id):
     return render(request, 'courses/delete_lesson.html', context)
 
 
-@login_required
-def mark_lesson_complete(request, course_id, module_id, lesson_id):
-    """Mark lesson as completed (AJAX)"""
-    
-    if request.method != 'POST':
-        return JsonResponse({'success': False, 'error': 'Invalid method'})
-    
-    if request.user.role != 'student':
-        return JsonResponse({'success': False, 'error': 'Only students can mark lessons complete'})
-    
-    course = get_object_or_404(Course, id=course_id)
-    lesson = get_object_or_404(CourseLesson, id=lesson_id)
-    
-    # Check enrollment
-    is_enrolled = course.enrollments.filter(
-        student=request.user, is_active=True
-    ).exists()
-    
-    if not is_enrolled:
-        return JsonResponse({'success': False, 'error': 'Not enrolled in course'})
-    
-    # Get or create progress
-    from .models import LessonProgress
-    progress, created = LessonProgress.objects.get_or_create(
-        student=request.user,
-        lesson=lesson
-    )
-    
-    progress.mark_as_completed()
-    
-    return JsonResponse({
-        'success': True, 
-        'message': 'Lesson marked as completed!',
-        'completion_percentage': float(progress.completion_percentage)
-    })
 
 
 def lesson_content_type_help(request):
@@ -1016,9 +1156,18 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 import logging
 
-from userss.models import CustomUser, EmailLog, EmailTemplate, EmailTemplateType
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q
+from django.core.paginator import Paginator
+from django.shortcuts import render, redirect
+import json
+import logging
+
+from userss.models import CustomUser
 from courses.models import Course, Enrollment
-from courses.forms import EnrollmentForm  # You'll need to create this
 
 logger = logging.getLogger(__name__)
 
@@ -1090,6 +1239,294 @@ def manage_enrollments(request):
     return render(request, 'courses/manage_enrollments.html', context)
 
 
+# ==================== API ENDPOINTS ====================
+
+@require_http_methods(["GET"])
+@login_required
+def get_enrollment_api(request, enrollment_id):
+    """GET enrollment data"""
+    try:
+        enrollment = Enrollment.objects.select_related('student', 'course').get(id=enrollment_id)
+        
+        # Check permission
+        if request.user.role == 'instructor':
+            if enrollment.course.instructor != request.user:
+                return JsonResponse({'error': 'Permission denied'}, status=403)
+        
+        return JsonResponse({
+            'id': enrollment.id,
+            'status': enrollment.status,
+            'progress_percentage': float(enrollment.progress_percentage or 0),
+            'grade': enrollment.grade or '',
+            'payment_status': enrollment.payment_status,
+            'student_name': enrollment.student.get_full_name(),
+            'course_name': enrollment.course.title
+        })
+    except Enrollment.DoesNotExist:
+        return JsonResponse({'error': 'Enrollment not found'}, status=404)
+    except Exception as e:
+        logger.error(f"Error fetching enrollment {enrollment_id}: {str(e)}")
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@csrf_exempt  # We'll handle CSRF in the view
+@require_http_methods(["POST"])
+@login_required
+def update_enrollment_api(request, enrollment_id):
+    """UPDATE enrollment"""
+    try:
+        enrollment = Enrollment.objects.select_related('course').get(id=enrollment_id)
+        
+        # Check permission
+        if request.user.role == 'instructor':
+            if enrollment.course.instructor != request.user:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Permission denied'
+                }, status=403)
+        
+        # Parse JSON data
+        try:
+            data = json.loads(request.body)
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'message': 'Invalid JSON data'
+            }, status=400)
+        
+        # Update fields
+        if 'status' in data:
+            valid_statuses = ['enrolled', 'completed', 'dropped', 'suspended']
+            if data['status'] in valid_statuses:
+                enrollment.status = data['status']
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'
+                }, status=400)
+        
+        if 'progress_percentage' in data:
+            try:
+                progress = float(data['progress_percentage'])
+                if 0 <= progress <= 100:
+                    enrollment.progress_percentage = progress
+                else:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Progress must be between 0 and 100'
+                    }, status=400)
+            except (ValueError, TypeError):
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Invalid progress value'
+                }, status=400)
+        
+        if 'grade' in data:
+            enrollment.grade = data['grade'] if data['grade'] else None
+        
+        if 'payment_status' in data:
+            valid_payment_statuses = ['pending', 'completed', 'waived']
+            if data['payment_status'] in valid_payment_statuses:
+                enrollment.payment_status = data['payment_status']
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Invalid payment status. Must be one of: {", ".join(valid_payment_statuses)}'
+                }, status=400)
+        
+        enrollment.save()
+        
+        logger.info(f"Enrollment {enrollment_id} updated by {request.user.username}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Enrollment updated successfully!'
+        })
+        
+    except Enrollment.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Enrollment not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error updating enrollment {enrollment_id}: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Server error: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST", "DELETE"])  # Support both methods
+@login_required
+def delete_enrollment_api(request, enrollment_id):
+    """DELETE enrollment"""
+    try:
+        # Only superadmin can delete
+        if request.user.role != 'superadmin':
+            return JsonResponse({
+                'success': False,
+                'message': 'Only superadmin can delete enrollments'
+            }, status=403)
+        
+        enrollment = Enrollment.objects.get(id=enrollment_id)
+        course_name = enrollment.course.title
+        student_name = enrollment.student.get_full_name()
+        
+        enrollment.delete()
+        
+        logger.info(f"Enrollment {enrollment_id} ({student_name} - {course_name}) deleted by {request.user.username}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Enrollment deleted successfully!'
+        })
+    except Enrollment.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Enrollment not found'
+        }, status=404)
+    except Exception as e:
+        logger.error(f"Error deleting enrollment {enrollment_id}: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Server error: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@login_required
+def bulk_update_status(request):
+    """BULK UPDATE status"""
+    try:
+        data = json.loads(request.body)
+        enrollment_ids = data.get('enrollment_ids', [])
+        new_status = data.get('status')
+        
+        if not enrollment_ids:
+            return JsonResponse({
+                'success': False,
+                'message': 'No enrollments selected'
+            }, status=400)
+        
+        valid_statuses = ['enrolled', 'completed', 'dropped', 'suspended']
+        if new_status not in valid_statuses:
+            return JsonResponse({
+                'success': False,
+                'message': f'Invalid status. Must be one of: {", ".join(valid_statuses)}'
+            }, status=400)
+        
+        # Filter by permission
+        enrollments = Enrollment.objects.filter(id__in=enrollment_ids)
+        if request.user.role == 'instructor':
+            enrollments = enrollments.filter(course__instructor=request.user)
+        
+        updated = enrollments.update(status=new_status)
+        
+        logger.info(f"{updated} enrollments updated to {new_status} by {request.user.username}")
+        
+        return JsonResponse({
+            'success': True,
+            'updated_count': updated,
+            'message': f'{updated} enrollments updated to {new_status}'
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        logger.error(f"Error in bulk update: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Server error: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@login_required
+def bulk_delete_enrollments(request):
+    """BULK DELETE enrollments"""
+    try:
+        # Only superadmin can bulk delete
+        if request.user.role != 'superadmin':
+            return JsonResponse({
+                'success': False,
+                'message': 'Only superadmin can delete enrollments'
+            }, status=403)
+        
+        data = json.loads(request.body)
+        enrollment_ids = data.get('enrollment_ids', [])
+        
+        if not enrollment_ids:
+            return JsonResponse({
+                'success': False,
+                'message': 'No enrollments selected'
+            }, status=400)
+        
+        deleted, _ = Enrollment.objects.filter(id__in=enrollment_ids).delete()
+        
+        logger.info(f"{deleted} enrollments deleted by {request.user.username}")
+        
+        return JsonResponse({
+            'success': True,
+            'deleted_count': deleted,
+            'message': f'{deleted} enrollments deleted successfully'
+        })
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        logger.error(f"Error in bulk delete: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Server error: {str(e)}'
+        }, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@login_required
+def send_student_email(request):
+    """Send email to student(s)"""
+    try:
+        data = json.loads(request.body)
+        to_email = data.get('to')
+        subject = data.get('subject')
+        body = data.get('body')
+        template = data.get('template')
+        
+        if not all([to_email, subject, body]):
+            return JsonResponse({
+                'success': False,
+                'message': 'Missing required fields'
+            }, status=400)
+        
+        # Here you would implement actual email sending
+        # For now, just log it
+        logger.info(f"Email to {to_email}: {subject}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Email sent successfully!'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        logger.error(f"Error sending email: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Server error: {str(e)}'
+        }, status=500)
+    
 @login_required
 def manual_enrollment(request):
     """Manually enroll a student with email notification"""
@@ -1506,62 +1943,53 @@ def bulk_delete_enrollments(request):
         return JsonResponse({'success': False, 'message': 'Failed to remove enrollments'})
 
 
-@csrf_exempt
-@login_required
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+import json
+
+@require_http_methods(["POST"])
 def update_enrollment_api(request, enrollment_id):
-    """Update single enrollment via API"""
-    if request.method != 'POST':
-        return JsonResponse({'success': False, 'message': 'Invalid request method'})
-    
-    if request.user.role not in ['superadmin', 'instructor']:
-        return JsonResponse({'success': False, 'message': 'Permission denied'})
-    
     try:
-        # Get enrollment
-        if request.user.role == 'superadmin':
-            enrollment = get_object_or_404(Enrollment, id=enrollment_id)
-        else:
-            enrollment = get_object_or_404(
-                Enrollment, 
-                id=enrollment_id,
-                course__instructor=request.user
-            )
+        enrollment = Enrollment.objects.get(id=enrollment_id)
         
+        # JSON data parse karo
         data = json.loads(request.body)
         
-        # Update fields
+        # Status update karo
         if 'status' in data:
-            valid_statuses = [choice[0] for choice in Enrollment.STATUS_CHOICES]
-            if data['status'] in valid_statuses:
-                enrollment.status = data['status']
+            enrollment.status = data['status']
         
+        # Progress update karo
         if 'progress_percentage' in data:
-            progress = float(data['progress_percentage'])
-            if 0 <= progress <= 100:
-                enrollment.progress_percentage = progress
+            enrollment.progress_percentage = data['progress_percentage']
         
+        # Grade update karo
         if 'grade' in data:
-            valid_grades = [choice[0] for choice in Enrollment.GRADE_CHOICES] + ['']
-            if data['grade'] in valid_grades:
-                enrollment.grade = data['grade']
+            enrollment.grade = data['grade'] if data['grade'] else None
         
+        # Payment status update karo
         if 'payment_status' in data:
-            valid_payment_statuses = ['pending', 'completed', 'waived']
-            if data['payment_status'] in valid_payment_statuses:
-                enrollment.payment_status = data['payment_status']
+            enrollment.payment_status = data['payment_status']
         
         enrollment.save()
         
-        return JsonResponse({'success': True, 'message': 'Enrollment updated successfully'})
+        return JsonResponse({
+            'success': True,
+            'message': 'Enrollment updated successfully!'
+        })
         
-    except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'message': 'Invalid JSON data'})
-    except ValueError:
-        return JsonResponse({'success': False, 'message': 'Invalid numeric value'})
+    except Enrollment.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Enrollment not found'
+        }, status=404)
+    
     except Exception as e:
-        logger.error(f"Failed to update enrollment: {str(e)}")
-        return JsonResponse({'success': False, 'message': 'Failed to update enrollment'})
-
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)
 
 @csrf_exempt
 @login_required
@@ -1864,10 +2292,16 @@ def course_preview(request, slug):
         total_reviews=Count('id')
     )
     
-    # Rating distribution
-    rating_distribution = {}
-    for i in range(1, 6):
-        rating_distribution[i] = reviews.filter(rating=i).count()
+    # ⭐ FIXED: Rating distribution as list
+    rating_distribution = []
+    for i in range(5, 0, -1):  # 5 to 1
+        count = reviews.filter(rating=i).count()
+        percentage = (count / review_stats['total_reviews'] * 100) if review_stats['total_reviews'] > 0 else 0
+        rating_distribution.append({
+            'rating': i,
+            'count': count,
+            'percentage': percentage
+        })
     
     # Get FAQs
     faqs = course.faqs.filter(is_active=True)
@@ -1888,15 +2322,14 @@ def course_preview(request, slug):
         'enroll_message': enroll_message,
         'modules': modules,
         'preview_lessons': preview_lessons,
-        'reviews': reviews[:10],  # Limit for page load
+        'reviews': reviews[:10],
         'review_stats': review_stats,
-        'rating_distribution': rating_distribution,
+        'rating_distribution': rating_distribution,  # ⭐ Now it's a list
         'faqs': faqs,
         'related_courses': related_courses,
     }
     
     return render(request, 'courses/course_preview.html', context)
-
 
 @login_required
 def enroll_course(request, course_id):
@@ -2277,6 +2710,9 @@ def create_batch_lesson(request, course_id, batch_id, module_id):
     }
     
     return render(request, 'courses/batch_lesson_form.html', context)
+
+
+
 
 
 @login_required
@@ -4010,133 +4446,240 @@ from .models import Enrollment, CourseLesson, LessonProgress
 
 # courses/views.py - UPDATE THIS
 
+# courses/views.py - continue_learning view FIX KARO
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.db.models import Q
+from .models import Course, BatchEnrollment, LessonProgress, BatchModule, BatchLesson
+
+
 @login_required
-def continue_learning(request, course_id):
-    """Continue learning - redirect to STUDENT template"""
+def course_detail_continue_learning_student(request, course_id):
+    """View course details"""
+    course = get_object_or_404(Course, id=course_id)
     
-    if request.user.role != 'student':
-        messages.error(request, 'Only students can access course content.')
-        return redirect('courses:course_catalog')
+    # Check if user can view this course
+    can_view = False
+    if request.user.role == 'superadmin':
+        can_view = True
+    elif request.user.role == 'instructor' and course.instructor == request.user:
+        can_view = True
+    elif request.user.role == 'student':
+        # Students can view if enrolled or if course is published
+        if course.status == 'published' or course.enrollments.filter(student=request.user, is_active=True).exists():
+            can_view = True
     
-    enrollment = get_object_or_404(
-        Enrollment,
-        student=request.user,
-        course_id=course_id,
-        is_active=True
-    )
+    if not can_view:
+        messages.error(request, "You don't have permission to view this course!")
+        return redirect('courses:course_dashboard')
     
-    # Check lock
-    if hasattr(enrollment, 'is_locked') and enrollment.is_locked:
-        messages.error(request, 'This course is currently locked.')
-        return redirect('student_courses')
+    # Get course modules and lessons
+    modules = course.modules.filter(is_active=True).prefetch_related('lessons')
     
-    # Update last accessed
-    enrollment.last_accessed = timezone.now()
-    enrollment.save(update_fields=['last_accessed'])
+    # Get enrollment info for students
+    user_enrollment = None
+    if request.user.role == 'student':
+        user_enrollment = course.enrollments.filter(student=request.user, is_active=True).first()
     
-    # Find lesson
-    last_lesson = None
+    # Get course reviews
+    reviews = course.reviews.filter(is_approved=True).order_by('-created_at')[:5]
     
-    # Try last accessed
-    last_progress = LessonProgress.objects.filter(
-        student=request.user,
-        lesson__module__course=enrollment.course
-    ).order_by('-last_accessed').first()
+    # Get FAQs
+    faqs = course.faqs.filter(is_active=True)
     
-    if last_progress and last_progress.status != 'completed':
-        last_lesson = last_progress.lesson
-    else:
-        # Find first incomplete
-        all_lessons = CourseLesson.objects.filter(
-            module__course=enrollment.course,
-            is_active=True
-        ).order_by('module__order', 'order')
-        
-        for lesson in all_lessons:
-            progress = LessonProgress.objects.filter(
-                student=request.user,
-                lesson=lesson
-            ).first()
-            
-            if not progress or progress.status != 'completed':
-                last_lesson = lesson
-                break
+    context = {
+        'course': course,
+        'modules': modules,
+        'user_enrollment': user_enrollment,
+        'reviews': reviews,
+        'faqs': faqs,
+    }
     
-    # Fallback to first lesson
-    if not last_lesson:
-        first_module = enrollment.course.modules.filter(is_active=True).order_by('order').first()
-        if first_module:
-            last_lesson = first_module.lessons.filter(is_active=True).order_by('order').first()
-    
-    # 🔥 REDIRECT TO STUDENT TEMPLATE!
-    if last_lesson:
-        return redirect('courses:student_lesson_view', 
-                       course_id=enrollment.course.id,
-                       module_id=last_lesson.module.id,
-                       lesson_id=last_lesson.id)
-    else:
-        messages.info(request, 'No lessons available yet.')
-        return redirect('courses:course_detail', course_id=enrollment.course.id)
+    return render(request, 'courses/course_detail_continue_learning_student.html', context)
+
 
 # courses/views.py - ADD THIS NEW VIEW
 
+# views.py mein ye view UPDATE karo
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
+from .models import Course, BatchLesson, BatchModule, LessonProgress, LessonAttachment
+
+# courses/views.py
+
+# courses/views.py
+
+# courses/views.py - BATCH-BASED Lesson Viewer
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
+from .models import Course, Batch, BatchModule, BatchLesson, LessonProgress, BatchEnrollment
+
+# courses/views.py - Lesson Viewer WITHOUT enrollment check
+# courses/views.py - COURSE DIRECT (NO BATCH)
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import JsonResponse
+from .models import Course, CourseModule, CourseLesson, LessonProgress
+
 @login_required
-def student_lesson_view(request, course_id, module_id, lesson_id):
-    """Student-specific lesson viewer - SIMPLE & CLEAN"""
-    
-    # Only for students
-    if request.user.role != 'student':
-        messages.error(request, 'This page is for students only.')
-        return redirect('courses:lesson_detail', course_id=course_id, module_id=module_id, lesson_id=lesson_id)
+def continue_learning(request, course_id):
+    """Continue learning - SEEDHA COURSE SE"""
     
     course = get_object_or_404(Course, id=course_id)
-    module = get_object_or_404(CourseModule, id=module_id, course=course)
-    lesson = get_object_or_404(CourseLesson, id=lesson_id, module=module)
     
-    # Check enrollment
-    enrollment = get_object_or_404(
-        Enrollment,
+    # ✅ Get last accessed lesson
+    last_progress = LessonProgress.objects.filter(
         student=request.user,
-        course=course,
-        is_active=True
-    )
+        course_lesson__module__course=course  # Direct course relation
+    ).order_by('-last_accessed').first()
     
-    # Check if locked
-    if hasattr(enrollment, 'is_locked') and enrollment.is_locked:
-        messages.error(request, 'This course is currently locked. Please contact admin.')
+    if last_progress and last_progress.course_lesson:
+        # Continue from last lesson
+        lesson = last_progress.course_lesson
+        module = lesson.module
+        
+        return redirect(
+            'courses:student_lesson_view',
+            course_id=course.id,
+            module_id=module.id,
+            lesson_id=lesson.id
+        )
+    
+    # ✅ No progress? Start from first lesson
+    first_module = course.modules.filter(is_active=True).order_by('order').first()
+    
+    if not first_module:
+        messages.warning(request, "No modules available yet!")
         return redirect('student_courses')
     
-    # Get/Create progress
+    first_lesson = first_module.lessons.filter(is_active=True).order_by('order').first()
+    
+    if not first_lesson:
+        messages.warning(request, "No lessons available yet!")
+        return redirect('student_courses')
+    
+    return redirect(
+        'courses:student_lesson_view',
+        course_id=course.id,
+        module_id=first_module.id,
+        lesson_id=first_lesson.id
+    )
+
+
+# courses/views.py - student_lesson_view
+
+# courses/views.py - UPDATED VIEW
+
+# courses/views.py - CROSS MODULE NAVIGATION
+
+@login_required
+def student_lesson_view(request, course_id, module_id, lesson_id):
+    """Student lesson viewer - CROSS MODULE NAVIGATION"""
+    
+    course = get_object_or_404(Course, id=course_id)
+    
+    # ✅ Don't check module_id strict - lesson might be in different module
+    lesson = get_object_or_404(CourseLesson, id=lesson_id)
+    module = lesson.module  # Get actual module from lesson
+    
+    # Get or create lesson progress
     lesson_progress, created = LessonProgress.objects.get_or_create(
         student=request.user,
-        lesson=lesson
+        course_lesson=lesson,
+        defaults={'status': 'in_progress'}
     )
     
-    # Mark as started
-    if created or lesson_progress.status == 'not_started':
-        lesson_progress.mark_as_started()
+    if lesson_progress.status == 'not_started':
+        lesson_progress.status = 'in_progress'
+        lesson_progress.save()
     
-    # Update last accessed
-    lesson_progress.last_accessed = timezone.now()
-    lesson_progress.save(update_fields=['last_accessed'])
+    # Get attachments
+    attachments = []
+    if hasattr(lesson, 'attachments'):
+        attachments = lesson.attachments.all()
     
-    enrollment.last_accessed = timezone.now()
-    enrollment.save(update_fields=['last_accessed'])
+    # ✅ GET ALL LESSONS FROM ALL MODULES (cross-module navigation)
+    all_course_lessons = []
+    all_modules = course.modules.filter(is_active=True).order_by('order')
     
-    # Navigation
-    other_lessons = module.lessons.filter(is_active=True).exclude(id=lesson.id)
-    prev_lesson = other_lessons.filter(order__lt=lesson.order).order_by('-order').first()
-    next_lesson = other_lessons.filter(order__gt=lesson.order).order_by('order').first()
+    for mod in all_modules:
+        for les in mod.lessons.filter(is_active=True).order_by('order'):
+            all_course_lessons.append(les)
+    
+    print(f"\n=== LESSON NAVIGATION DEBUG ===")
+    print(f"Course: {course.title} (ID: {course.id})")
+    print(f"Total modules: {all_modules.count()}")
+    print(f"Total lessons: {len(all_course_lessons)}")
+    print(f"Current lesson: {lesson.title} (ID: {lesson.id}, Module: {module.title})")
+    
+    # Find current lesson index
+    current_index = None
+    for idx, l in enumerate(all_course_lessons):
+        if l.id == lesson.id:
+            current_index = idx
+            break
+    
+    print(f"Current index: {current_index}")
+    
+    prev_lesson = None
+    next_lesson = None
+    
+    if current_index is not None:
+        if current_index > 0:
+            prev_lesson = all_course_lessons[current_index - 1]
+            print(f"✅ Prev: {prev_lesson.title} (Module: {prev_lesson.module.title})")
+        
+        if current_index < len(all_course_lessons) - 1:
+            next_lesson = all_course_lessons[current_index + 1]
+            print(f"✅ Next: {next_lesson.title} (Module: {next_lesson.module.title})")
+    
+    print(f"=== END DEBUG ===\n")
     
     context = {
         'course': course,
         'module': module,
         'lesson': lesson,
-        'enrollment': enrollment,
         'lesson_progress': lesson_progress,
+        'attachments': attachments,
         'prev_lesson': prev_lesson,
         'next_lesson': next_lesson,
-        'attachments': lesson.attachments.filter(is_active=True),
+        'all_modules': all_modules,
     }
     
     return render(request, 'courses/lesson_viewer.html', context)
+
+
+@login_required
+def mark_lesson_complete(request, course_id, module_id, lesson_id):
+    """Mark course lesson as completed"""
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid method'})
+    
+    lesson = get_object_or_404(CourseLesson, id=lesson_id)
+    
+    try:
+        progress = LessonProgress.objects.get(
+            student=request.user,
+            course_lesson=lesson  # ✅ course_lesson field
+        )
+        progress.mark_as_completed()
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Lesson marked as complete!'
+        })
+    
+    except LessonProgress.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'error': 'Progress record not found'
+        })

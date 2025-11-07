@@ -1,0 +1,538 @@
+{% extends base_template %}
+{% load static %}
+
+{% block title %}Attendance Analytics{% endblock %}
+
+{% block extra_css %}
+<style>
+    .analytics-container {
+        padding: 2rem;
+    }
+
+    .analytics-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    }
+
+    .analytics-header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0 0 0.5rem 0;
+    }
+
+    .analytics-header p {
+        margin: 0;
+        opacity: 0.9;
+    }
+
+    /* Stats Cards */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        border-left: 5px solid;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 100px;
+        height: 100px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.1), transparent);
+        border-radius: 50%;
+        transform: translate(30%, -30%);
+    }
+
+    .stat-card.primary { border-left-color: #3b82f6; }
+    .stat-card.success { border-left-color: #10b981; }
+    .stat-card.warning { border-left-color: #f59e0b; }
+    .stat-card.info { border-left-color: #06b6d4; }
+    .stat-card.purple { border-left-color: #8b5cf6; }
+
+    .stat-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+        opacity: 0.8;
+    }
+
+    .stat-card.primary .stat-icon { color: #3b82f6; }
+    .stat-card.success .stat-icon { color: #10b981; }
+    .stat-card.warning .stat-icon { color: #f59e0b; }
+    .stat-card.info .stat-icon { color: #06b6d4; }
+    .stat-card.purple .stat-icon { color: #8b5cf6; }
+
+    .stat-value {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #1f2937;
+        margin-bottom: 0.5rem;
+        line-height: 1;
+    }
+
+    .stat-label {
+        font-size: 0.95rem;
+        color: #6b7280;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .stat-trend {
+        font-size: 0.85rem;
+        margin-top: 0.5rem;
+        padding: 0.3rem 0.7rem;
+        border-radius: 20px;
+        display: inline-block;
+        font-weight: 600;
+    }
+
+    .trend-up {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .trend-down {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    /* Charts Section */
+    .chart-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+
+    .chart-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #f3f4f6;
+    }
+
+    .chart-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #1f2937;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    /* Batch Stats Table */
+    .batch-stats-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 0.5rem;
+    }
+
+    .batch-stats-table thead th {
+        background: #f9fafb;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 700;
+        color: #374151;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .batch-stats-table tbody tr {
+        background: white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+    }
+
+    .batch-stats-table tbody tr:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .batch-stats-table tbody td {
+        padding: 1.2rem 1rem;
+        color: #4b5563;
+    }
+
+    .batch-stats-table tbody td:first-child {
+        border-left: 5px solid #667eea;
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .progress-bar-wrapper {
+        background: #e5e7eb;
+        height: 8px;
+        border-radius: 10px;
+        overflow: hidden;
+        width: 120px;
+    }
+
+    .progress-bar-fill {
+        height: 100%;
+        border-radius: 10px;
+        transition: width 1s ease;
+    }
+
+    .progress-excellent { background: linear-gradient(90deg, #10b981, #059669); }
+    .progress-good { background: linear-gradient(90deg, #3b82f6, #2563eb); }
+    .progress-average { background: linear-gradient(90deg, #f59e0b, #d97706); }
+    .progress-poor { background: linear-gradient(90deg, #ef4444, #dc2626); }
+
+    .percentage-badge {
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.85rem;
+    }
+
+    .badge-excellent { background: #d1fae5; color: #065f46; }
+    .badge-good { background: #dbeafe; color: #1e40af; }
+    .badge-average { background: #fef3c7; color: #92400e; }
+    .badge-poor { background: #fee2e2; color: #991b1b; }
+
+    /* Recent Sessions */
+    .session-item {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border-left: 5px solid #667eea;
+        transition: all 0.3s ease;
+    }
+
+    .session-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.15);
+    }
+
+    .session-header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .session-batch-name {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1f2937;
+    }
+
+    .session-date {
+        color: #6b7280;
+        font-size: 0.9rem;
+    }
+
+    .session-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        text-align: center;
+    }
+
+    .session-stat-item {
+        padding: 0.8rem;
+        background: #f9fafb;
+        border-radius: 8px;
+    }
+
+    .session-stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.2rem;
+    }
+
+    .session-stat-label {
+        font-size: 0.75rem;
+        color: #6b7280;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    }
+
+    .empty-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .empty-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-text {
+        color: #6b7280;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .analytics-container {
+            padding: 1rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .session-stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .chart-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="analytics-container">
+    <!-- Header -->
+    <div class="analytics-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1>📊 Attendance Analytics</h1>
+                <p>Comprehensive insights and statistics</p>
+            </div>
+            <div>
+                {% if request.user.role == 'superadmin' %}
+                    <a href="{% url 'admin_dashboard' %}" class="btn btn-light">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                    </a>
+                {% else %}
+                    <a href="{% url 'instructor_dashboard' %}" class="btn btn-light">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+        <div class="stat-card primary">
+            <div class="stat-icon">📋</div>
+            <div class="stat-value">{{ total_sessions }}</div>
+            <div class="stat-label">Total Sessions</div>
+        </div>
+
+        <div class="stat-card success">
+            <div class="stat-icon">✅</div>
+            <div class="stat-value">{{ active_sessions }}</div>
+            <div class="stat-label">Active Sessions</div>
+        </div>
+
+        <div class="stat-card info">
+            <div class="stat-icon">👥</div>
+            <div class="stat-value">{{ total_marks }}</div>
+            <div class="stat-label">Total Marks</div>
+        </div>
+
+        <div class="stat-card warning">
+            <div class="stat-icon">⚠️</div>
+            <div class="stat-value">{{ late_marks }}</div>
+            <div class="stat-label">Late Marks</div>
+        </div>
+
+        <div class="stat-card purple">
+            <div class="stat-icon">📈</div>
+            <div class="stat-value">{{ avg_attendance }}%</div>
+            <div class="stat-label">Average Attendance</div>
+            {% if avg_attendance >= 75 %}
+                <span class="stat-trend trend-up">
+                    <i class="fas fa-arrow-up"></i> Excellent
+                </span>
+            {% else %}
+                <span class="stat-trend trend-down">
+                    <i class="fas fa-arrow-down"></i> Needs Improvement
+                </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Batch-wise Statistics -->
+    {% if batch_stats %}
+    <div class="chart-card">
+        <div class="chart-header">
+            <div class="chart-title">
+                <i class="fas fa-chart-bar"></i>
+                Top 10 Batches by Sessions
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="batch-stats-table">
+                <thead>
+                    <tr>
+                        <th>Batch Name</th>
+                        <th>Total Sessions</th>
+                        <th>Avg Attendance</th>
+                        <th>Performance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for batch in batch_stats %}
+                    {% with avg_percent=batch.avg_attendance|default:0|floatformat:0 %}
+                    <tr>
+                        <td>{{ batch.batch__name }}</td>
+                        <td>
+                            <strong>{{ batch.session_count }}</strong> sessions
+                        </td>
+                        <td>
+                            <div class="progress-bar-wrapper">
+                                {% if avg_percent >= "75" %}
+                                    <div class="progress-bar-fill progress-excellent" style="width: {{ avg_percent }}%"></div>
+                                {% elif avg_percent >= "60" %}
+                                    <div class="progress-bar-fill progress-good" style="width: {{ avg_percent }}%"></div>
+                                {% elif avg_percent >= "40" %}
+                                    <div class="progress-bar-fill progress-average" style="width: {{ avg_percent }}%"></div>
+                                {% else %}
+                                    <div class="progress-bar-fill progress-poor" style="width: {{ avg_percent }}%"></div>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            {% if avg_percent >= "75" %}
+                                <span class="percentage-badge badge-excellent">{{ avg_percent }}% - Excellent</span>
+                            {% elif avg_percent >= "60" %}
+                                <span class="percentage-badge badge-good">{{ avg_percent }}% - Good</span>
+                            {% elif avg_percent >= "40" %}
+                                <span class="percentage-badge badge-average">{{ avg_percent }}% - Average</span>
+                            {% else %}
+                                <span class="percentage-badge badge-poor">{{ avg_percent }}% - Poor</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endwith %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Recent Sessions -->
+    {% if recent_sessions %}
+    <div class="chart-card">
+        <div class="chart-header">
+            <div class="chart-title">
+                <i class="fas fa-clock"></i>
+                Recent Sessions (Last 10)
+            </div>
+        </div>
+
+        {% for session in recent_sessions %}
+        <div class="session-item">
+            <div class="session-header-row">
+                <div>
+                    <div class="session-batch-name">{{ session.batch.name }}</div>
+                    <div class="session-date">
+                        <i class="fas fa-calendar"></i>
+                        {{ session.start_time|date:"D, d M Y" }} | 
+                        <i class="fas fa-clock"></i>
+                        {{ session.start_time|time:"h:i A" }}
+                    </div>
+                </div>
+                <div>
+                    {% if session.is_active %}
+                        <span class="badge bg-success">Active</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Inactive</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="session-stats-grid">
+                <div class="session-stat-item">
+                    <div class="session-stat-value" style="color: #3b82f6;">
+                        {{ session.stats.total_students }}
+                    </div>
+                    <div class="session-stat-label">Total Students</div>
+                </div>
+                <div class="session-stat-item">
+                    <div class="session-stat-value" style="color: #10b981;">
+                        {{ session.stats.present_count }}
+                    </div>
+                    <div class="session-stat-label">Present</div>
+                </div>
+                <div class="session-stat-item">
+                    <div class="session-stat-value" style="color: #ef4444;">
+                        {{ session.stats.absent_count }}
+                    </div>
+                    <div class="session-stat-label">Absent</div>
+                </div>
+                <div class="session-stat-item">
+                    <div class="session-stat-value" style="color: #8b5cf6;">
+                        {{ session.stats.attendance_percentage }}%
+                    </div>
+                    <div class="session-stat-label">Attendance</div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📊</div>
+        <div class="empty-title">No Sessions Yet</div>
+        <div class="empty-text">Create your first attendance session to see analytics</div>
+    </div>
+    {% endif %}
+
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <a href="{% url 'attendance:instructor_sessions' %}" class="btn btn-primary btn-lg w-100">
+                <i class="fas fa-list me-2"></i>
+                View All Sessions
+            </a>
+        </div>
+        <div class="col-md-6">
+            <a href="{% url 'attendance:create_session' %}" class="btn btn-success btn-lg w-100">
+                <i class="fas fa-plus me-2"></i>
+                Create New Session
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}

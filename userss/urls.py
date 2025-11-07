@@ -105,4 +105,7 @@ urlpatterns = [
     path("exam-create", views.createExam, name="create_exam"),
     path("assign-create", views.assignExam, name="assign_exam"),
     path("exam-submission", views.exam_submission, name="exam_submission"),
+
+    path('email-configuration/', views.email_smtp_settings, name='email_configuration_settings'),
+
 ]

@@ -400,9 +400,10 @@ class LessonAttachment(models.Model):
     def get_file_size_mb(self):
         return round(self.file_size / (1024 * 1024), 2)
 
+# courses/models.py - UPDATE LessonProgress
 
 class LessonProgress(models.Model):
-    """Track student progress on individual lessons"""
+    """Track student progress on BOTH CourseLesson AND BatchLesson"""
     
     STATUS_CHOICES = [
         ('not_started', 'Not Started'),
@@ -414,7 +415,22 @@ class LessonProgress(models.Model):
         User, on_delete=models.CASCADE,
         limit_choices_to={'role': 'student'}
     )
-    lesson = models.ForeignKey(CourseLesson, on_delete=models.CASCADE, related_name='progress_records')
+    
+    # ✅ OPTION 1: Separate fields for both types
+    course_lesson = models.ForeignKey(
+        'CourseLesson', 
+        on_delete=models.CASCADE, 
+        related_name='progress_records',
+        null=True, blank=True  # Allow null
+    )
+    
+    batch_lesson = models.ForeignKey(
+        'BatchLesson',
+        on_delete=models.CASCADE,
+        related_name='progress_records',
+        null=True, blank=True  # Allow null
+    )
+    
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='not_started')
     
     # Progress tracking
@@ -427,29 +443,31 @@ class LessonProgress(models.Model):
     last_accessed = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ['student', 'lesson']
+        # ✅ Remove old unique_together
         ordering = ['-last_accessed']
-
+        indexes = [
+            models.Index(fields=['student', 'course_lesson']),
+            models.Index(fields=['student', 'batch_lesson']),
+        ]
+    
     def __str__(self):
-        return f"{self.student.username} - {self.lesson.title} ({self.status})"
-
+        lesson_title = self.batch_lesson.title if self.batch_lesson else self.course_lesson.title
+        return f"{self.student.username} - {lesson_title} ({self.status})"
+    
     def mark_as_completed(self):
-        """Mark lesson as completed"""
         from django.utils import timezone
         self.status = 'completed'
         self.completion_percentage = 100.00
         if not self.completed_at:
             self.completed_at = timezone.now()
         self.save()
-
+    
     def mark_as_started(self):
-        """Mark lesson as started"""
         from django.utils import timezone
         if self.status == 'not_started':
             self.status = 'in_progress'
             self.started_at = timezone.now()
             self.save()
-
 # Enhanced Enrollment Model (update your existing one)
 
 class Enrollment(models.Model):
@@ -790,35 +808,6 @@ class BatchEnrollment(models.Model):
     def __str__(self):
         return f"{self.student.username} - {self.batch.name}"
     
-    def save(self, *args, **kwargs):
-        is_new_enrollment = self.pk is None
-        super().save(*args, **kwargs)
-        
-        if is_new_enrollment and self.is_active:
-            self.enroll_in_course()
-    
-    def enroll_in_course(self):
-        """Auto-enroll in course"""
-        course = self.batch.course
-        
-        existing_enrollment = Enrollment.objects.filter(
-            student=self.student,
-            course=course,
-            is_active=True
-        ).exists()
-        
-        if not existing_enrollment:
-            Enrollment.objects.create(
-                student=self.student,
-                course=course,
-                status='enrolled',
-                amount_paid=0.00,
-                payment_status='completed',
-                is_active=True
-            )
-            
-            course.total_enrollments = course.get_enrolled_count()
-            course.save(update_fields=['total_enrollments'])
     
     @property
     def is_locked(self):

@@ -1,255 +1,316 @@
 {% extends 'students/student_base.html' %}
 {% load static %}
+
 {% block title %}My Attendance{% endblock %}
 
-{% block extra_css %}
+{% block content %}
 <style>
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
-
-    body {
-        background: #f3f4f6;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-
-    .container {
-        max-width: 1200px;
+    .attendance-container {
+        max-width: 1400px;
         margin: 0 auto;
         padding: 2rem;
     }
 
     /* Header Section */
-    .header {
+    .attendance-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        padding: 3rem 2rem;
-        border-radius: 20px;
-        margin-bottom: 3rem;
-        box-shadow: 0 20px 60px rgba(102, 126, 234, 0.4);
-        animation: slideDown 0.6s ease-out;
+        padding: 2.5rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
     }
 
-    @keyframes slideDown {
-        from {
-            opacity: 0;
-            transform: translateY(-30px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    .header h1 {
-        font-size: 2.5rem;
-        font-weight: 800;
+    .attendance-header h1 {
+        font-size: 2rem;
+        font-weight: 700;
         margin: 0 0 0.5rem 0;
-        text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
     }
 
-    .header p {
+    .attendance-header p {
         margin: 0;
-        opacity: 0.95;
-        font-size: 1.1rem;
+        opacity: 0.9;
     }
 
-    /* Stats Grid */
-    .stats-grid {
+    /* Stats Cards */
+    .stats-row {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-        gap: 2rem;
-        margin-bottom: 3rem;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
     }
 
     .stat-card {
         background: white;
-        padding: 2rem;
-        border-radius: 15px;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
         text-align: center;
-        border-top: 5px solid #667eea;
-        transition: all 0.3s ease;
-        cursor: pointer;
+        border-top: 4px solid;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
 
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+
+    .stat-card.total { border-top-color: #3b82f6; }
     .stat-card.present { border-top-color: #10b981; }
     .stat-card.absent { border-top-color: #ef4444; }
     .stat-card.late { border-top-color: #f59e0b; }
-    .stat-card.total { border-top-color: #3b82f6; }
-
-    .stat-card:hover {
-        transform: translateY(-10px);
-        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
-    }
 
     .stat-icon {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-        filter: drop-shadow(2px 2px 4px rgba(0,0,0,0.1));
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
     }
 
     .stat-number {
-        font-size: 3rem;
-        font-weight: 900;
+        font-size: 2.5rem;
+        font-weight: 700;
         margin-bottom: 0.5rem;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
     }
 
-    .stat-card.present .stat-number { 
-        background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent; 
-        background-clip: text; 
-    }
-    
-    .stat-card.absent .stat-number { 
-        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); 
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent; 
-        background-clip: text; 
-    }
-    
-    .stat-card.late .stat-number { 
-        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); 
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent; 
-        background-clip: text; 
-    }
+    .stat-card.total .stat-number { color: #3b82f6; }
+    .stat-card.present .stat-number { color: #10b981; }
+    .stat-card.absent .stat-number { color: #ef4444; }
+    .stat-card.late .stat-number { color: #f59e0b; }
 
     .stat-label {
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         color: #6b7280;
         font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.5px;
     }
 
-    /* Circular Progress Section */
-    .progress-section {
+    /* Progress Section */
+    .progress-card {
         background: white;
-        padding: 3rem 2rem;
-        border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        margin-bottom: 3rem;
+        padding: 2rem;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
         text-align: center;
     }
 
-    .circular-progress {
+    .circular-progress-wrapper {
         position: relative;
-        width: 220px;
-        height: 220px;
+        width: 200px;
+        height: 200px;
+        margin: 0 auto 1.5rem;
+    }
+
+    .circular-progress {
+        width: 100%;
+        height: 100%;
         border-radius: 50%;
         background: conic-gradient(
-            #667eea 0deg calc(var(--progress) * 3.6deg),
-            #e5e7eb calc(var(--progress) * 3.6deg) 360deg
+            #667eea 0deg,
+            #667eea calc(var(--progress) * 3.6deg),
+            #e5e7eb calc(var(--progress) * 3.6deg),
+            #e5e7eb 360deg
         );
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 0 auto 2rem;
-        box-shadow: 0 15px 40px rgba(102, 126, 234, 0.3);
-        animation: rotate 1s ease-out;
     }
 
-    @keyframes rotate {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-    }
-
-    .circular-progress::before {
-        content: attr(data-percentage) '%';
-        position: absolute;
-        width: 180px;
-        height: 180px;
+    .circular-progress-inner {
+        width: 85%;
+        height: 85%;
         background: white;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 3rem;
-        font-weight: 900;
-        color: #667eea;
-        box-shadow: inset 0 5px 20px rgba(0,0,0,0.05);
+        flex-direction: column;
     }
 
-    .progress-section h2 {
-        font-size: 1.8rem;
+    .progress-percentage {
+        font-size: 2.5rem;
         font-weight: 800;
-        color: #1f2937;
-        margin: 1.5rem 0 1rem 0;
+        color: #667eea;
+    }
+
+    .progress-label {
+        font-size: 0.9rem;
+        color: #6b7280;
+        font-weight: 600;
     }
 
     .progress-status {
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: #667eea;
-        padding: 1rem 2rem;
-        background: #f0f4ff;
-        border-radius: 10px;
         display: inline-block;
+        padding: 0.75rem 1.5rem;
+        border-radius: 25px;
+        font-weight: 600;
         margin-top: 1rem;
     }
 
-    /* Batch Cards Section */
-    .batch-grid {
+    .status-excellent { background: #d1fae5; color: #065f46; }
+    .status-warning { background: #fef3c7; color: #92400e; }
+    .status-critical { background: #fee2e2; color: #991b1b; }
+
+    /* All Sessions Section */
+    .upcoming-sessions {
+        background: white;
+        padding: 2rem;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .session-card {
+        background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+        padding: 1.5rem;
+        border-radius: 12px;
+        margin-bottom: 1rem;
+        border-left: 5px solid #3b82f6;
+        transition: all 0.3s ease;
+    }
+
+    .session-card.upcoming {
+        background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+        border-left-color: #10b981;
+    }
+
+    .session-card.running {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border-left-color: #f59e0b;
+        animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.9; }
+    }
+
+    .session-card.past {
+        background: linear-gradient(135deg, #f3f4f6 0%, #e5e7eb 100%);
+        border-left-color: #6b7280;
+        opacity: 0.85;
+    }
+
+    .session-card:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(59, 130, 246, 0.2);
+    }
+
+    .session-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+
+    .session-batch {
+        font-weight: 700;
+        color: #1f2937;
+        font-size: 1.1rem;
+    }
+
+    .session-badge {
+        background: #3b82f6;
+        color: white;
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .session-badge.upcoming-badge {
+        background: #10b981;
+    }
+
+    .session-badge.past-badge {
+        background: #6b7280;
+    }
+
+    .session-details {
+        display: flex;
+        gap: 2rem;
+        color: #6b7280;
+        font-size: 0.95rem;
+        margin-bottom: 1rem;
+    }
+
+    .session-detail-item {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .mark-attendance-btn {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        text-decoration: none;
+        display: inline-block;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        border: none;
+        cursor: pointer;
+    }
+
+    .mark-attendance-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+
+    /* Batch Stats */
+    .batch-stats-grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 2rem;
-        margin-bottom: 3rem;
+        gap: 1.5rem;
+        margin-bottom: 2rem;
     }
 
     .batch-card {
         background: white;
-        padding: 2rem;
-        border-radius: 15px;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-        border-left: 6px solid #667eea;
-        transition: all 0.3s ease;
-    }
-
-    .batch-card:hover {
-        box-shadow: 0 15px 40px rgba(0,0,0,0.15);
-        transform: translateY(-8px);
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        border-left: 5px solid #667eea;
     }
 
     .batch-name {
         font-weight: 700;
         color: #1f2937;
-        margin-bottom: 1.5rem;
-        font-size: 1.2rem;
-        padding-bottom: 0.8rem;
-        border-bottom: 2px solid #e5e7eb;
+        margin-bottom: 1rem;
+        font-size: 1.1rem;
     }
 
-    .batch-stats {
+    .batch-mini-stats {
         display: grid;
         grid-template-columns: repeat(4, 1fr);
         gap: 1rem;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1rem;
         text-align: center;
     }
 
     .batch-stat-value {
-        font-size: 1.8rem;
-        font-weight: 900;
-        margin-bottom: 0.3rem;
+        font-size: 1.5rem;
+        font-weight: 700;
     }
 
     .batch-stat-label {
         font-size: 0.75rem;
         color: #9ca3af;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
         font-weight: 600;
     }
 
-    .progress-bar {
+    .batch-progress-bar {
         background: #e5e7eb;
         border-radius: 10px;
         height: 8px;
@@ -257,307 +318,208 @@
         margin-top: 1rem;
     }
 
-    .progress-fill {
+    .batch-progress-fill {
         height: 100%;
         background: linear-gradient(90deg, #667eea, #764ba2);
         border-radius: 10px;
-        transition: width 1s ease-out;
+        transition: width 1s ease;
     }
 
-    .progress-text {
+    .batch-progress-text {
+        text-align: center;
+        margin-top: 0.5rem;
         font-size: 0.85rem;
         color: #6b7280;
-        margin-top: 0.8rem;
-        text-align: center;
         font-weight: 600;
     }
 
-    /* Records Section */
-    .records-section {
+    /* Recent Records */
+    .recent-records {
         background: white;
-        padding: 2.5rem;
-        border-radius: 20px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
-        margin-bottom: 3rem;
+        padding: 2rem;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
     }
 
-    .section-header {
+    .attendance-item {
+        background: #f9fafb;
+        padding: 1.5rem;
+        border-radius: 10px;
+        margin-bottom: 1rem;
+        border-left: 5px solid;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 2rem;
-        padding-bottom: 1.5rem;
-        border-bottom: 3px solid #e5e7eb;
-    }
-
-    .section-header h2 {
-        font-size: 1.8rem;
-        font-weight: 800;
-        color: #1f2937;
-        margin: 0;
-    }
-
-    .view-all-btn {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 0.9rem 2rem;
-        border-radius: 12px;
-        text-decoration: none;
-        font-weight: 700;
-        font-size: 0.95rem;
         transition: all 0.3s ease;
-        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
     }
 
-    .view-all-btn:hover {
-        box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
-        transform: translateY(-3px);
-    }
-
-    /* Attendance Items */
-    .attendance-item {
-        background: #f9fafb;
-        padding: 1.8rem;
-        border-radius: 15px;
-        margin-bottom: 1.5rem;
-        border-left: 6px solid #e5e7eb;
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-        transition: all 0.3s ease;
+    .attendance-item:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
     }
 
     .attendance-item.present { 
         border-left-color: #10b981; 
         background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
     }
-    
+
     .attendance-item.absent { 
         border-left-color: #ef4444; 
         background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
     }
-    
+
     .attendance-item.late { 
         border-left-color: #f59e0b; 
         background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-    }
-
-    .attendance-item:hover {
-        box-shadow: 0 8px 25px rgba(0,0,0,0.12);
-        transform: translateX(8px);
     }
 
     .attendance-info {
         flex: 1;
     }
 
-    .attendance-status {
+    .attendance-status-row {
         display: flex;
         gap: 1rem;
         align-items: center;
-        margin-bottom: 0.8rem;
+        margin-bottom: 0.5rem;
     }
 
-    .badge {
-        display: inline-block;
-        padding: 0.5rem 1rem;
-        border-radius: 25px;
+    .status-badge {
+        padding: 0.4rem 0.9rem;
+        border-radius: 20px;
         font-size: 0.8rem;
         font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
     }
 
-    .badge-present { 
-        background: #d1fae5; 
-        color: #065f46;
-        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.2);
-    }
-    
-    .badge-absent { 
-        background: #fee2e2; 
-        color: #991b1b;
-        box-shadow: 0 2px 8px rgba(239, 68, 68, 0.2);
-    }
-    
-    .badge-late { 
-        background: #fef3c7; 
-        color: #92400e;
-        box-shadow: 0 2px 8px rgba(245, 158, 11, 0.2);
-    }
+    .status-badge.present { background: #d1fae5; color: #065f46; }
+    .status-badge.absent { background: #fee2e2; color: #991b1b; }
+    .status-badge.late { background: #fef3c7; color: #92400e; }
 
-    .attendance-batch {
+    .attendance-batch-name {
         font-weight: 700;
         color: #1f2937;
-        font-size: 1.05rem;
     }
 
-    .attendance-details {
-        font-size: 0.95rem;
+    .attendance-details-text {
+        font-size: 0.9rem;
         color: #6b7280;
-        margin-top: 0.6rem;
-        line-height: 1.6;
+        margin-top: 0.3rem;
     }
 
-    .attendance-method {
-        font-size: 0.8rem;
-        color: #9ca3af;
-        text-align: right;
-        font-weight: 600;
+    .attendance-method-badge {
         background: white;
         padding: 0.5rem 1rem;
         border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        font-size: 0.85rem;
+        color: #6b7280;
+        font-weight: 600;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.05);
     }
 
     /* Empty State */
     .empty-state {
         text-align: center;
-        padding: 4rem 2rem;
+        padding: 3rem 1rem;
     }
 
     .empty-icon {
-        font-size: 5rem;
-        margin-bottom: 1.5rem;
+        font-size: 4rem;
+        margin-bottom: 1rem;
         opacity: 0.5;
     }
 
     .empty-title {
-        font-size: 1.5rem;
+        font-size: 1.3rem;
         font-weight: 700;
         color: #1f2937;
-        margin-bottom: 0.8rem;
+        margin-bottom: 0.5rem;
     }
 
     .empty-text {
         color: #6b7280;
-        font-size: 1.05rem;
     }
 
     /* Quick Actions */
-    .actions-grid {
+    .quick-actions {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-        gap: 2rem;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
         margin-top: 2rem;
     }
 
-    .action-card {
+    .action-btn {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
-        padding: 2.5rem;
-        border-radius: 20px;
+        padding: 1.5rem;
+        border-radius: 12px;
         text-decoration: none;
-        box-shadow: 0 15px 40px rgba(102, 126, 234, 0.3);
-        transition: all 0.3s ease;
-    }
-
-    .action-card:hover {
-        box-shadow: 0 25px 60px rgba(102, 126, 234, 0.4);
-        transform: translateY(-8px);
-    }
-
-    .action-content {
         display: flex;
         justify-content: space-between;
         align-items: center;
+        box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        transition: all 0.3s ease;
+    }
+
+    .action-btn:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 25px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+
+    .action-btn.secondary {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
     }
 
     .action-info h3 {
-        font-size: 1.5rem;
-        font-weight: 800;
-        margin: 0 0 0.5rem 0;
+        font-size: 1.2rem;
+        font-weight: 700;
+        margin: 0 0 0.3rem 0;
     }
 
     .action-info p {
         margin: 0;
         opacity: 0.9;
-        font-size: 1rem;
     }
 
     .action-arrow {
-        font-size: 2.5rem;
-        transition: transform 0.3s ease;
+        font-size: 2rem;
     }
 
-    .action-card:hover .action-arrow {
-        transform: translateX(10px);
-    }
-
-    /* Responsive Design */
+    /* Responsive */
     @media (max-width: 768px) {
-        .container {
+        .attendance-container {
             padding: 1rem;
         }
 
-        .header {
-            padding: 2rem 1.5rem;
-        }
-
-        .header h1 {
-            font-size: 2rem;
-        }
-
-        .stats-grid {
+        .stats-row {
             grid-template-columns: repeat(2, 1fr);
             gap: 1rem;
-        }
-
-        .stat-icon {
-            font-size: 2rem;
-        }
-
-        .stat-number {
-            font-size: 2rem;
-        }
-
-        .circular-progress {
-            width: 180px;
-            height: 180px;
-        }
-
-        .circular-progress::before {
-            width: 150px;
-            height: 150px;
-            font-size: 2.5rem;
-        }
-
-        .batch-stats {
-            grid-template-columns: repeat(2, 1fr);
-        }
-
-        .section-header {
-            flex-direction: column;
-            gap: 1rem;
-            align-items: flex-start;
         }
 
         .attendance-item {
             flex-direction: column;
+            align-items: flex-start;
             gap: 1rem;
         }
 
-        .attendance-method {
-            text-align: left;
-        }
-
-        .actions-grid {
-            grid-template-columns: 1fr;
+        .session-details {
+            flex-direction: column;
+            gap: 0.5rem;
         }
     }
 </style>
-{% endblock %}
 
-{% block content %}
-<div class="container">
+<div class="attendance-container">
     <!-- Header -->
-    <div class="header">
+    <div class="attendance-header">
         <h1>📊 My Attendance</h1>
         <p>Track your attendance across all courses</p>
     </div>
 
-    <!-- Stats Grid -->
-    <div class="stats-grid">
+    <!-- Stats Cards -->
+    <div class="stats-row">
         <div class="stat-card total">
             <div class="stat-icon">📋</div>
             <div class="stat-number">{{ total_sessions }}</div>
@@ -584,104 +546,222 @@
     </div>
 
     <!-- Overall Progress -->
-    <div class="progress-section">
-        <div class="circular-progress" 
-             style="--progress: {{ attendance_percentage }}"
-             data-percentage="{{ attendance_percentage }}">
+    <div class="progress-card">
+        <div class="circular-progress-wrapper">
+            <div class="circular-progress" style="--progress: {{ attendance_percentage }}">
+                <div class="circular-progress-inner">
+                    <div class="progress-percentage">{{ attendance_percentage|floatformat:0 }}%</div>
+                    <div class="progress-label">Overall</div>
+                </div>
+            </div>
         </div>
-        <h2>Overall Attendance</h2>
-        <div class="progress-status">
-            {% if attendance_percentage >= 75 %}
-                ✅ Excellent! Keep up the good work!
-            {% elif attendance_percentage >= 60 %}
-                ⚠️ Needs improvement - Aim for 75%+
+        <h2 style="margin: 0 0 0.5rem 0; color: #1f2937;">Overall Attendance</h2>
+        {% if attendance_percentage >= 75 %}
+            <div class="progress-status status-excellent">✅ Excellent! Keep up the good work!</div>
+        {% elif attendance_percentage >= 60 %}
+            <div class="progress-status status-warning">⚠️ Needs improvement - Aim for 75%+</div>
+        {% else %}
+            <div class="progress-status status-critical">❌ Critical - Below 60%</div>
+        {% endif %}
+    </div>
+
+    <!-- 🎯 ALL SESSIONS (Past + Running + Upcoming) - YAHAN CHANGE HAI! -->
+    <!-- 🎯 ALL SESSIONS with Smart Status Display -->
+{% if sessions_with_status %}
+<div class="upcoming-sessions">
+    <div class="section-title">📅 All Sessions ({{ sessions_with_status|length }} Total)</div>
+    {% for item in sessions_with_status %}
+    <div class="session-card {{ item.status }}">
+        <div class="session-header">
+            <div class="session-batch">{{ item.session.batch.name }}</div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <!-- Session Status Badge -->
+                {% if item.is_upcoming %}
+                    <div class="session-badge upcoming-badge">🔜 Upcoming</div>
+                {% elif item.is_running %}
+                    <div class="session-badge" style="background: #f59e0b;">▶️ Running Now</div>
+                {% else %}
+                    <div class="session-badge past-badge">✅ Past</div>
+                {% endif %}
+                
+                <!-- Attendance Status Badge -->
+                {% if item.has_attendance %}
+                    {% if item.is_present %}
+                        {% if item.is_late %}
+                            <div class="session-badge" style="background: #f59e0b;">⚠️ Marked (Late)</div>
+                        {% else %}
+                            <div class="session-badge" style="background: #10b981;">✅ Marked (Present)</div>
+                        {% endif %}
+                    {% else %}
+                        <div class="session-badge" style="background: #ef4444;">❌ Marked (Absent)</div>
+                    {% endif %}
+                {% elif item.has_pending_request %}
+                    <div class="session-badge" style="background: #f59e0b;">⏳ Request Pending</div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <div class="session-details">
+            <div class="session-detail-item">
+                <i class="fas fa-calendar"></i>
+                <span>{{ item.session.start_time|date:"D, d M Y" }}</span>
+            </div>
+            <div class="session-detail-item">
+                <i class="fas fa-clock"></i>
+                <span>{{ item.session.start_time|time:"h:i A" }} - {{ item.session.end_time|time:"h:i A" }}</span>
+            </div>
+            <div class="session-detail-item">
+                <i class="fas fa-map-marker-alt"></i>
+                <span>{{ item.session.classroom_location|default:"Classroom" }}</span>
+            </div>
+        </div>
+        
+        <!-- Smart Action Buttons -->
+        <div style="margin-top: 1rem; display: flex; gap: 1rem; flex-wrap: wrap;">
+            {% if item.has_attendance %}
+                <!-- Already Marked -->
+                {% if item.is_present %}
+                    <div style="background: #d1fae5; color: #065f46; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Attendance Marked Successfully!</span>
+                    </div>
+                    {% if item.attendance.distance_from_classroom %}
+                        <div style="background: #e0f2fe; color: #0c4a6e; padding: 0.75rem 1rem; border-radius: 8px; font-size: 0.9rem;">
+                            📍 Distance: {{ item.attendance.distance_from_classroom }}m
+                        </div>
+                    {% endif %}
+                {% else %}
+                    <!-- Absent - Allow Manual Request -->
+                    <div style="background: #fee2e2; color: #991b1b; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fas fa-times-circle"></i>
+                        <span>Marked Absent (Outside Radius)</span>
+                    </div>
+                    {% if not item.has_pending_request %}
+                        <a href="{% url 'attendance:student_scanner' %}?session_id={{ item.session.id }}" 
+                           class="mark-attendance-btn" style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);">
+                            📝 Request Manual Attendance
+                        </a>
+                    {% else %}
+                        <div style="background: #fef3c7; color: #92400e; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600;">
+                            ⏳ Manual Request Pending Approval
+                        </div>
+                    {% endif %}
+                {% endif %}
             {% else %}
-                ❌ Critical - Below 60%
+                <!-- Not Marked Yet -->
+                {% if item.is_running %}
+                    <a href="{% url 'attendance:student_scanner' %}?session_id={{ item.session.id }}" 
+                       class="mark-attendance-btn" style="animation: pulse 2s infinite;">
+                        ▶️ Mark Attendance NOW (Running)
+                    </a>
+                {% elif item.is_upcoming %}
+                    <a href="{% url 'attendance:student_scanner' %}?session_id={{ item.session.id }}" 
+                       class="mark-attendance-btn">
+                        🔜 Mark Attendance (Starting Soon)
+                    </a>
+                {% else %}
+                    <!-- Past Session - Allow Manual Request -->
+                    {% if not item.has_pending_request %}
+                        <a href="{% url 'attendance:student_scanner' %}?session_id={{ item.session.id }}" 
+                           class="mark-attendance-btn" style="background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);">
+                            📝 Request Manual Attendance (Past)
+                        </a>
+                    {% else %}
+                        <div style="background: #fef3c7; color: #92400e; padding: 0.75rem 1.5rem; border-radius: 8px; font-weight: 600;">
+                            ⏳ Manual Request Pending Approval
+                        </div>
+                    {% endif %}
+                {% endif %}
             {% endif %}
         </div>
     </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="upcoming-sessions">
+    <div class="section-title">📅 All Sessions</div>
+    <div class="empty-state">
+        <div class="empty-icon">📭</div>
+        <div class="empty-title">No Sessions Available</div>
+        <div class="empty-text">No active sessions found for your enrolled batches</div>
+    </div>
+</div>
+{% endif %}
 
     <!-- Batch-wise Stats -->
     {% if batch_stats %}
-    <div class="records-section">
-        <h2 style="margin-top: 0; color: #1f2937; font-size: 1.8rem; font-weight: 800;">📚 Batch-wise Attendance</h2>
-        <div class="batch-grid">
+    <div class="upcoming-sessions">
+        <div class="section-title">📚 Batch-wise Attendance</div>
+        <div class="batch-stats-grid">
             {% for batch_name, stats in batch_stats.items %}
             <div class="batch-card">
                 <div class="batch-name">{{ batch_name }}</div>
-                <div class="batch-stats">
-                    <div class="batch-stat">
+                <div class="batch-mini-stats">
+                    <div>
                         <div class="batch-stat-value" style="color: #3b82f6;">{{ stats.total }}</div>
                         <div class="batch-stat-label">Total</div>
                     </div>
-                    <div class="batch-stat">
+                    <div>
                         <div class="batch-stat-value" style="color: #10b981;">{{ stats.present }}</div>
                         <div class="batch-stat-label">Present</div>
                     </div>
-                    <div class="batch-stat">
+                    <div>
                         <div class="batch-stat-value" style="color: #ef4444;">{{ stats.absent }}</div>
                         <div class="batch-stat-label">Absent</div>
                     </div>
-                    <div class="batch-stat">
+                    <div>
                         <div class="batch-stat-value" style="color: #f59e0b;">{{ stats.late }}</div>
                         <div class="batch-stat-label">Late</div>
                     </div>
                 </div>
-                <div class="progress-bar">
-                    <div class="progress-fill" style="width: {{ stats.percentage }}%"></div>
+                <div class="batch-progress-bar">
+                    <div class="batch-progress-fill" style="width: {{ stats.percentage }}%"></div>
                 </div>
-                <div class="progress-text">{{ stats.percentage|floatformat:0 }}% Attendance</div>
+                <div class="batch-progress-text">{{ stats.percentage|floatformat:0 }}% Attendance</div>
             </div>
             {% endfor %}
         </div>
     </div>
     {% endif %}
 
-    <!-- Recent Attendance Records -->
-    <div class="records-section">
-        <div class="section-header">
-            <h2>📝 Recent Records</h2>
-            <a href="{% url 'attendance:student_attendance_history' %}" class="view-all-btn">
-                View Full History →
-            </a>
-        </div>
+    <!-- Recent Records -->
+    <div class="recent-records">
+        <div class="section-title">📝 Recent Attendance Records</div>
 
         {% if attendances %}
-        <div>
             {% for attendance in attendances %}
             <div class="attendance-item {% if attendance.is_present %}{% if attendance.is_late %}late{% else %}present{% endif %}{% else %}absent{% endif %}">
                 <div class="attendance-info">
-                    <div class="attendance-status">
+                    <div class="attendance-status-row">
                         {% if attendance.is_present %}
                             {% if attendance.is_late %}
-                                <span class="badge badge-late">⚠️ Late</span>
+                                <span class="status-badge late">⚠️ Late</span>
                             {% else %}
-                                <span class="badge badge-present">✅ Present</span>
+                                <span class="status-badge present">✅ Present</span>
                             {% endif %}
                         {% else %}
-                            <span class="badge badge-absent">❌ Absent</span>
+                            <span class="status-badge absent">❌ Absent</span>
                         {% endif %}
-                        <span class="attendance-batch">{{ attendance.session.batch.name }}</span>
+                        <span class="attendance-batch-name">{{ attendance.session.batch.name }}</span>
                     </div>
-                    <div class="attendance-details">
+                    <div class="attendance-details-text">
                         📅 {{ attendance.session.start_time|date:"D, d M Y" }} | 
                         🕐 {{ attendance.session.start_time|time:"h:i A" }} - {{ attendance.session.end_time|time:"h:i A" }}
                     </div>
                     {% if attendance.is_present %}
-                    <div class="attendance-details">
+                    <div class="attendance-details-text">
                         ✓ Marked at {{ attendance.marked_at|time:"h:i A" }}
                         {% if attendance.distance_from_classroom %}
-                            | 📍 Distance: {{ attendance.distance_from_classroom }}m
+                            | 📍 {{ attendance.distance_from_classroom }}m away
                         {% endif %}
                     </div>
                     {% endif %}
                 </div>
-                <div class="attendance-method">
+                <div class="attendance-method-badge">
                     {{ attendance.get_marking_method_display }}
                 </div>
             </div>
             {% endfor %}
-        </div>
         {% else %}
         <div class="empty-state">
             <div class="empty-icon">📭</div>
@@ -692,67 +772,22 @@
     </div>
 
     <!-- Quick Actions -->
-    <div class="actions-grid">
-        <a href="{% url 'attendance:student_scanner' %}" class="action-card">
-            <div class="action-content">
-                <div class="action-info">
-                    <h3>📱 Scan QR</h3>
-                    <p>Mark your attendance</p>
-                </div>
-                <div class="action-arrow">→</div>
+    <div class="quick-actions">
+        <a href="{% url 'attendance:student_scanner' %}" class="action-btn">
+            <div class="action-info">
+                <h3>📱 Scan QR Code</h3>
+                <p>Mark your attendance</p>
             </div>
+            <div class="action-arrow">→</div>
         </a>
         
-        <a href="{% url 'attendance:student_attendance_history' %}" class="action-card" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
-            <div class="action-content">
-                <div class="action-info">
-                    <h3>📊 History</h3>
-                    <p>View detailed records</p>
-                </div>
-                <div class="action-arrow">→</div>
+        <a href="{% url 'attendance:student_attendance_history' %}" class="action-btn secondary">
+            <div class="action-info">
+                <h3>📊 Full History</h3>
+                <p>View all records</p>
             </div>
+            <div class="action-arrow">→</div>
         </a>
     </div>
 </div>
-
-{% endblock %}
-
-{% block extra_js %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Animate progress bars
-        const progressFills = document.querySelectorAll('.progress-fill');
-        progressFills.forEach(fill => {
-            const targetWidth = fill.style.width;
-            fill.style.width = '0%';
-            setTimeout(() => {
-                fill.style.width = targetWidth;
-            }, 200);
-        });
-
-        // Animate stat cards on load
-        const statCards = document.querySelectorAll('.stat-card');
-        statCards.forEach((card, index) => {
-            card.style.opacity = '0';
-            card.style.transform = 'translateY(30px)';
-            setTimeout(() => {
-                card.style.transition = 'all 0.5s ease';
-                card.style.opacity = '1';
-                card.style.transform = 'translateY(0)';
-            }, index * 100);
-        });
-
-        // Animate attendance items
-        const attendanceItems = document.querySelectorAll('.attendance-item');
-        attendanceItems.forEach((item, index) => {
-            item.style.opacity = '0';
-            item.style.transform = 'translateX(-20px)';
-            setTimeout(() => {
-                item.style.transition = 'all 0.4s ease';
-                item.style.opacity = '1';
-                item.style.transform = 'translateX(0)';
-            }, 300 + (index * 80));
-        });
-    });
-</script>
 {% endblock %}

@@ -1,0 +1,248 @@
+{% extends 'base.html' %}
+
+{% block title %}Email SMTP Configuration - LMS Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .config-card {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.07);
+        margin-bottom: 20px;
+    }
+
+    .section-title {
+        color: var(--primary-color);
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 20px;
+        padding-bottom: 10px;
+        border-bottom: 2px solid var(--primary-color);
+    }
+
+    .form-label {
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 8px;
+    }
+
+    .form-control, .form-select {
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 10px 15px;
+        transition: all 0.3s;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .info-box {
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        border-radius: 8px;
+        padding: 15px;
+        margin-top: 10px;
+    }
+
+    .info-box i {
+        color: var(--primary-color);
+        margin-right: 8px;
+    }
+
+    .btn-primary {
+        background: var(--primary-color);
+        border: none;
+        border-radius: 8px;
+        padding: 12px 40px;
+        font-weight: 600;
+        transition: all 0.3s;
+    }
+
+    .btn-primary:hover {
+        background: var(--primary-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+
+    .breadcrumb {
+        background: transparent;
+        padding: 0;
+        margin-bottom: 20px;
+    }
+
+    .breadcrumb-item a {
+        color: var(--primary-color);
+        text-decoration: none;
+    }
+
+    .breadcrumb-item.active {
+        color: #6b7280;
+    }
+
+    .current-config {
+        background: #f0fdf4;
+        border: 1px solid #86efac;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+
+    .current-config strong {
+        color: #166534;
+    }
+
+    .warning-note {
+        background: #fef3c7;
+        border: 1px solid #fcd34d;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">Dashboard</a></li>
+        <li class="breadcrumb-item active">Email SMTP Settings</li>
+    </ol>
+</nav>
+
+<!-- Page Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2><i class="fas fa-server me-2"></i>Email SMTP Configuration</h2>
+</div>
+
+Note about Email Limits
+<div class="warning-note">
+    <i class="fas fa-info-circle me-2"></i>
+    <strong>Note:</strong> This page is for SMTP email server settings only. 
+    To manage daily email limits, contact admin</a>.
+</div>
+
+<!-- Current Configuration Status -->
+{% if smtp_config %}
+<div class="current-config">
+    <strong><i class="fas fa-check-circle me-2"></i>Active SMTP Configuration:</strong>
+    {{ smtp_config.email_host_user }} ({{ smtp_config.email_host }}:{{ smtp_config.email_port }})
+    <span class="text-muted ms-3">(Last Updated: {{ smtp_config.updated_at|date:"M d, Y H:i" }})</span>
+</div>
+{% else %}
+<div class="alert alert-warning">
+    <i class="fas fa-exclamation-triangle me-2"></i>
+    No SMTP configuration found. Please configure email server settings below.
+</div>
+{% endif %}
+
+<!-- Configuration Form -->
+<form method="POST" class="config-card">
+    {% csrf_token %}
+
+    <!-- SMTP Settings Section -->
+    <div class="section-title">
+        <i class="fas fa-server me-2"></i>SMTP Server Settings
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-md-8">
+            <label class="form-label">Email Host</label>
+            <input type="text" name="email_host" class="form-control" 
+                   value="{{ smtp_config.email_host|default:'smtp.gmail.com' }}" 
+                   placeholder="smtp.gmail.com" required>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">Port</label>
+            <input type="number" name="email_port" class="form-control" 
+                   value="{{ smtp_config.email_port|default:'587' }}" 
+                   placeholder="587" required>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" name="email_use_tls" 
+                   id="useTLS" {% if smtp_config.email_use_tls or not smtp_config %}checked{% endif %}>
+            <label class="form-check-label" for="useTLS">
+                <strong>Use TLS/SSL</strong> (Recommended for Gmail)
+            </label>
+        </div>
+    </div>
+
+    <!-- Credentials Section -->
+    <div class="section-title mt-4">
+        <i class="fas fa-key me-2"></i>Email Credentials
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Email Address</label>
+        <input type="email" name="email_host_user" class="form-control" 
+               value="{{ smtp_config.email_host_user|default:'' }}" 
+               placeholder="your-email@gmail.com" required>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">App Password</label>
+        <input type="password" name="email_host_password" class="form-control" 
+               value="{{ smtp_config.email_host_password|default:'' }}" 
+               placeholder="Enter Gmail App Password" required>
+        <div class="info-box">
+            <i class="fas fa-info-circle"></i>
+            <strong>How to get Gmail App Password:</strong>
+            <ol class="mb-0 mt-2">
+                <li>Go to your Google Account → Security</li>
+                <li>Enable 2-Step Verification</li>
+                <li>Search for "App passwords"</li>
+                <li>Generate password for "Mail" app</li>
+                <li>Copy and paste the 16-character password here</li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Default From Email</label>
+        <input type="email" name="default_from_email" class="form-control" 
+               value="{{ smtp_config.default_from_email|default:'' }}" 
+               placeholder="LMS System <your-email@gmail.com>">
+        <small class="text-muted">This will be shown as sender name in emails</small>
+    </div>
+
+    <!-- Submit Button -->
+    <div class="text-center mt-4">
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save me-2"></i>Save SMTP Configuration
+        </button>
+    </div>
+</form>
+
+<!-- Help Section -->
+<div class="config-card mt-4">
+    <div class="section-title">
+        <i class="fas fa-question-circle me-2"></i>Troubleshooting
+    </div>
+    <div class="row">
+        <div class="col-md-6">
+            <h6><i class="fas fa-exclamation-triangle text-warning me-2"></i>Common Issues:</h6>
+            <ul>
+                <li>Authentication failed → Check App Password</li>
+                <li>Emails not sending → Verify SMTP host and port</li>
+                <li>Connection timeout → Check firewall/network settings</li>
+            </ul>
+        </div>
+        <div class="col-md-6">
+            <h6><i class="fas fa-shield-alt text-success me-2"></i>Security Tips:</h6>
+            <ul>
+                <li>Never share your App Password</li>
+                <li>Use dedicated email for LMS</li>
+                <li>Regularly rotate App Passwords</li>
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+

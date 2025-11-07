@@ -1,0 +1,621 @@
+<!-- courses/templates/courses/enhanced_lesson_form.html -->
+
+{% extends 'instructor_base.html' %}
+{% load static %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+.content-type-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin: 15px 0;
+    border-left: 4px solid #007bff;
+}
+
+.file-upload-info {
+    font-size: 0.9em;
+    color: #6c757d;
+    margin-top: 5px;
+}
+
+.lesson-type-help {
+    background: #e3f2fd;
+    border-radius: 5px;
+    padding: 10px;
+    margin-top: 10px;
+    font-size: 0.9em;
+}
+
+.attachment-row {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 10px;
+    border: 1px solid #dee2e6;
+}
+
+.dynamic-form {
+    transition: all 0.3s ease;
+}
+
+.form-section {
+    margin-bottom: 2rem;
+}
+
+.section-title {
+    color: #495057;
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 8px;
+    margin-bottom: 20px;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-book-open me-2"></i>
+                        {{ title }}
+                    </h4>
+                    <small class="opacity-75">
+                        Course: {{ course.title }} | Module: {{ module.title }}
+                    </small>
+                </div>
+                
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" id="lessonForm">
+                        {% csrf_token %}
+                        
+                        <!-- Basic Information Section -->
+                        <div class="form-section">
+                            <h5 class="section-title">
+                                <i class="fas fa-info-circle me-2"></i>
+                                Basic Information
+                            </h5>
+                            
+                            <div class="row">
+                                <div class="col-md-8">
+                                    <div class="mb-3">
+                                        <label for="{{ form.title.id_for_label }}" class="form-label">
+                                            <strong>Lesson Title</strong>
+                                            <span class="text-danger">*</span>
+                                        </label>
+                                        {{ form.title }}
+                                        {% if form.title.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {{ form.title.errors|join:" " }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-3">
+                                        <label for="{{ form.duration_minutes.id_for_label }}" class="form-label">
+                                            <strong>Duration (minutes)</strong>
+                                        </label>
+                                        {{ form.duration_minutes }}
+                                        {% if form.duration_minutes.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {{ form.duration_minutes.errors|join:" " }}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.description.id_for_label }}" class="form-label">
+                                    <strong>Lesson Description</strong>
+                                    <span class="text-danger">*</span>
+                                </label>
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.description.errors|join:" " }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Content Type Selection -->
+                        <div class="form-section">
+                            <h5 class="section-title">
+                                <i class="fas fa-layer-group me-2"></i>
+                                Content Type
+                            </h5>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.lesson_type.id_for_label }}" class="form-label">
+                                    <strong>Primary Content Type</strong>
+                                    <span class="text-danger">*</span>
+                                </label>
+                                {{ form.lesson_type }}
+                                {% if form.lesson_type.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.lesson_type.errors|join:" " }}
+                                    </div>
+                                {% endif %}
+                                <div id="contentTypeHelp" class="lesson-type-help" style="display: none;">
+                                    <!-- Dynamic help text will appear here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Content Sections -->
+                        <div id="contentSections" class="dynamic-form">
+                            
+                            <!-- Text Content Section -->
+                            <div id="textContentSection" class="content-type-section" style="display: none;">
+                                <h6><i class="fas fa-align-left me-2"></i>Text Content</h6>
+                                <div class="mb-3">
+                                    <label for="{{ form.text_content.id_for_label }}" class="form-label">
+                                        Rich Text Content
+                                    </label>
+                                    {{ form.text_content }}
+                                    {% if form.text_content.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.text_content.errors|join:" " }}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <!-- Video Content Section -->
+                            <div id="videoContentSection" class="content-type-section" style="display: none;">
+                                <h6><i class="fas fa-video me-2"></i>Video Content</h6>
+                                
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <div class="mb-3">
+                                            <label for="{{ form.video_file.id_for_label }}" class="form-label">
+                                                Upload Video File
+                                            </label>
+                                            {{ form.video_file }}
+                                            {% if form.video_file.errors %}
+                                                <div class="text-danger small mt-1">
+                                                    {{ form.video_file.errors|join:" " }}
+                                                </div>
+                                            {% endif %}
+                                            <div class="file-upload-info">
+                                                Supported formats: MP4, AVI, MKV, MOV (Max 500MB)
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.youtube_url.id_for_label }}" class="form-label">
+                                                YouTube URL
+                                            </label>
+                                            {{ form.youtube_url }}
+                                            {% if form.youtube_url.errors %}
+                                                <div class="text-danger small mt-1">
+                                                    {{ form.youtube_url.errors|join:" " }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.vimeo_url.id_for_label }}" class="form-label">
+                                                Vimeo URL
+                                            </label>
+                                            {{ form.vimeo_url }}
+                                            {% if form.vimeo_url.errors %}
+                                                <div class="text-danger small mt-1">
+                                                    {{ form.vimeo_url.errors|join:" " }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- PDF Content Section -->
+                            <div id="pdfContentSection" class="content-type-section" style="display: none;">
+                                <h6><i class="fas fa-file-pdf me-2"></i>PDF Document</h6>
+                                <div class="mb-3">
+                                    <label for="{{ form.pdf_file.id_for_label }}" class="form-label">
+                                        Upload PDF File
+                                    </label>
+                                    {{ form.pdf_file }}
+                                    {% if form.pdf_file.errors %}
+                                        <div class="text-danger small mt-1">
+                                            {{ form.pdf_file.errors|join:" " }}
+                                        </div>
+                                    {% endif %}
+                                    <div class="file-upload-info">
+                                        PDF files only (Max 50MB)
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Mixed Content Section -->
+                            <div id="mixedContentSection" class="content-type-section" style="display: none;">
+                                <h6><i class="fas fa-layer-group me-2"></i>Mixed Content</h6>
+                                <p class="small text-muted mb-3">
+                                    You can add multiple types of content for a comprehensive lesson.
+                                </p>
+                                
+                                <!-- All content fields will be shown for mixed type -->
+                                <div class="mb-3">
+                                    <label for="{{ form.text_content.id_for_label }}" class="form-label">
+                                        Text Content
+                                    </label>
+                                    {{ form.text_content }}
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.video_file.id_for_label }}" class="form-label">
+                                        Video File
+                                    </label>
+                                    {{ form.video_file }}
+                                    <div class="file-upload-info">Max 500MB</div>
+                                </div>
+                                
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.youtube_url.id_for_label }}" class="form-label">
+                                                YouTube URL
+                                            </label>
+                                            {{ form.youtube_url }}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <label for="{{ form.pdf_file.id_for_label }}" class="form-label">
+                                                PDF File
+                                            </label>
+                                            {{ form.pdf_file }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Additional Notes -->
+                        <div class="form-section">
+                            <h5 class="section-title">
+                                <i class="fas fa-sticky-note me-2"></i>
+                                Additional Information
+                            </h5>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.additional_notes.id_for_label }}" class="form-label">
+                                    Additional Notes
+                                </label>
+                                {{ form.additional_notes }}
+                                {% if form.additional_notes.errors %}
+                                    <div class="text-danger small mt-1">
+                                        {{ form.additional_notes.errors|join:" " }}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Lesson Settings -->
+                        <div class="form-section">
+                            <h5 class="section-title">
+                                <i class="fas fa-cogs me-2"></i>
+                                Lesson Settings
+                            </h5>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="form-check mb-3">
+                                        {{ form.is_free_preview }}
+                                        <label class="form-check-label" for="{{ form.is_free_preview.id_for_label }}">
+                                            <strong>Free Preview</strong>
+                                        </label>
+                                        <div class="form-text">Allow non-enrolled students to view this lesson</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="form-check mb-3">
+                                        {{ form.is_mandatory }}
+                                        <label class="form-check-label" for="{{ form.is_mandatory.id_for_label }}">
+                                            <strong>Mandatory Lesson</strong>
+                                        </label>
+                                        <div class="form-text">Required for course completion</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Attachments Section -->
+                        <!-- Attachments Section -->
+<div class="form-section">
+    <h5 class="section-title">
+        <i class="fas fa-paperclip me-2"></i>
+        Lesson Attachments
+    </h5>
+    
+    <div id="attachment-forms">
+        {{ attachment_formset.management_form }}
+        
+        {% for form in attachment_formset %}
+            <div class="attachment-row" data-form-index="{{ forloop.counter0 }}">
+                {{ form.id }}
+                {% if form.instance.pk %}
+                    {{ form.DELETE }}
+                {% endif %}
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="mb-2">
+                            <label class="form-label small">Title</label>
+                            {{ form.title }}
+                            {% if form.title.errors %}
+                                <div class="text-danger small">{{ form.title.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-2">
+                            <label class="form-label small">File</label>
+                            {{ form.file }}
+                            {% if form.file.errors %}
+                                <div class="text-danger small">{{ form.file.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="mb-2">
+                            <label class="form-label small">Description</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="text-danger small">{{ form.description.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                
+                {% if form.instance.pk %}
+                    <div class="form-check">
+                        <label class="form-check-label text-danger">
+                            {{ form.DELETE }} Delete this attachment
+                        </label>
+                    </div>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+    
+    <button type="button" id="add-attachment" class="btn btn-sm btn-outline-primary mt-2">
+        <i class="fas fa-plus me-1"></i>Add Another Attachment
+    </button>
+</div>
+                        <!-- Form Actions -->
+                        <div class="form-section">
+                            <div class="d-flex justify-content-between">
+                                <a href="{% url 'courses:module_lessons' course.id module.id %}" 
+                                   class="btn btn-secondary">
+                                    <i class="fas fa-arrow-left me-1"></i>
+                                    Back to Lessons
+                                </a>
+                                
+                                <div>
+                                    {% if not is_edit %}
+                                        <button type="submit" name="save_and_continue" class="btn btn-info me-2">
+                                            <i class="fas fa-save me-1"></i>
+                                            Save & Add Another
+                                        </button>
+                                    {% endif %}
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-save me-1"></i>
+                                        {{ button_text }}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Side Panel with Tips -->
+        <div class="col-lg-4">
+            <div class="card border-info">
+                <div class="card-header bg-info text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        Content Creation Tips
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="content-tip" data-type="text">
+                        <h6 class="text-info">Text Content Tips:</h6>
+                        <ul class="small">
+                            <li>Use clear headings and bullet points</li>
+                            <li>Break content into digestible sections</li>
+                            <li>Include examples and practical applications</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="content-tip" data-type="video" style="display: none;">
+                        <h6 class="text-info">Video Content Tips:</h6>
+                        <ul class="small">
+                            <li>Keep videos under 15 minutes for better engagement</li>
+                            <li>Use clear audio and good lighting</li>
+                            <li>Add captions for accessibility</li>
+                            <li>YouTube links automatically embed</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="content-tip" data-type="pdf" style="display: none;">
+                        <h6 class="text-info">PDF Content Tips:</h6>
+                        <ul class="small">
+                            <li>Optimize PDFs for web viewing</li>
+                            <li>Use clear fonts and proper formatting</li>
+                            <li>Keep file sizes reasonable</li>
+                            <li>Include bookmarks for navigation</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="content-tip" data-type="mixed" style="display: none;">
+                        <h6 class="text-info">Mixed Content Tips:</h6>
+                        <ul class="small">
+                            <li>Organize content logically</li>
+                            <li>Use text to introduce video content</li>
+                            <li>Provide PDFs as supplementary material</li>
+                            <li>Create a clear learning flow</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- File Size Guidelines -->
+            <div class="card border-warning mt-3">
+                <div class="card-header bg-warning text-dark">
+                    <h6 class="mb-0">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        File Guidelines
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <ul class="small mb-0">
+                        <li><strong>Videos:</strong> Max 500MB (MP4, AVI, MKV, MOV)</li>
+                        <li><strong>PDFs:</strong> Max 50MB</li>
+                        <li><strong>Attachments:</strong> Max 100MB per file</li>
+                        <li><strong>Images:</strong> JPG, PNG, GIF recommended</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const lessonTypeSelect = document.getElementById('{{ form.lesson_type.id_for_label }}');
+    const contentSections = {
+        'text': document.getElementById('textContentSection'),
+        'video': document.getElementById('videoContentSection'), 
+        'pdf': document.getElementById('pdfContentSection'),
+        'mixed': document.getElementById('mixedContentSection')
+    };
+    
+    const contentTips = document.querySelectorAll('.content-tip');
+    
+    function showContentSection(type) {
+        // Hide all sections and DISABLE their inputs
+        Object.entries(contentSections).forEach(([sectionType, section]) => {
+            if (section) {
+                if (sectionType === type) {
+                    // Show and enable inputs in active section
+                    section.style.display = 'block';
+                    section.querySelectorAll('input, textarea, select').forEach(input => {
+                        input.disabled = false;
+                    });
+                } else {
+                    // Hide and disable inputs in inactive sections
+                    section.style.display = 'none';
+                    section.querySelectorAll('input, textarea, select').forEach(input => {
+                        input.disabled = true;
+                    });
+                }
+            }
+        });
+        
+        // Show appropriate tips
+        contentTips.forEach(tip => {
+            tip.style.display = tip.dataset.type === type ? 'block' : 'none';
+        });
+        
+        // Show help text
+        showContentTypeHelp(type);
+    }
+    
+    function showContentTypeHelp(type) {
+        const helpDiv = document.getElementById('contentTypeHelp');
+        const helpTexts = {
+            'text': 'Rich text content with formatting, images, and links. Perfect for written explanations and tutorials.',
+            'video': 'Upload video file or provide YouTube/Vimeo URL. Videos should be clear and concise.',
+            'pdf': 'Upload PDF documents for reading material, handouts, or detailed guides.',
+            'mixed': 'Combination of text, video, and PDF content for comprehensive lessons.'
+        };
+        
+        if (helpTexts[type]) {
+            helpDiv.innerHTML = '<i class="fas fa-info-circle me-2"></i>' + helpTexts[type];
+            helpDiv.style.display = 'block';
+        } else {
+            helpDiv.style.display = 'none';
+        }
+    }
+    
+    if (lessonTypeSelect.value) {
+        showContentSection(lessonTypeSelect.value);
+    }
+    
+    lessonTypeSelect.addEventListener('change', function() {
+        showContentSection(this.value);
+    });
+    
+    // Attachment formset handling
+    const totalFormsInput = document.querySelector('input[name="attachments-TOTAL_FORMS"]');
+    const initialFormsInput = document.querySelector('input[name="attachments-INITIAL_FORMS"]');
+    
+    if (!totalFormsInput || !initialFormsInput) {
+        console.error('Management form inputs not found!');
+        return;
+    }
+    
+    let formCount = parseInt(totalFormsInput.value) || 0;
+    
+    document.getElementById('add-attachment').addEventListener('click', function() {
+        const formsetDiv = document.getElementById('attachment-forms');
+        const allForms = formsetDiv.querySelectorAll('.attachment-row');
+        
+        if (allForms.length === 0) {
+            console.error('No attachment forms found to clone!');
+            return;
+        }
+        
+        const lastForm = allForms[allForms.length - 1];
+        const newForm = lastForm.cloneNode(true);
+        
+        const inputs = newForm.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            if (input.name) {
+                input.name = input.name.replace(/attachments-\d+-/, `attachments-${formCount}-`);
+            }
+            if (input.id) {
+                input.id = input.id.replace(/id_attachments-\d+-/, `id_attachments-${formCount}-`);
+            }
+            if (input.type !== 'hidden') {
+                input.value = '';
+            }
+        });
+        
+        const labels = newForm.querySelectorAll('label');
+        labels.forEach(label => {
+            if (label.htmlFor) {
+                label.htmlFor = label.htmlFor.replace(/id_attachments-\d+-/, `id_attachments-${formCount}-`);
+            }
+        });
+        
+        newForm.setAttribute('data-form-index', formCount);
+        
+        const deleteCheckbox = newForm.querySelector('input[name*="DELETE"]');
+        if (deleteCheckbox) {
+            const deleteContainer = deleteCheckbox.closest('.form-check');
+            if (deleteContainer) deleteContainer.remove();
+        }
+        
+        formsetDiv.appendChild(newForm);
+        
+        formCount++;
+        totalFormsInput.value = formCount;
+    });
+});
+</script>
+{% endblock %}

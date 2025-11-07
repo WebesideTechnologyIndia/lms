@@ -1,0 +1,359 @@
+{% extends 'instructor_base.html' %}
+
+{% block title %}Mark Attendance - {{ session.batch.name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .student-checkbox-row {
+        padding: 12px;
+        border-bottom: 1px solid #e9ecef;
+        transition: background-color 0.2s;
+    }
+    
+    .student-checkbox-row:hover {
+        background-color: #f8f9fa;
+    }
+    
+    .student-checkbox-row.selected {
+        background-color: #e7f3ff;
+    }
+    
+    .batch-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 25px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+    
+    .action-buttons {
+        position: sticky;
+        top: 20px;
+        z-index: 100;
+    }
+    
+    .stats-mini {
+        font-size: 0.85rem;
+        opacity: 0.9;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2><i class="fas fa-clipboard-check"></i> Mark Attendance</h2>
+            <p class="text-muted mb-0">Quickly mark attendance for multiple students</p>
+        </div>
+        <a href="{% url 'attendance:session_detail' session.id %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Session
+        </a>
+    </div>
+    
+    <!-- Batch Info -->
+    <div class="batch-header">
+        <div class="row align-items-center">
+            <div class="col-md-9">
+                <h3 class="mb-2"><i class="fas fa-chalkboard-teacher"></i> {{ session.batch.name }}</h3>
+                <div class="stats-mini">
+                    <span class="mr-3"><i class="fas fa-calendar"></i> {{ session.date|date:"l, d M Y" }}</span>
+                    <span class="mr-3"><i class="fas fa-clock"></i> {{ session.start_time|time:"h:i A" }} - {{ session.end_time|time:"h:i A" }}</span>
+                    <span><i class="fas fa-map-marker-alt"></i> {{ session.classroom_location }}</span>
+                </div>
+            </div>
+            <div class="col-md-3 text-right">
+                <div class="bg-white text-dark rounded p-3">
+                    <h4 class="mb-0">{{ stats.present }}/{{ stats.total }}</h4>
+                    <small>Present ({{ stats.percentage }}%)</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Student List -->
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0"><i class="fas fa-users"></i> Students ({{ students.count }})</h5>
+                        <div>
+                            <button type="button" class="btn btn-sm btn-light" onclick="selectAll()">
+                                <i class="fas fa-check-square"></i> Select All
+                            </button>
+                            <button type="button" class="btn btn-sm btn-light" onclick="deselectAll()">
+                                <i class="fas fa-square"></i> Clear All
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body p-0">
+                    <form method="post" id="attendanceForm">
+                        {% csrf_token %}
+                        
+                        <!-- Filter Buttons -->
+                        <div class="p-3 bg-light border-bottom">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <button type="button" class="btn btn-outline-secondary active" onclick="filterStudents('all')">
+                                    <i class="fas fa-list"></i> All ({{ students.count }})
+                                </button>
+                                <button type="button" class="btn btn-outline-success" onclick="filterStudents('present')">
+                                    <i class="fas fa-check"></i> Present ({{ stats.present }})
+                                </button>
+                                <button type="button" class="btn btn-outline-danger" onclick="filterStudents('absent')">
+                                    <i class="fas fa-times"></i> Absent ({{ stats.absent }})
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="filterStudents('unmarked')">
+                                    <i class="fas fa-minus"></i> Unmarked
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Student List -->
+                        <div style="max-height: 600px; overflow-y: auto;">
+                            {% for item in students %}
+                            <div class="student-checkbox-row" data-status="{% if item.attendance %}{% if item.attendance.is_present %}present{% else %}absent{% endif %}{% else %}unmarked{% endif %}">
+                                <div class="row align-items-center">
+                                    <div class="col-md-1 text-center">
+                                        <input type="checkbox" name="students" value="{{ item.student.id }}" class="student-checkbox" style="width: 20px; height: 20px;">
+                                    </div>
+                                    <div class="col-md-5">
+                                        <strong>{{ item.student.get_full_name }}</strong><br>
+                                        <small class="text-muted">{{ item.student.email }}</small>
+                                    </div>
+                                    <div class="col-md-3">
+                                        {% if item.attendance %}
+                                            {% if item.attendance.is_present %}
+                                                <span class="badge badge-success">
+                                                    <i class="fas fa-check-circle"></i> Present
+                                                </span>
+                                                {% if item.attendance.is_late %}
+                                                    <span class="badge badge-warning">Late</span>
+                                                {% endif %}
+                                            {% else %}
+                                                <span class="badge badge-danger">
+                                                    <i class="fas fa-times-circle"></i> Absent
+                                                </span>
+                                            {% endif %}
+                                            <br><small class="text-muted">{{ item.attendance.marked_at|time:"h:i A" }}</small>
+                                        {% else %}
+                                            <span class="badge badge-secondary">
+                                                <i class="fas fa-minus-circle"></i> Not Marked
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-md-3 text-right">
+                                        <a href="{% url 'attendance:manual_mark' session.id item.student.id %}" class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="text-center py-5 text-muted">
+                                <i class="fas fa-user-slash fa-3x mb-3"></i>
+                                <p>No students enrolled in this batch</p>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Actions Panel -->
+        <div class="col-md-4">
+            <div class="action-buttons">
+                <!-- Selection Info -->
+                <div class="card mb-3">
+                    <div class="card-body text-center">
+                        <h1 class="mb-0" id="selectedCount">0</h1>
+                        <p class="text-muted mb-0">Students Selected</p>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="card mb-3">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0"><i class="fas fa-bolt"></i> Quick Actions</h6>
+                    </div>
+                    <div class="card-body">
+                        <button type="button" class="btn btn-success btn-block mb-2" onclick="markSelected('present', false)">
+                            <i class="fas fa-check-circle"></i> Mark Present (On Time)
+                        </button>
+                        <button type="button" class="btn btn-warning btn-block mb-2" onclick="markSelected('present', true)">
+                            <i class="fas fa-clock"></i> Mark Present (Late)
+                        </button>
+                        <button type="button" class="btn btn-danger btn-block" onclick="markSelected('absent', false)">
+                            <i class="fas fa-times-circle"></i> Mark Absent
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Bulk Actions -->
+                <div class="card">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-tasks"></i> Bulk Operations</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info alert-sm">
+                            <small><i class="fas fa-info-circle"></i> These actions apply to ALL unmarked students</small>
+                        </div>
+                        
+                        <form method="post" action="{% url 'attendance:bulk_mark_attendance' session.id %}">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                <select name="status" class="form-control form-control-sm" required>
+                                    <option value="">-- Select Status --</option>
+                                    <option value="present">Mark All Present</option>
+                                    <option value="absent">Mark All Absent</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn btn-primary btn-sm btn-block">
+                                <i class="fas fa-check-double"></i> Apply to Unmarked
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- Session Stats -->
+                <div class="card mt-3">
+                    <div class="card-header">
+                        <h6 class="mb-0"><i class="fas fa-chart-pie"></i> Statistics</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Total Students:</span>
+                            <strong>{{ stats.total }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2 text-success">
+                            <span>Present:</span>
+                            <strong>{{ stats.present }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2 text-danger">
+                            <span>Absent:</span>
+                            <strong>{{ stats.absent }}</strong>
+                        </div>
+                        <div class="d-flex justify-content-between text-muted">
+                            <span>Not Marked:</span>
+                            <strong>{{ stats.total|add:"-stats.present"|add:"-stats.absent" }}</strong>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <span>Attendance Rate:</span>
+                            <strong class="text-primary">{{ stats.percentage }}%</strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Update selected count
+    function updateSelectedCount() {
+        const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+        document.getElementById('selectedCount').textContent = checkboxes.length;
+        
+        // Highlight selected rows
+        document.querySelectorAll('.student-checkbox-row').forEach(row => {
+            const checkbox = row.querySelector('.student-checkbox');
+            if (checkbox.checked) {
+                row.classList.add('selected');
+            } else {
+                row.classList.remove('selected');
+            }
+        });
+    }
+    
+    // Select all students
+    function selectAll() {
+        document.querySelectorAll('.student-checkbox').forEach(cb => {
+            if (cb.closest('.student-checkbox-row').style.display !== 'none') {
+                cb.checked = true;
+            }
+        });
+        updateSelectedCount();
+    }
+    
+    // Deselect all students
+    function deselectAll() {
+        document.querySelectorAll('.student-checkbox').forEach(cb => cb.checked = false);
+        updateSelectedCount();
+    }
+    
+    // Filter students by status
+    function filterStudents(status) {
+        // Update active button
+        document.querySelectorAll('.btn-group button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        event.target.classList.add('active');
+        
+        // Filter rows
+        document.querySelectorAll('.student-checkbox-row').forEach(row => {
+            if (status === 'all') {
+                row.style.display = '';
+            } else if (row.dataset.status === status) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+    
+    // Mark selected students
+    function markSelected(status, isLate) {
+        const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+        
+        if (checkboxes.length === 0) {
+            alert('Please select at least one student!');
+            return;
+        }
+        
+        const studentIds = Array.from(checkboxes).map(cb => cb.value);
+        
+        if (!confirm(`Mark ${checkboxes.length} student(s) as ${status}${isLate ? ' (Late)' : ''}?`)) {
+            return;
+        }
+        
+        // Send AJAX request
+        fetch('{% url "attendance:mark_selected_attendance" session.id %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                student_ids: studentIds,
+                status: status,
+                is_late: isLate
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+                location.reload();
+            } else {
+                alert('Error: ' + data.message);
+            }
+        })
+        .catch(error => {
+            alert('Error: ' + error);
+        });
+    }
+    
+    // Initialize
+    document.querySelectorAll('.student-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', updateSelectedCount);
+    });
+    
+    updateSelectedCount();
+</script>
+{% endblock %}

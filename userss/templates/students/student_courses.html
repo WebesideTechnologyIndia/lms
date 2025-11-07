@@ -200,7 +200,8 @@
                             </select>
                         </div>
                         <div class="col-md-6">
-                            <input type="text" name="search" class="form-control" placeholder="Search courses..." value="{{ search }}">
+                            <input type="text" name="search" class="form-control" placeholder="Search courses..."
+                                value="{{ search }}">
                         </div>
                         <div class="col-md-2">
                             <button type="submit" class="btn btn-primary btn-block">
@@ -217,7 +218,8 @@
     <div class="row">
         {% for item in enrollments %}
         <div class="col-lg-4 col-md-6 mb-4">
-            <div class="card course-card {% if item.lock_info.is_locked %}locked{% endif %} shadow" data-course-id="{{ item.enrollment.course.id }}">
+            <div class="card course-card {% if item.lock_info.is_locked %}locked{% endif %} shadow"
+                data-course-id="{{ item.course.id }}">
 
                 <!-- Lock/Warning Overlay -->
                 {% if item.lock_info.is_locked %}
@@ -231,8 +233,8 @@
                 {% endif %}
 
                 <!-- Course Thumbnail -->
-                {% if item.enrollment.course.thumbnail %}
-                <img src="{{ item.enrollment.course.thumbnail.url }}" class="course-thumbnail" alt="{{ item.enrollment.course.title }}">
+                {% if item.course.thumbnail %}
+                <img src="{{ item.course.thumbnail.url }}" class="course-thumbnail" alt="{{ item.course.title }}">
                 {% else %}
                 <div class="course-thumbnail bg-primary d-flex align-items-center justify-content-center">
                     <i class="fas fa-book text-white" style="font-size: 3rem;"></i>
@@ -241,12 +243,13 @@
 
                 <div class="card-body">
                     <!-- Course Info -->
-                    <h5 class="card-title">{{ item.enrollment.course.title }}</h5>
-                    <p class="text-muted small mb-2">{{ item.enrollment.course.course_code }}</p>
-                    <p class="card-text">{{ item.enrollment.course.short_description|truncatewords:20 }}</p>
+                    <h5 class="card-title">{{ item.course.title }}</h5>
+                    <p class="text-muted small mb-2">{{ item.course.course_code }}</p>
+                    <p class="card-text">{{ item.course.short_description|truncatewords:20 }}</p>
 
                     <!-- Enrollment Status -->
-                    <span class="badge {% if item.enrollment.status == 'enrolled' %}badge-success{% elif item.enrollment.status == 'completed' %}badge-primary{% else %}badge-secondary{% endif %} mb-2">
+                    <span
+                        class="badge {% if item.enrollment.status == 'enrolled' %}badge-success{% elif item.enrollment.status == 'completed' %}badge-primary{% else %}badge-secondary{% endif %} mb-2">
                         {{ item.enrollment.get_status_display }}
                     </span>
 
@@ -257,7 +260,7 @@
                         <strong>Course Locked</strong><br>
                         <small>{{ item.lock_info.lock_reason }}</small>
                         {% if item.lock_info.overdue_amount > 0 %}
-                        <br><small>Overdue: ${{ item.lock_info.overdue_amount }} ({{ item.lock_info.overdue_days }} days)</small>
+                        <br><small>Overdue: ₹{{ item.lock_info.overdue_amount }}</small>
                         {% endif %}
                     </div>
                     {% elif item.lock_info.warning_message %}
@@ -282,17 +285,18 @@
                         </div>
 
                         <div class="progress-bar-custom mb-2">
-                            <div class="progress-fill" style="width: {{ item.fee_assignment.get_completion_percentage }}%"></div>
+                            <div class="progress-fill"
+                                style="width: {{ item.fee_assignment.get_completion_percentage }}%"></div>
                         </div>
 
                         <div class="row text-center">
                             <div class="col-6">
                                 <small class="text-muted">Paid</small><br>
-                                <strong class="text-success">${{ item.fee_assignment.amount_paid }}</strong>
+                                <strong class="text-success">₹{{ item.fee_assignment.amount_paid }}</strong>
                             </div>
                             <div class="col-6">
                                 <small class="text-muted">Pending</small><br>
-                                <strong class="text-danger">${{ item.fee_assignment.amount_pending }}</strong>
+                                <strong class="text-danger">₹{{ item.fee_assignment.amount_pending }}</strong>
                             </div>
                         </div>
 
@@ -301,7 +305,7 @@
                         <div class="mt-2 pt-2 border-top">
                             <small class="text-muted">Next Due:</small><br>
                             <small>
-                                <strong>${{ item.next_due.amount }}</strong> on {{ item.next_due.due_date }}
+                                <strong>₹{{ item.next_due.amount }}</strong> on {{ item.next_due.due_date|date:"d M Y" }}
                                 {% if item.next_due.status == 'overdue' %}
                                 <span class="text-danger">(Overdue)</span>
                                 {% endif %}
@@ -312,58 +316,72 @@
                     {% endif %}
 
                     <!-- Action Buttons -->
-                   <!-- students/student_courses.html - UPDATE THIS SECTION -->
+                    <div class="mt-3">
+                        {% if item.lock_info.is_locked %}
+                        <!-- LOCKED STATE -->
+                        <button class="btn btn-danger action-btn" disabled>
+                            <i class="fas fa-lock"></i> Course Locked
+                        </button>
+                        <div class="alert alert-danger mt-2 py-2 mb-0">
+                            <small>
+                                <strong>{{ item.lock_info.lock_reason }}</strong><br>
+                                {% if item.lock_info.overdue_amount > 0 %}
+                                Overdue Amount: <strong>₹{{ item.lock_info.overdue_amount }}</strong>
+                                {% endif %}
+                            </small>
+                        </div>
 
-<!-- Action Buttons -->
-<div class="mt-3">
-    {% if item.lock_info.is_locked %}
-        <!-- Locked course buttons -->
-        {% if item.lock_info.can_unlock %}
-        <a href="#" class="btn btn-success action-btn">
-            <i class="fas fa-unlock"></i> Access Course
-        </a>
-        {% else %}
-        <button class="btn btn-danger action-btn" disabled>
-            <i class="fas fa-lock"></i> Course Locked
-        </button>
-        {% if item.lock_info.action_required == 'contact_admin' %}
-        <a href="#" class="btn btn-outline-primary action-btn mt-1">
-            <i class="fas fa-envelope"></i> Contact Admin
-        </a>
-        {% endif %}
-        {% endif %}
-    {% else %}
-        <!-- UNLOCKED COURSE - Continue Learning Button -->
-        <a href="{% url 'courses:continue_learning' item.enrollment.course.id %}" class="btn btn-primary action-btn">
-            <i class="fas fa-play"></i> 
-            {% if item.enrollment.last_accessed %}
-                Continue Learning
-            {% else %}
-                Start Learning
-            {% endif %}
-        </a>
-        
-        <!-- Review Button -->
-        {% if item.enrollment.course.id %}
-        <a href="{% url 'courses:submit_course_review' item.enrollment.course.id %}" class="btn btn-warning btn-sm mt-1">
-            <i class="fas fa-star"></i> Write Review
-        </a>
-        {% endif %}
-    {% endif %}
+                        {% if item.lock_info.can_unlock %}
+                        <a href="{% url 'fees:student_payment_dashboard' %}" class="btn btn-warning action-btn mt-2">
+                            <i class="fas fa-credit-card"></i> Make Payment to Unlock
+                        </a>
+                        {% endif %}
 
-    <!-- Payment Button if needed -->
-    {% if item.fee_assignment and item.fee_assignment.amount_pending > 0 %}
-    <a href="#" class="btn btn-outline-success action-btn mt-1">
-        <i class="fas fa-credit-card"></i> Make Payment
-    </a>
-    {% endif %}
-</div>
+                        {% else %}
+                        <!-- UNLOCKED STATE - MAIN BUTTONS -->
+
+                        <!-- Continue/Start Learning -->
+                        <a href="{% url 'courses:continue_learning' item.course.id %}"
+                            class="btn btn-success action-btn">
+                            <i class="fas fa-play-circle"></i>
+                            {% if item.enrollment.last_accessed %}
+                            Continue Learning
+                            {% else %}
+                            Start Learning
+                            {% endif %}
+                        </a>
+
+                        <!-- View All Content -->
+                        <a href="{% url 'courses:course_content' item.course.id %}"
+                            class="btn btn-outline-primary action-btn mt-1">
+                            <i class="fas fa-list"></i> View All Lessons
+                        </a>
+
+                        <!-- Course Details -->
+                        <a href="{% url 'courses:course_detail_continue_learning_student' item.course.id %}"
+                            class="btn btn-outline-info action-btn mt-1">
+                            <i class="fas fa-info-circle"></i> Course Details
+                        </a>
+                        {% endif %}
+
+                        <!-- Payment Warning -->
+                        {% if item.lock_info.warning_message and not item.lock_info.is_locked %}
+                        <div class="alert alert-warning mt-2 mb-0 py-2">
+                            <small>
+                                <i class="fas fa-exclamation-triangle"></i>
+                                <strong>Payment Due Soon!</strong><br>
+                                {{ item.lock_info.warning_message }}
+                            </small>
+                        </div>
+                        {% endif %}
+                    </div>
+
                 </div>
 
                 <!-- Course Footer -->
                 <div class="card-footer text-muted">
                     <small>
-                        <i class="fas fa-user"></i> {{ item.enrollment.course.instructor.get_full_name }}
+                        <i class="fas fa-user"></i> {{ item.course.instructor.get_full_name }}
                         <span class="float-right">
                             <i class="fas fa-calendar"></i> Enrolled {{ item.enrollment.enrolled_at|date:"M d, Y" }}
                         </span>
@@ -378,6 +396,9 @@
                     <i class="fas fa-book text-gray-300" style="font-size: 4rem;"></i>
                     <h5 class="mt-3 text-gray-600">No Courses Found</h5>
                     <p class="text-muted">You haven't enrolled in any courses yet.</p>
+                    <a href="{% url 'browse_courses' %}" class="btn btn-primary mt-3">
+                        <i class="fas fa-search"></i> Browse Courses
+                    </a>
                 </div>
             </div>
         </div>
@@ -392,10 +413,12 @@
                 <ul class="pagination justify-content-center">
                     {% if enrollments.has_previous %}
                     <li class="page-item">
-                        <a class="page-link" href="?page=1{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">First</a>
+                        <a class="page-link"
+                            href="?page=1{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">First</a>
                     </li>
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ enrollments.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">Previous</a>
+                        <a class="page-link"
+                            href="?page={{ enrollments.previous_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">Previous</a>
                     </li>
                     {% endif %}
 
@@ -406,17 +429,20 @@
                     </li>
                     {% elif num > enrollments.number|add:'-3' and num < enrollments.number|add:'3' %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">{{ num }}</a>
+                        <a class="page-link"
+                            href="?page={{ num }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">{{ num }}</a>
                     </li>
                     {% endif %}
                     {% endfor %}
 
                     {% if enrollments.has_next %}
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ enrollments.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">Next</a>
+                        <a class="page-link"
+                            href="?page={{ enrollments.next_page_number }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">Next</a>
                     </li>
                     <li class="page-item">
-                        <a class="page-link" href="?page={{ enrollments.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">Last</a>
+                        <a class="page-link"
+                            href="?page={{ enrollments.paginator.num_pages }}{% if search %}&search={{ search }}{% endif %}{% if status %}&status={{ status }}{% endif %}">Last</a>
                     </li>
                     {% endif %}
                 </ul>

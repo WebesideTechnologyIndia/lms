@@ -142,7 +142,7 @@
                                 {% endif %}
                             </div>
                             <div>
-                                <a href="{% url 'attendance:mark_attendance' item.session.id %}" class="btn btn-sm btn-outline-success" title="Mark Attendance">
+                                <a href="{% url 'attendance:mark_attendance_instructor' item.session.id %}" class="btn btn-sm btn-outline-success" title="Mark Attendance">
                                     <i class="fas fa-edit"></i> Mark
                                 </a>
                                 <a href="{% url 'attendance:session_detail' item.session.id %}" class="btn btn-sm btn-primary">

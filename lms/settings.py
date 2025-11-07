@@ -168,14 +168,55 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'userss.CustomUser'
 
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'  # For Gmail
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'webeside.agency@gmail.com'  # Your email
-EMAIL_HOST_PASSWORD = 'zxki gfti crqy xwry'  # Your app password
-DEFAULT_FROM_EMAIL = 'LMS System <your-email@gmail.com>'
+# settings.py
 
+# ✅ Fetch Email Configuration Dynamically
+def get_email_settings():
+    """Fetch SMTP and Limit settings from database"""
+    settings = {
+        'EMAIL_HOST': 'smtp.gmail.com',
+        'EMAIL_PORT': 587,
+        'EMAIL_USE_TLS': True,
+        'EMAIL_HOST_USER': 'webeside.agency@gmail.com',
+        'EMAIL_HOST_PASSWORD': 'zxki gfti crqy xwry',
+        'DEFAULT_FROM_EMAIL': 'LMS System <webeside.agency@gmail.com>',
+        'EMAIL_DAILY_LIMIT': 50,
+    }
+    
+    try:
+        # Import models
+        from userss.models import EmailSMTPConfiguration, EmailLimitSet
+        
+        # Get SMTP Config
+        smtp = EmailSMTPConfiguration.objects.filter(is_active=True).first()
+        if smtp:
+            settings['EMAIL_HOST'] = smtp.email_host
+            settings['EMAIL_PORT'] = smtp.email_port
+            settings['EMAIL_USE_TLS'] = smtp.email_use_tls
+            settings['EMAIL_HOST_USER'] = smtp.email_host_user
+            settings['EMAIL_HOST_PASSWORD'] = smtp.email_host_password
+            settings['DEFAULT_FROM_EMAIL'] = smtp.default_from_email
+        
+        # Get Email Limit
+        limit = EmailLimitSet.objects.filter(is_active=True).first()
+        if limit:
+            settings['EMAIL_DAILY_LIMIT'] = limit.email_limit_per_day
+            
+    except Exception as e:
+        print(f"Error loading email settings: {e}")
+    
+    return settings
+
+# Apply configuration
+EMAIL_SETTINGS = get_email_settings()
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = EMAIL_SETTINGS['EMAIL_HOST']
+EMAIL_PORT = EMAIL_SETTINGS['EMAIL_PORT']
+EMAIL_USE_TLS = EMAIL_SETTINGS['EMAIL_USE_TLS']
+EMAIL_HOST_USER = EMAIL_SETTINGS['EMAIL_HOST_USER']
+EMAIL_HOST_PASSWORD = EMAIL_SETTINGS['EMAIL_HOST_PASSWORD']
+DEFAULT_FROM_EMAIL = EMAIL_SETTINGS['DEFAULT_FROM_EMAIL']
+EMAIL_DAILY_LIMIT_DEFAULT = EMAIL_SETTINGS['EMAIL_DAILY_LIMIT']
 
 LOGGING = {
     'version': 1,
@@ -215,3 +256,14 @@ EMAIL_DAILY_LIMIT_MAX = 50
 # File Upload Settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 50 * 1024 * 1024  # 50MB
 DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100MB
+
+
+# lms/settings.py - Find CRONJOBS (or add if not exists)
+
+CRONJOBS = [
+    # ✅ Check every 5 minutes for ended sessions
+    ('*/5 * * * *', 'attendance.utils.mark_absent_for_ended_sessions'),
+]
+
+# ✅ Cron job settings
+CRONTAB_LOCK_JOBS = True  # Prevent duplicate runs

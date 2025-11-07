@@ -73,6 +73,11 @@
 
 {% block content %}
 <div class="container mt-4">
+    <!-- ✅ CSRF Token Form -->
+    <form id="csrf-form" style="display: none;">
+        {% csrf_token %}
+    </form>
+    
     <div class="scanner-container">
         <h2><i class="fas fa-qrcode"></i> Scan QR Code for Attendance</h2>
         
@@ -89,13 +94,13 @@
         <div id="manual-request-box" class="manual-request-option" style="display:none;">
             <h5><i class="fas fa-hand-paper"></i> Can't Scan QR Code?</h5>
             <p>Having trouble? You can request manual attendance from your instructor.</p>
-            <button id="request-manual-btn" class="btn btn-warning">
+            <button id="request-manual-btn" class="btn btn-warning" type="button">
                 <i class="fas fa-envelope"></i> Request Manual Attendance
             </button>
         </div>
         
         <div class="mt-3">
-            <button id="retry-btn" class="btn btn-primary" style="display:none;">
+            <button id="retry-btn" class="btn btn-primary" style="display:none;" type="button">
                 <i class="fas fa-redo"></i> Retry Scan
             </button>
             <a href="{% url 'student_dashboard' %}" class="btn btn-secondary">
@@ -118,7 +123,7 @@
             <div class="modal-body">
                 <p>Session will be identified automatically. Please explain why you couldn't scan the QR code:</p>
                 <textarea id="manual-reason" class="form-control" rows="4" 
-                          placeholder="e.g., Phone camera not working, QR code not visible, etc."></textarea>
+                          placeholder="e.g., Phone camera not working, QR code not visible, too far from classroom, etc."></textarea>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
@@ -147,6 +152,26 @@ const requestManualBtn = document.getElementById('request-manual-btn');
 let userLocation = null;
 let scanning = false;
 let failedSessionId = null;
+let lastQrData = null;
+
+// Get CSRF token helper function
+function getCSRFToken() {
+    // Method 1: From form
+    const csrfInput = document.querySelector('#csrf-form input[name=csrfmiddlewaretoken]');
+    if (csrfInput) {
+        return csrfInput.value;
+    }
+    
+    // Method 2: From cookie
+    const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='));
+    if (cookieValue) {
+        return cookieValue.split('=')[1];
+    }
+    
+    return null;
+}
 
 // Get user's location
 function getLocation() {
@@ -219,6 +244,7 @@ function scanQR() {
         
         if (code && code.data) {
             scanning = false;
+            lastQrData = code.data;
             markAttendance(code.data);
             return;
         }
@@ -227,16 +253,32 @@ function scanQR() {
     requestAnimationFrame(scanQR);
 }
 
+// Extract session ID from QR data
+function extractSessionId(qrData) {
+    try {
+        const parts = qrData.split(':');
+        if (parts.length >= 2) {
+            return parts[1];
+        }
+        return null;
+    } catch (e) {
+        console.error('Error extracting session ID:', e);
+        return null;
+    }
+}
+
 // Mark attendance
 async function markAttendance(qrData) {
     try {
         updateStatus('info', '<div class="spinner"></div><strong>Marking attendance...</strong>');
         
+        const csrftoken = getCSRFToken();
+        
         const response = await fetch('{% url "attendance:mark_attendance_qr" %}', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': '{{ csrf_token }}'
+                'X-CSRFToken': csrftoken
             },
             body: JSON.stringify({
                 qr_data: qrData,
@@ -263,22 +305,21 @@ async function markAttendance(qrData) {
             }, 3000);
             
         } else {
-            // Failed - show error and manual request option
             updateStatus('error', `
                 <i class="fas fa-times-circle fa-3x mb-3"></i>
                 <h4>❌ Failed!</h4>
                 <p>${data.message}</p>
             `);
             
-            if (data.can_request) {
-                // Extract session ID from QR data
-                try {
-                    const parts = qrData.split(':');
-                    failedSessionId = parts[1];
-                    manualRequestBox.style.display = 'block';
-                } catch (e) {
-                    console.error('Could not extract session ID');
-                }
+            failedSessionId = extractSessionId(qrData);
+            
+            console.log('Failed Session ID:', failedSessionId);
+            console.log('Can request manual:', data.can_request);
+            
+            if (data.can_request || data.message.toLowerCase().includes('location') || 
+                data.message.toLowerCase().includes('distance') || 
+                data.message.toLowerCase().includes('range')) {
+                manualRequestBox.style.display = 'block';
             }
             
             retryBtn.style.display = 'inline-block';
@@ -289,6 +330,11 @@ async function markAttendance(qrData) {
         updateStatus('error', `<i class="fas fa-exclamation-triangle"></i> Network error: ${error}`);
         retryBtn.style.display = 'inline-block';
         manualRequestBox.style.display = 'block';
+        
+        if (lastQrData) {
+            failedSessionId = extractSessionId(lastQrData);
+        }
+        
         stopCamera();
     }
 }
@@ -313,11 +359,16 @@ retryBtn.addEventListener('click', () => {
     manualRequestBox.style.display = 'none';
     userLocation = null;
     failedSessionId = null;
+    lastQrData = null;
     initScanner();
 });
 
 // Manual request button
 requestManualBtn.addEventListener('click', () => {
+    if (!failedSessionId) {
+        alert('⚠️ Please scan the QR code first to identify the session!');
+        return;
+    }
     $('#manualRequestModal').modal('show');
 });
 
@@ -326,17 +377,78 @@ document.getElementById('submit-manual-request').addEventListener('click', async
     const reason = document.getElementById('manual-reason').value.trim();
     
     if (!reason) {
-        alert('Please provide a reason!');
+        alert('❌ Please provide a reason for manual attendance request!');
         return;
     }
     
     if (!failedSessionId) {
-        alert('Session information not available. Please scan QR code first.');
+        alert('⚠️ Session information not available. Please scan QR code first.');
         return;
     }
     
-    // Redirect to manual request page with session ID
-    window.location.href = `/attendance/request-manual/${failedSessionId}/?reason=${encodeURIComponent(reason)}`;
+    try {
+        updateStatus('info', '<div class="spinner"></div><strong>Submitting request...</strong>');
+        
+        const csrftoken = getCSRFToken();
+        
+        if (!csrftoken) {
+            throw new Error('CSRF token not found');
+        }
+        
+        console.log('Submitting to:', `/attendance/request-manual/${failedSessionId}/`);
+        console.log('CSRF Token:', csrftoken);
+        
+const response = await fetch(`/attendance/session/${failedSessionId}/request-manual/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrftoken
+            },
+            body: JSON.stringify({
+                reason: reason,
+                latitude: userLocation ? userLocation.latitude : null,
+                longitude: userLocation ? userLocation.longitude : null
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const responseText = await response.text();
+        console.log('Response:', responseText);
+        
+        let data;
+        try {
+            data = JSON.parse(responseText);
+        } catch (e) {
+            console.error('JSON Parse Error:', e);
+            console.error('Response was:', responseText);
+            throw new Error('Invalid JSON response from server');
+        }
+        
+        if (data.success) {
+            $('#manualRequestModal').modal('hide');
+            updateStatus('success', `
+                <i class="fas fa-paper-plane fa-3x mb-3"></i>
+                <h4>✅ Request Sent!</h4>
+                <p>${data.message}</p>
+                <p>Your instructor will review and approve/reject your request.</p>
+            `);
+            
+            setTimeout(() => {
+                window.location.href = '{% url "student_dashboard" %}';
+            }, 3000);
+        } else {
+            alert('❌ ' + data.message);
+            updateStatus('error', `<i class="fas fa-exclamation-triangle"></i> ${data.message}`);
+        }
+        
+    } catch (error) {
+        console.error('Full error:', error);
+        alert('❌ Network error: ' + error.message);
+        updateStatus('error', `<i class="fas fa-exclamation-triangle"></i> Network error: ${error.message}`);
+    }
 });
 
 // Initialize on load

@@ -203,12 +203,7 @@
                                 <div class="text-end">
                                     {% if request.user.role == 'superadmin' or course.instructor == request.user %}
                                         <div class="btn-group btn-group-sm">
-                                            <a href="{% url 'courses:edit_module' module.id %}" class="btn btn-outline-primary btn-sm">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <a href="{% url 'courses:add_lesson' module.id %}" class="btn btn-outline-success btn-sm">
-                                                <i class="fas fa-plus"></i>
-                                            </a>
+                                            
                                         </div>
                                     {% endif %}
                                 </div>

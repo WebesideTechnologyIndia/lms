@@ -376,6 +376,8 @@ def student_scanner(request):
     
     return render(request, 'attendance/student_scanner.html', context)
 
+
+
 @login_required
 @require_POST
 def mark_attendance_qr(request):
@@ -552,66 +554,136 @@ def mark_attendance_qr(request):
             'error_trace': error_trace  # Development mein hi dekh
         }, status=500)
 # ==================== STUDENT - MANUAL REQUEST ====================
+from django.views.decorators.http import require_http_methods
 
-@login_required
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+
+
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
+from attendance.models import AttendanceSession, Attendance, ManualAttendanceRequest
+from .utils import is_within_allowed_location
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def request_manual_attendance(request, session_id):
-    """Student requests manual attendance if QR scan failed"""
+    print("=" * 60)
+    print("🔍 DEBUG MANUAL REQUEST STARTED")
+    print(f"Session ID: {session_id}")
+    print(f"User: {request.user.username} ({getattr(request.user, 'role', 'N/A')})")
+    print("=" * 60)
+
+    data = request.data
+    reason = data.get("reason", "")
+    latitude = data.get("latitude")
+    longitude = data.get("longitude")
+
+    print(f"📍 Location Data:")
+    print(f"  Reason: {reason}")
+    print(f"  Latitude: {latitude}")
+    print(f"  Longitude: {longitude}")
+
+    try:
+        session = AttendanceSession.objects.get(id=session_id)
+    except AttendanceSession.DoesNotExist:
+        print("❌ Invalid Session ID")
+        return Response({"error": "Invalid session"}, status=404)
+
+    print(f"✅ Session: {session.batch.name} | Instructor: {session.instructor}")
+
+    # Check enrollment
+    from courses.models import BatchEnrollment
+    if not BatchEnrollment.objects.filter(
+        student=request.user,
+        batch=session.batch,
+        is_active=True
+    ).exists():
+        print("❌ Student not enrolled!")
+        return Response({"error": "You are not enrolled in this batch!"}, status=403)
+
+    # Check if attendance already exists and is PRESENT
+    existing_attendance = Attendance.objects.filter(
+        session=session, 
+        student=request.user
+    ).first()
     
-    if request.user.role != 'student':
-        messages.error(request, 'Access denied!')
-        return redirect(get_dashboard_url(request.user))
-    
-    session = get_object_or_404(AttendanceSession, id=session_id)
-    
-    # Check if already has attendance
-    if Attendance.objects.filter(session=session, student=request.user).exists():
-        messages.info(request, 'Attendance already marked!')
-        return redirect('student_dashboard')
-    
-    # Check if already requested
+    if existing_attendance and existing_attendance.is_present:
+        print("✅ Attendance already marked as PRESENT")
+        return Response({
+            "error": "Attendance already marked as present!"
+        }, status=400)
+
+    # ✅ Check for existing requests
     existing_request = ManualAttendanceRequest.objects.filter(
         session=session,
         student=request.user
     ).first()
     
-    if request.method == 'POST':
-        reason = request.POST.get('reason', '').strip()
+    if existing_request:
+        print(f"⚠️ Existing request found - Status: {existing_request.status}")
         
-        if not reason:
-            messages.error(request, 'Please provide a reason!')
-            return render(request, 'attendance/request_manual.html', {'session': session})
+        # If approved, don't allow new request
+        if existing_request.status == 'approved':
+            return Response({
+                "error": "Your request has already been approved!"
+            }, status=400)
         
-        if existing_request:
-            if existing_request.status == 'pending':
-                messages.info(request, 'Request already sent!')
-            else:
-                # Update existing request
-                existing_request.reason = reason
-                existing_request.status = 'pending'
-                existing_request.save()
-                messages.success(request, 'Request updated!')
-        else:
-            # Create new request
-            ManualAttendanceRequest.objects.create(
-                session=session,
-                student=request.user,
-                reason=reason
-            )
-            messages.success(request, 'Request sent to instructor!')
+        # If pending, inform user
+        if existing_request.status == 'pending':
+            return Response({
+                "error": "You already have a pending request. Please wait for instructor approval.",
+                "request_id": existing_request.id
+            }, status=400)
         
-        return redirect('student_dashboard')
+        # ✅ If rejected, allow resubmission by updating existing request
+        if existing_request.status == 'rejected':
+            print(f"🔄 Updating rejected request (ID: {existing_request.id})")
+            existing_request.reason = reason
+            existing_request.request_latitude = latitude
+            existing_request.request_longitude = longitude
+            existing_request.status = 'pending'  # ✅ Reset to pending
+            existing_request.approved_by = None
+            existing_request.approved_at = None
+            existing_request.admin_notes = ''
+            existing_request.save()
+            
+            print(f"✅ Request updated and resubmitted (ID: {existing_request.id})")
+            return Response({
+                "success": "Your request has been resubmitted successfully!",
+                "request_id": existing_request.id,
+                "message": "Your previous request was rejected. This is a new submission."
+            }, status=200)
+
+    # ✅ CREATE NEW REQUEST
+    manual_request = ManualAttendanceRequest.objects.create(
+        session=session,
+        student=request.user,
+        reason=reason,
+        request_latitude=latitude,
+        request_longitude=longitude,
+        status='pending'
+    )
+
+    print(f"✅ New Manual Request Created (ID: {manual_request.id})")
+    print(f"   Location: ({latitude}, {longitude})")
+    print("=" * 60)
     
-    context = {
-        'session': session,
-        'existing_request': existing_request,
-        'page_title': 'Request Manual Attendance'
-    }
-    
-    return render(request, 'attendance/request_manual.html', context)
-
-
-# ==================== INSTRUCTOR/SUPERADMIN - MANUAL REQUESTS ====================
-
+    return Response({
+        "success": "Manual attendance request submitted successfully!",
+        "request_id": manual_request.id,
+        "message": "Your request has been sent to the instructor for approval."
+    }, status=200)
+#
+# 
+# 
 @login_required
 def pending_requests(request):
     """Instructor/Superadmin views pending manual attendance requests"""
@@ -623,11 +695,13 @@ def pending_requests(request):
     # Get requests based on role
     if request.user.role == 'superadmin':
         requests_list = ManualAttendanceRequest.objects.filter(status='pending')
+        base_template = 'base.html'  # ✅ Superadmin ke liye
     else:
         requests_list = ManualAttendanceRequest.objects.filter(
             session__instructor=request.user,
             status='pending'
         )
+        base_template = 'instructor_base.html'  # ✅ Instructor ke liye
     
     requests_list = requests_list.select_related(
         'session', 'student', 'session__batch', 'session__instructor'
@@ -635,74 +709,159 @@ def pending_requests(request):
     
     context = {
         'requests': requests_list,
-        'page_title': 'Pending Attendance Requests'
+        'page_title': 'Pending Attendance Requests',
+        'base_template': base_template  # ✅ Template ko bhejo
     }
     
     return render(request, 'attendance/pending_requests.html', context)
 
-
 @login_required
-@require_POST
 def approve_manual_request(request, request_id):
-    """Instructor/Superadmin approves manual attendance request"""
+    """Approve a manual attendance request"""
     
     if request.user.role not in ['instructor', 'superadmin']:
-        return JsonResponse({'success': False, 'message': 'Access denied!'}, status=403)
+        messages.error(request, 'Access denied!')
+        return redirect(get_dashboard_url(request.user))
     
     try:
-        att_request = get_object_or_404(ManualAttendanceRequest, id=request_id)
+        # Get request based on role
+        if request.user.role == 'superadmin':
+            manual_req = ManualAttendanceRequest.objects.select_related(
+                'session', 'student'
+            ).get(id=request_id, status='pending')
+        else:
+            manual_req = ManualAttendanceRequest.objects.select_related(
+                'session', 'student'
+            ).get(id=request_id, session__instructor=request.user, status='pending')
         
-        # Check permission (instructor can only approve their own sessions)
-        if request.user.role == 'instructor' and att_request.session.instructor != request.user:
-            return JsonResponse({'success': False, 'message': 'Access denied!'}, status=403)
+        print("="*60)
+        print(f"🔍 APPROVING REQUEST {request_id}")
+        print(f"   Student: {manual_req.student.get_full_name()}")
+        print(f"   Session: {manual_req.session.batch.name}")
+        print(f"   Location: ({manual_req.request_latitude}, {manual_req.request_longitude})")
+        print("="*60)
         
-        # Create attendance
-        Attendance.objects.create(
-            session=att_request.session,
-            student=att_request.student,
-            marking_method='manual',
-            is_present=True,
-            marked_by_instructor=request.user,
-            notes=f"Manual approval: {att_request.reason}"
+        # Check if attendance already exists
+        existing = Attendance.objects.filter(
+            session=manual_req.session,
+            student=manual_req.student
+        ).first()
+        
+        if existing:
+            print(f"⚠️ Attendance EXISTS - Present: {existing.is_present}")
+            
+            # ✅ UPDATE existing attendance to PRESENT
+            existing.is_present = True
+            existing.is_late = False
+            existing.marking_method = 'manual'
+            existing.marked_by_instructor = request.user
+            existing.notes = f"Manual request approved. Reason: {manual_req.reason[:100]}"
+            existing.save()
+            
+            print(f"✅ Updated existing attendance to PRESENT")
+        else:
+            # ✅ CREATE new attendance record
+            admin_notes = request.POST.get('admin_notes', '').strip()
+            notes_text = f"Manual request approved. Reason: {manual_req.reason[:100]}"
+            if admin_notes:
+                notes_text += f"\nAdmin Notes: {admin_notes}"
+            
+            attendance = Attendance.objects.create(
+                session=manual_req.session,
+                student=manual_req.student,
+                is_present=True,  # ✅ PRESENT
+                is_late=False,
+                marking_method='manual',
+                marked_by_instructor=request.user,
+                student_latitude=manual_req.request_latitude,   # ✅ Use saved location
+                student_longitude=manual_req.request_longitude, # ✅ Use saved location
+                notes=notes_text,
+                is_within_radius=True  # ✅ Manual approval = within radius
+            )
+            
+            print(f"✅ Created NEW attendance - Present: {attendance.is_present}")
+        
+        # ✅ UPDATE request status
+        admin_notes = request.POST.get('admin_notes', '').strip()
+        manual_req.status = 'approved'
+        manual_req.approved_by = request.user
+        manual_req.approved_at = timezone.now()
+        manual_req.admin_notes = admin_notes
+        manual_req.save()
+        
+        print(f"✅ Request status updated to APPROVED")
+        print("="*60)
+        
+        messages.success(
+            request, 
+            f'✅ Approved manual attendance for {manual_req.student.get_full_name()}'
         )
         
-        # Update request status
-        att_request.status = 'approved'
-        att_request.approved_by = request.user
-        att_request.save()
+        return redirect('attendance:pending_requests')
         
-        return JsonResponse({'success': True, 'message': 'Request approved!'})
-        
+    except ManualAttendanceRequest.DoesNotExist:
+        messages.error(request, '❌ Request not found or already processed!')
+        return redirect('attendance:pending_requests')
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
-
+        import traceback
+        error_trace = traceback.format_exc()
+        print("="*60)
+        print("❌ ERROR IN APPROVE_MANUAL_REQUEST:")
+        print(error_trace)
+        print("="*60)
+        messages.error(request, f'Error: {str(e)}')
+        return redirect('attendance:pending_requests')
 
 @login_required
-@require_POST
 def reject_manual_request(request, request_id):
-    """Instructor/Superadmin rejects manual attendance request"""
+    """Reject a manual attendance request"""
     
     if request.user.role not in ['instructor', 'superadmin']:
-        return JsonResponse({'success': False, 'message': 'Access denied!'}, status=403)
+        messages.error(request, 'Access denied!')
+        return redirect(get_dashboard_url(request.user))
     
     try:
-        att_request = get_object_or_404(ManualAttendanceRequest, id=request_id)
+        # Get request based on role
+        if request.user.role == 'superadmin':
+            manual_req = ManualAttendanceRequest.objects.get(
+                id=request_id, 
+                status='pending'
+            )
+        else:
+            manual_req = ManualAttendanceRequest.objects.get(
+                id=request_id, 
+                session__instructor=request.user,
+                status='pending'
+            )
         
-        # Check permission
-        if request.user.role == 'instructor' and att_request.session.instructor != request.user:
-            return JsonResponse({'success': False, 'message': 'Access denied!'}, status=403)
+        # Get rejection reason from POST
+        rejection_reason = request.POST.get('rejection_reason', '').strip()
         
-        # Update request status
-        att_request.status = 'rejected'
-        att_request.approved_by = request.user
-        att_request.save()
+        manual_req.status = 'rejected'
+        manual_req.approved_by = request.user
+        manual_req.approved_at = timezone.now()
+        manual_req.admin_notes = rejection_reason  # Save rejection reason
+        manual_req.save()
         
-        return JsonResponse({'success': True, 'message': 'Request rejected!'})
+        messages.success(
+            request, 
+            f'❌ Rejected request from {manual_req.student.get_full_name()}'
+        )
         
+        return redirect('attendance:pending_requests')
+        
+    except ManualAttendanceRequest.DoesNotExist:
+        messages.error(request, 'Request not found or already processed!')
+        return redirect('attendance:pending_requests')
     except Exception as e:
-        return JsonResponse({'success': False, 'message': str(e)}, status=500)
-
-
+        import traceback
+        error_trace = traceback.format_exc()
+        print("="*60)
+        print("ERROR IN REJECT_MANUAL_REQUEST:")
+        print(error_trace)
+        print("="*60)
+        messages.error(request, f'Error: {str(e)}')
+        return redirect('attendance:pending_requests')
 # ==================== MANUAL MARK ATTENDANCE ====================
 
 @login_required
@@ -713,6 +872,9 @@ def manual_mark_attendance(request, session_id, student_id):
         messages.error(request, 'Only instructors/admins can mark attendance!')
         return redirect(get_dashboard_url(request.user))
     
+    from userss.models import CustomUser  # ✅ Correct import
+    from courses.models import BatchEnrollment
+    
     session = get_object_or_404(AttendanceSession, id=session_id)
     
     # Check permission
@@ -720,8 +882,8 @@ def manual_mark_attendance(request, session_id, student_id):
         messages.error(request, 'Access denied!')
         return redirect('attendance:instructor_sessions')
     
-    from users.models import User
-    student = get_object_or_404(User, id=student_id, role='student')
+    # ✅ Use CustomUser instead of User
+    student = get_object_or_404(CustomUser, id=student_id, role='student')
     
     # Check enrollment
     if not BatchEnrollment.objects.filter(
@@ -784,8 +946,6 @@ def manual_mark_attendance(request, session_id, student_id):
     }
     
     return render(request, 'attendance/manual_mark.html', context)
-
-
 # ==================== MARK ATTENDANCE PAGE ====================
 
 @login_required
@@ -830,6 +990,48 @@ def mark_attendance(request, session_id):
     }
     
     return render(request, 'attendance/mark_attendance.html', context)
+@login_required
+def mark_attendance_instructor(request, session_id):
+    """Instructor/Superadmin marks attendance for multiple students"""
+    
+    if request.user.role not in ['instructor', 'superadmin']:
+        messages.error(request, 'Only instructors/admins can mark attendance!')
+        return redirect(get_dashboard_url(request.user))
+    
+    session = get_object_or_404(AttendanceSession, id=session_id)
+    
+    # Check permission
+    if request.user.role == 'instructor' and session.instructor != request.user:
+        messages.error(request, 'Access denied!')
+        return redirect('attendance:instructor_sessions')
+    
+    enrolled_students = BatchEnrollment.objects.filter(
+        batch=session.batch,
+        is_active=True
+    ).select_related('student')
+    
+    attendances = Attendance.objects.filter(session=session).select_related('student')
+    attendance_dict = {a.student_id: a for a in attendances}
+    
+    students = []
+    for enrollment in enrolled_students:
+        student = enrollment.student
+        attendance = attendance_dict.get(student.id)
+        students.append({
+            'student': student,
+            'attendance': attendance
+        })
+    
+    stats = session.get_stats()
+    
+    context = {
+        'session': session,
+        'students': students,
+        'stats': stats,
+        'page_title': f'Mark Attendance - {session.batch.name}'
+    }
+    
+    return render(request, 'attendance/mark_attendance_instructor.html', context)
 
 
 # ==================== MARK SELECTED ====================
@@ -860,7 +1062,7 @@ def mark_selected_attendance(request, session_id):
         is_present = (status == 'present')
         marked_count = 0
         
-        from users.models import User
+        from userss.models import AbstractUser
         students = User.objects.filter(id__in=student_ids, role='student')
         
         for student in students:
@@ -949,23 +1151,26 @@ def bulk_mark_attendance(request, session_id):
 
 # ==================== STUDENT VIEWS ====================
 
-
 @login_required
 def student_my_attendance(request):
-    """Student views their own attendance records"""
+    """Student views their own attendance records + ALL sessions (past + upcoming)"""
     
     if request.user.role != 'student':
         messages.error(request, 'Only students can access this!')
         return redirect('home')
     
     from django.utils import timezone
-    from datetime import datetime
+    from datetime import datetime, timedelta
     from django.db.models import Count, Q
+    from courses.models import BatchEnrollment
     
     # Get all attendance records for this student
     attendances = Attendance.objects.filter(
         student=request.user
-    ).select_related('session', 'session__batch').order_by('-session__start_time')
+    ).select_related(
+        'session', 
+        'session__batch'
+    ).order_by('-session__created_at', '-session__start_time')
     
     # Calculate overall stats
     total_sessions = attendances.count()
@@ -977,6 +1182,60 @@ def student_my_attendance(request):
     attendance_percentage = 0
     if total_sessions > 0:
         attendance_percentage = (present_count / total_sessions) * 100
+    
+    # 📅 Get ALL sessions for enrolled batches
+    enrolled_batches = BatchEnrollment.objects.filter(
+        student=request.user,
+        is_active=True
+    ).values_list('batch_id', flat=True)
+    
+    # ✅ Get ALL active sessions
+    all_sessions = AttendanceSession.objects.filter(
+        batch_id__in=enrolled_batches,
+        is_active=True
+    ).select_related('batch').order_by('-start_time')
+    
+    # Get current time
+    current_time = timezone.now()
+    
+    # ✅ CREATE DICT - session_id → attendance object
+    attendance_dict = {
+        att.session_id: att for att in Attendance.objects.filter(
+            student=request.user,
+            session__in=all_sessions
+        ).select_related('session')
+    }
+    
+    # 🎯 Add status + attendance info to each session
+    sessions_with_status = []
+    for session in all_sessions:
+        is_upcoming = session.start_time > current_time
+        is_running = session.start_time <= current_time <= session.end_time if session.end_time else False
+        is_past = session.end_time < current_time if session.end_time else session.start_time < current_time
+        
+        # ✅ CHECK if attendance exists for this session
+        attendance_record = attendance_dict.get(session.id)
+        
+        # ✅ CHECK if manual request exists
+        has_pending_request = ManualAttendanceRequest.objects.filter(
+            session=session,
+            student=request.user,
+            status='pending'
+        ).exists()
+        
+        sessions_with_status.append({
+            'session': session,
+            'is_upcoming': is_upcoming,
+            'is_running': is_running,
+            'is_past': is_past,
+            'status': 'upcoming' if is_upcoming else ('running' if is_running else 'past'),
+            # ✅ NEW FIELDS
+            'attendance': attendance_record,
+            'has_attendance': attendance_record is not None,
+            'is_present': attendance_record.is_present if attendance_record else False,
+            'is_late': attendance_record.is_late if attendance_record else False,
+            'has_pending_request': has_pending_request,
+        })
     
     # Optional: Filter by batch
     batch_id = request.GET.get('batch')
@@ -992,7 +1251,7 @@ def student_my_attendance(request):
             from_datetime = timezone.make_aware(
                 datetime.strptime(from_date, '%Y-%m-%d').replace(hour=0, minute=0, second=0)
             )
-            attendances = attendances.filter(session__start_time__gte=from_datetime)
+            attendances = attendances.filter(session__created_at__gte=from_datetime)
         except ValueError:
             messages.warning(request, 'Invalid from_date format. Use YYYY-MM-DD')
     
@@ -1001,7 +1260,7 @@ def student_my_attendance(request):
             to_datetime = timezone.make_aware(
                 datetime.strptime(to_date, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
             )
-            attendances = attendances.filter(session__start_time__lte=to_datetime)
+            attendances = attendances.filter(session__created_at__lte=to_datetime)
         except ValueError:
             messages.warning(request, 'Invalid to_date format. Use YYYY-MM-DD')
     
@@ -1033,14 +1292,14 @@ def student_my_attendance(request):
             'percentage': (batch_present / batch_total * 100) if batch_total > 0 else 0
         }
     
-    # Pagination
+    # Pagination - Show recent 8 records
     from django.core.paginator import Paginator
-    paginator = Paginator(attendances, 8)  # 8 per page
+    paginator = Paginator(attendances, 8)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
     # Get enrolled batches for filter
-    enrolled_batches = BatchEnrollment.objects.filter(
+    enrolled_batches_list = BatchEnrollment.objects.filter(
         student=request.user,
         is_active=True
     ).select_related('batch')
@@ -1054,14 +1313,15 @@ def student_my_attendance(request):
         'late_count': late_count,
         'attendance_percentage': round(attendance_percentage, 2),
         'batch_stats': batch_stats,
-        'enrolled_batches': enrolled_batches,
+        'sessions_with_status': sessions_with_status,
+        'current_time': current_time,
+        'enrolled_batches': enrolled_batches_list,
         'selected_batch': batch_id,
         'from_date': from_date,
         'to_date': to_date,
     }
     
     return render(request, 'attendance/student_my_attendance.html', context)
-
 
 @login_required
 def student_attendance_history(request):
@@ -1193,8 +1453,8 @@ def session_list(request):
     }
     
     return render(request, 'attendance/session_list.html', context)
+    
 # ==================== REPORTS & ANALYTICS ====================
-
 @login_required
 def attendance_reports(request):
     """Generate attendance reports"""
@@ -1207,21 +1467,28 @@ def attendance_reports(request):
     date_from = request.GET.get('date_from')
     date_to = request.GET.get('date_to')
     
+    # ✅ Dynamic base template
     if request.user.role == 'superadmin':
         sessions = AttendanceSession.objects.all()
         batches = Batch.objects.filter(is_active=True)
+        base_template = 'base.html'
     else:
-        sessions = AttendanceSession.objects.filter(instructor=request.user)
+        sessions = AttendanceSession.objects.filter(batch__instructor=request.user)
         batches = Batch.objects.filter(instructor=request.user, is_active=True)
+        base_template = 'instructor_base.html'
     
+    # ✅ Filters - Use start_time instead of date
     if batch_id:
         sessions = sessions.filter(batch_id=batch_id)
     if date_from:
-        sessions = sessions.filter(date__gte=date_from)
+        # ✅ Filter by start_time date
+        sessions = sessions.filter(start_time__date__gte=date_from)
     if date_to:
-        sessions = sessions.filter(date__lte=date_to)
+        # ✅ Filter by start_time date
+        sessions = sessions.filter(start_time__date__lte=date_to)
     
-    sessions = sessions.select_related('batch').order_by('-date')
+    # ✅ Order by start_time instead of date
+    sessions = sessions.select_related('batch').order_by('-start_time')
     
     total_sessions = sessions.count()
     total_attendances = Attendance.objects.filter(session__in=sessions).count()
@@ -1239,7 +1506,8 @@ def attendance_reports(request):
         'selected_batch': batch_id,
         'date_from': date_from,
         'date_to': date_to,
-        'page_title': 'Attendance Reports'
+        'page_title': 'Attendance Reports',
+        'base_template': base_template  # ✅ Add this
     }
     
     return render(request, 'attendance/attendance_reports.html', context)
@@ -1253,10 +1521,13 @@ def attendance_analytics(request):
         messages.error(request, 'Access denied!')
         return redirect(get_dashboard_url(request.user))
     
+    # ✅ Dynamic base template
     if request.user.role == 'superadmin':
         sessions = AttendanceSession.objects.all()
+        base_template = 'base.html'
     else:
-        sessions = AttendanceSession.objects.filter(instructor=request.user)
+        sessions = AttendanceSession.objects.filter(batch__instructor=request.user)
+        base_template = 'instructor_base.html'
     
     total_sessions = sessions.count()
     active_sessions = sessions.filter(is_active=True).count()
@@ -1273,7 +1544,7 @@ def attendance_analytics(request):
         avg_attendance=Avg('attendances__is_present')
     ).order_by('-session_count')[:10]
     
-    recent_sessions = sessions.select_related('batch').order_by('-date', '-start_time')[:10]
+    recent_sessions = sessions.select_related('batch').order_by('-start_time')[:10]
     for session in recent_sessions:
         session.stats = session.get_stats()
     
@@ -1286,7 +1557,8 @@ def attendance_analytics(request):
         'avg_attendance': avg_attendance,
         'batch_stats': batch_stats,
         'recent_sessions': recent_sessions,
-        'page_title': 'Attendance Analytics'
+        'page_title': 'Attendance Analytics',
+        'base_template': base_template  # ✅ Add this
     }
     
     return render(request, 'attendance/attendance_analytics.html', context)

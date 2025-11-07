@@ -1,0 +1,417 @@
+{% extends base_template %}
+{% load static %}
+
+{% block title %}Attendance Reports{% endblock %}
+
+{% block extra_css %}
+<style>
+    .reports-container {
+        padding: 2rem;
+    }
+
+    .reports-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2.5rem;
+        border-radius: 15px;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+    }
+
+    .reports-header h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin: 0 0 0.5rem 0;
+    }
+
+    /* Filter Card */
+    .filter-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+
+    .filter-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 12px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        border-top: 4px solid;
+        transition: transform 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+
+    .stat-card.primary { border-top-color: #3b82f6; }
+    .stat-card.success { border-top-color: #10b981; }
+    .stat-card.info { border-top-color: #06b6d4; }
+    .stat-card.purple { border-top-color: #8b5cf6; }
+
+    .stat-icon {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 800;
+        margin-bottom: 0.3rem;
+    }
+
+    .stat-card.primary .stat-value { color: #3b82f6; }
+    .stat-card.success .stat-value { color: #10b981; }
+    .stat-card.info .stat-value { color: #06b6d4; }
+    .stat-card.purple .stat-value { color: #8b5cf6; }
+
+    .stat-label {
+        font-size: 0.85rem;
+        color: #6b7280;
+        font-weight: 600;
+        text-transform: uppercase;
+    }
+
+    /* Sessions Table */
+    .sessions-card {
+        background: white;
+        padding: 2rem;
+        border-radius: 15px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        margin-bottom: 2rem;
+    }
+
+    .section-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid #f3f4f6;
+    }
+
+    .sessions-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 0.5rem;
+    }
+
+    .sessions-table thead th {
+        background: #f9fafb;
+        padding: 1rem;
+        text-align: left;
+        font-weight: 700;
+        color: #374151;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .sessions-table tbody tr {
+        background: white;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        transition: all 0.3s ease;
+    }
+
+    .sessions-table tbody tr:hover {
+        transform: translateX(5px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    .sessions-table tbody td {
+        padding: 1.2rem 1rem;
+        color: #4b5563;
+    }
+
+    .sessions-table tbody td:first-child {
+        border-left: 5px solid #667eea;
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .percentage-badge {
+        padding: 0.4rem 0.8rem;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 0.85rem;
+    }
+
+    .badge-excellent { background: #d1fae5; color: #065f46; }
+    .badge-good { background: #dbeafe; color: #1e40af; }
+    .badge-average { background: #fef3c7; color: #92400e; }
+    .badge-poor { background: #fee2e2; color: #991b1b; }
+
+    .status-badge {
+        padding: 0.3rem 0.7rem;
+        border-radius: 15px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+
+    .status-active { background: #d1fae5; color: #065f46; }
+    .status-inactive { background: #f3f4f6; color: #6b7280; }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+    }
+
+    .empty-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+
+    .empty-title {
+        font-size: 1.3rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-text {
+        color: #6b7280;
+    }
+
+    /* Export Buttons */
+    .export-buttons {
+        display: flex;
+        gap: 1rem;
+        margin-top: 1.5rem;
+    }
+
+    .export-btn {
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: all 0.3s ease;
+    }
+
+    .export-btn.excel {
+        background: #10b981;
+        color: white;
+    }
+
+    .export-btn.pdf {
+        background: #ef4444;
+        color: white;
+    }
+
+    .export-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        color: white;
+    }
+
+    @media (max-width: 768px) {
+        .reports-container {
+            padding: 1rem;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .export-buttons {
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="reports-container">
+    <!-- Header -->
+    <div class="reports-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1>📊 Attendance Reports</h1>
+                <p class="mb-0 opacity-75">Generate and download attendance reports</p>
+            </div>
+            <div>
+                {% if request.user.role == 'superadmin' %}
+                    <a href="{% url 'admin_dashboard' %}" class="btn btn-light">
+                        <i class="fas fa-arrow-left me-2"></i>Back
+                    </a>
+                {% else %}
+                    <a href="{% url 'instructor_dashboard' %}" class="btn btn-light">
+                        <i class="fas fa-arrow-left me-2"></i>Back
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-card">
+        <div class="filter-title">
+            <i class="fas fa-filter"></i>
+            Filter Reports
+        </div>
+        <form method="get" action="">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">Batch</label>
+                    <select name="batch" class="form-select">
+                        <option value="">All Batches</option>
+                        {% for batch in batches %}
+                            <option value="{{ batch.id }}" {% if selected_batch == batch.id|stringformat:"s" %}selected{% endif %}>
+                                {{ batch.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">From Date</label>
+                    <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">To Date</label>
+                    <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label">&nbsp;</label>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search me-2"></i>Filter
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+        <div class="stat-card primary">
+            <div class="stat-icon">📋</div>
+            <div class="stat-value">{{ total_sessions }}</div>
+            <div class="stat-label">Total Sessions</div>
+        </div>
+
+        <div class="stat-card info">
+            <div class="stat-icon">👥</div>
+            <div class="stat-value">{{ total_attendances }}</div>
+            <div class="stat-label">Total Marks</div>
+        </div>
+
+        <div class="stat-card success">
+            <div class="stat-icon">✅</div>
+            <div class="stat-value">{{ present_count }}</div>
+            <div class="stat-label">Present Count</div>
+        </div>
+
+        <div class="stat-card purple">
+            <div class="stat-icon">📈</div>
+            <div class="stat-value">{{ overall_percentage }}%</div>
+            <div class="stat-label">Overall %</div>
+        </div>
+    </div>
+
+    <!-- Sessions List -->
+    <div class="sessions-card">
+        <div class="section-title">
+            <i class="fas fa-list me-2"></i>
+            Session Details
+        </div>
+
+        {% if sessions %}
+        <div class="table-responsive">
+            <table class="sessions-table">
+                <thead>
+                    <tr>
+                        <th>Batch Name</th>
+                        <th>Date & Time</th>
+                        <th>Status</th>
+                        <th>Total Students</th>
+                        <th>Present</th>
+                        <th>Absent</th>
+                        <th>Attendance %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for session in sessions %}
+                    {% with stats=session.get_stats %}
+                    <tr>
+                        <td>{{ session.batch.name }}</td>
+                        <td>
+                            <div>{{ session.start_time|date:"d M, Y" }}</div>
+                            <small class="text-muted">
+                                {{ session.start_time|time:"h:i A" }}
+                            </small>
+                        </td>
+                        <td>
+                            {% if session.is_active %}
+                                <span class="status-badge status-active">Active</span>
+                            {% else %}
+                                <span class="status-badge status-inactive">Inactive</span>
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ stats.total_students }}</strong></td>
+                        <td style="color: #10b981;"><strong>{{ stats.present_count }}</strong></td>
+                        <td style="color: #ef4444;"><strong>{{ stats.absent_count }}</strong></td>
+                        <td>
+                            {% with percentage=stats.attendance_percentage %}
+                                {% if percentage >= 75 %}
+                                    <span class="percentage-badge badge-excellent">{{ percentage }}%</span>
+                                {% elif percentage >= 60 %}
+                                    <span class="percentage-badge badge-good">{{ percentage }}%</span>
+                                {% elif percentage >= 40 %}
+                                    <span class="percentage-badge badge-average">{{ percentage }}%</span>
+                                {% else %}
+                                    <span class="percentage-badge badge-poor">{{ percentage }}%</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                    </tr>
+                    {% endwith %}
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Export Buttons -->
+        <div class="export-buttons">
+            <a href="#" class="export-btn excel">
+                <i class="fas fa-file-excel"></i>
+                Export to Excel
+            </a>
+            <a href="#" class="export-btn pdf">
+                <i class="fas fa-file-pdf"></i>
+                Export to PDF
+            </a>
+        </div>
+
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">📊</div>
+            <div class="empty-title">No Sessions Found</div>
+            <div class="empty-text">Try adjusting your filters or create a new session</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

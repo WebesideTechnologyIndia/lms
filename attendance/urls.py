@@ -18,11 +18,17 @@ urlpatterns = [
          views.manual_mark_attendance, name='manual_mark'),
     path('session/<int:session_id>/mark-attendance/', 
          views.mark_attendance, name='mark_attendance'),
+    path('session/<int:session_id>/mark-attendance/instructor', 
+         views.mark_attendance_instructor, name='mark_attendance_instructor'),
     path('session/<int:session_id>/mark-selected/', 
          views.mark_selected_attendance, name='mark_selected_attendance'),
     path('session/<int:session_id>/bulk-mark/', 
          views.bulk_mark_attendance, name='bulk_mark_attendance'),
-    
+    path('session/<int:session_id>/request-manual/', views.request_manual_attendance, name='request_manual_attendance'),
+path('request-manual/<int:session_id>/', 
+     views.request_manual_attendance, 
+     name='request_manual_attendance_alt'),
+
     # Manual Requests
     path('instructor/pending-requests/', views.pending_requests, name='pending_requests'),
     path('request/<int:request_id>/approve/', views.approve_manual_request, name='approve_manual_request'),

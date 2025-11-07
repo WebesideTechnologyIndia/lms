@@ -952,18 +952,36 @@ from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q, Prefetch
 from courses.models import Enrollment, Course
-from fees.models import StudentFeeAssignment, EMISchedule, PaymentRecord
+from fees.models import StudentFeeAssignment, EMISchedule
 from django.utils import timezone
 from datetime import date
 
+# courses/views.py - student_courses
+
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
+from django.db.models import Q
+from courses.models import Enrollment,  BatchEnrollment
+from fees.models import StudentFeeAssignment, EMISchedule
+
+from fees.models import StudentFeeAssignment, EMISchedule
+
+from fees.models import StudentFeeAssignment, EMISchedule
+
+from fees.models import StudentFeeAssignment, EMISchedule
+
 @login_required
 def student_courses(request):
-    """Student's enrolled courses with lock status"""
+    """Student's enrolled courses - ONLY show enrolled courses"""
     
     if request.user.role != 'student':
         return redirect('user_login')
     
-    # Get enrollments with related data
+    from courses.models import Course
+    from fees.models import StudentFeeAssignment, EMISchedule
+    
+    # ⭐ Get ONLY enrolled courses (not all courses)
     enrollments = Enrollment.objects.filter(
         student=request.user,
         is_active=True
@@ -971,12 +989,9 @@ def student_courses(request):
         'course', 
         'course__instructor',
         'course__category'
-    ).prefetch_related(
-        'course__fee_assignments',
-        'course__batches'
     ).order_by('-enrolled_at')
     
-    # Filter by status if requested
+    # Filter by status
     status = request.GET.get('status')
     if status:
         enrollments = enrollments.filter(status=status)
@@ -989,43 +1004,82 @@ def student_courses(request):
             Q(course__course_code__icontains=search)
         )
     
-    # Enhanced enrollment data with lock status
+    # Enhanced enrollment data
     enhanced_enrollments = []
     
     for enrollment in enrollments:
-        # Get fee assignment for this student and course
+        course = enrollment.course
+        
+        # Fee assignment check
         try:
             fee_assignment = StudentFeeAssignment.objects.get(
                 student=request.user,
-                course=enrollment.course
+                course=course
             )
         except StudentFeeAssignment.DoesNotExist:
             fee_assignment = None
         
-        # Calculate lock status and payment info
-        lock_info = get_course_lock_info(enrollment.course, request.user, fee_assignment)
+        # ⭐ ENHANCED LOCK LOGIC - Status + Payment based
+        lock_info = {
+            'is_locked': False,
+            'lock_reason': '',
+            'warning_message': '',
+            'can_unlock': False,
+            'action_required': '',
+            'overdue_amount': 0,
+        }
         
-        # Get recent payments
-        recent_payments = []
-        if fee_assignment:
-            recent_payments = PaymentRecord.objects.filter(
-                fee_assignment=fee_assignment,
-                status='completed'
-            ).order_by('-payment_date')[:3]
+        # 🔒 PRIORITY 1: Check enrollment status first
+        if enrollment.status == 'dropped':
+            lock_info['is_locked'] = True
+            lock_info['lock_reason'] = '🚫 Course Dropped. You have withdrawn from this course.'
+            lock_info['can_unlock'] = False
+            lock_info['action_required'] = 'contact_admin'
+            
+        elif enrollment.status == 'suspended':
+            lock_info['is_locked'] = True
+            lock_info['lock_reason'] = '⏸️ Course Suspended. Your access has been temporarily suspended.'
+            lock_info['can_unlock'] = False
+            lock_info['action_required'] = 'contact_admin'
         
-        # Get next due payment
+        # 🔒 PRIORITY 2: Check payment issues (only if not dropped/suspended)
+        elif enrollment.status == 'enrolled':
+            if fee_assignment:
+                if fee_assignment.amount_pending > 0:
+                    # Check if course is locked due to payment
+                    if hasattr(fee_assignment, 'is_course_locked') and fee_assignment.is_course_locked:
+                        lock_info['is_locked'] = True
+                        lock_info['lock_reason'] = '💳 Payment Pending. Complete your fees to unlock access.'
+                        lock_info['can_unlock'] = True
+                        lock_info['action_required'] = 'make_payment'
+                        lock_info['overdue_amount'] = float(fee_assignment.amount_pending)
+        
+        # ✅ Show completion status
+        elif enrollment.status == 'completed':
+            lock_info['is_locked'] = False
+            lock_info['warning_message'] = '✅ Course Completed - View Only Mode'
+        
+        # Get next due payment (warning only - if not already locked)
         next_due = None
-        if fee_assignment and fee_assignment.fee_structure.payment_type == 'emi':
+        if fee_assignment and fee_assignment.fee_structure.payment_type == 'emi' and not lock_info['is_locked']:
             next_due = EMISchedule.objects.filter(
                 fee_assignment=fee_assignment,
                 status__in=['pending', 'overdue']
             ).order_by('due_date').first()
+            
+            if next_due:
+                from datetime import date
+                days_until_due = (next_due.due_date - date.today()).days
+                if days_until_due <= 7 and days_until_due >= 0:
+                    lock_info['warning_message'] = f'⚠️ Payment of ₹{next_due.amount} due in {days_until_due} days'
+                elif days_until_due < 0:
+                    lock_info['warning_message'] = f'🔴 Payment of ₹{next_due.amount} overdue by {abs(days_until_due)} days!'
         
         enhanced_enrollments.append({
             'enrollment': enrollment,
+            'course': course,
             'fee_assignment': fee_assignment,
             'lock_info': lock_info,
-            'recent_payments': recent_payments,
             'next_due': next_due,
         })
     
@@ -1035,9 +1089,11 @@ def student_courses(request):
     enhanced_enrollments = paginator.get_page(page)
     
     # Summary statistics
-    total_courses = len(enhanced_enrollments.object_list) if hasattr(enhanced_enrollments, 'object_list') else len(enhanced_enrollments)
-    locked_courses = sum(1 for item in (enhanced_enrollments.object_list if hasattr(enhanced_enrollments, 'object_list') else enhanced_enrollments) 
-                        if item['lock_info']['is_locked'])
+    total_courses = enrollments.count()
+    locked_courses = sum(1 for item in enhanced_enrollments.object_list if item['lock_info']['is_locked'])
+    dropped_courses = enrollments.filter(status='dropped').count()
+    suspended_courses = enrollments.filter(status='suspended').count()
+    completed_courses = enrollments.filter(status='completed').count()
     
     context = {
         'enrollments': enhanced_enrollments,
@@ -1045,10 +1101,14 @@ def student_courses(request):
         'search': search,
         'total_courses': total_courses,
         'locked_courses': locked_courses,
-        'active_courses': total_courses - locked_courses,
+        'active_courses': enrollments.filter(status='enrolled').count(),
+        'dropped_courses': dropped_courses,
+        'suspended_courses': suspended_courses,
+        'completed_courses': completed_courses,
     }
     
     return render(request, 'students/student_courses.html', context)
+
 
 
 def get_course_lock_info(course, student, fee_assignment=None):
@@ -1334,28 +1394,16 @@ def student_batches(request):
 
 @login_required
 def browse_courses(request):
-    """Browse available courses for enrollment with enrollment status"""
+    """Browse available courses - Check enrollment status for locks"""
     
     if request.user.role != 'student':
         return redirect('user_login')
     
-    from courses.models import BatchEnrollment, Enrollment
+    from courses.models import Enrollment, Course, CourseCategory
     from fees.models import StudentFeeAssignment
-    
-    # Debug current user enrollments
-    print(f"=== DEBUG for User: {request.user.username} ===")
-    
-    # Check batch enrollments
-    batch_enrollments = BatchEnrollment.objects.filter(student=request.user)
-    print(f"Batch Enrollments: {batch_enrollments.count()}")
-    for be in batch_enrollments:
-        print(f"  - Batch: {be.batch.name} | Course: {be.batch.course.title} | Active: {be.is_active}")
-    
-    # Check course enrollments
-    course_enrollments = Enrollment.objects.filter(student=request.user)
-    print(f"Course Enrollments: {course_enrollments.count()}")
-    for ce in course_enrollments:
-        print(f"  - Course: {ce.course.title} | Active: {ce.is_active}")
+    from django.db.models import Q
+    from django.core.paginator import Paginator
+    from collections import OrderedDict
     
     # Get courses
     courses = Course.objects.filter(
@@ -1363,7 +1411,7 @@ def browse_courses(request):
         status='published'
     ).select_related('instructor', 'category')
     
-    # Rest of filtering code...
+    # Filters
     category = request.GET.get('category')
     if category:
         courses = courses.filter(category__slug=category)
@@ -1387,50 +1435,58 @@ def browse_courses(request):
     sort = request.GET.get('sort', '-created_at')
     courses = courses.order_by(sort)
     
-    # FIXED: Check enrollment for each course
+    # ⭐⭐⭐ ENHANCED CHECK: Course Enrollment + Status ⭐⭐⭐
     for course in courses:
-        print(f"\n=== Checking Course: {course.title} ===")
-        
-        # Method 1: Check via BatchEnrollment
-        batch_enrollment = BatchEnrollment.objects.filter(
-            student=request.user,
-            batch__course=course,
-            is_active=True
-        ).first()
-        
-        # Method 2: Check via direct Enrollment
+        # ⭐ Check direct course enrollment
         course_enrollment = Enrollment.objects.filter(
             student=request.user,
             course=course,
             is_active=True
         ).first()
         
-        print(f"Batch Enrollment Found: {batch_enrollment is not None}")
-        print(f"Course Enrollment Found: {course_enrollment is not None}")
+        # Default values
+        course.is_student_enrolled = bool(course_enrollment)
+        course.is_course_locked = False
+        course.lock_reason = ''
+        course.enrollment_status = None
         
-        # Set enrollment status based on either method
-        if batch_enrollment or course_enrollment:
-            course.is_student_enrolled = True
-            course.student_batch = batch_enrollment.batch if batch_enrollment else None
+        # 🔒 Check enrollment status and payment
+        if course_enrollment:
+            course.enrollment_status = course_enrollment.status
             
-            # Check fee lock
-            try:
-                fee_assignment = StudentFeeAssignment.objects.get(
-                    student=request.user,
-                    course=course
-                )
-                course.is_course_locked = fee_assignment.is_course_locked
-            except StudentFeeAssignment.DoesNotExist:
+            # 🔒 PRIORITY 1: Check if dropped or suspended
+            if course_enrollment.status == 'dropped':
+                course.is_course_locked = True
+                course.lock_reason = '🚫 Course Dropped - You have withdrawn from this course'
+                
+            elif course_enrollment.status == 'suspended':
+                course.is_course_locked = True
+                course.lock_reason = '⏸️ Access Suspended - Please contact administration'
+            
+            # 🔒 PRIORITY 2: Check payment (only if enrolled status)
+            elif course_enrollment.status == 'enrolled':
+                try:
+                    fee_assignment = StudentFeeAssignment.objects.get(
+                        student=request.user,
+                        course=course
+                    )
+                    # Check if course is locked due to payment
+                    if hasattr(fee_assignment, 'is_course_locked') and fee_assignment.is_course_locked:
+                        course.is_course_locked = True
+                        course.lock_reason = f'💳 Payment Pending - ₹{fee_assignment.amount_pending} due'
+                except StudentFeeAssignment.DoesNotExist:
+                    pass
+            
+            # ✅ Completed courses are accessible (view only)
+            elif course_enrollment.status == 'completed':
                 course.is_course_locked = False
-        else:
-            course.is_student_enrolled = False
-            course.student_batch = None
-            course.is_course_locked = False
+                course.lock_reason = '✅ Course Completed'
         
-        print(f"Final Status - Enrolled: {course.is_student_enrolled}, Locked: {course.is_course_locked}")
+        # Check if enrollment is open (for non-enrolled students)
+        course.is_enrollment_open_flag = course.is_enrollment_open()
+        course.available_seats = course.get_available_seats()
     
-    # ========== NEW ADDON: GROUP BY CATEGORY ==========
-    from collections import OrderedDict
+    # Group by category
     category_courses = OrderedDict()
     
     for course in courses:
@@ -1438,29 +1494,29 @@ def browse_courses(request):
         if cat not in category_courses:
             category_courses[cat] = []
         category_courses[cat].append(course)
-    # ========== END NEW ADDON ==========
     
     # Pagination
     paginator = Paginator(courses, 12)
     page = request.GET.get('page')
-    courses = paginator.get_page(page)
+    courses_page = paginator.get_page(page)
     
     categories = CourseCategory.objects.filter(is_active=True)
     
     context = {
-        'courses': courses,
+        'courses': courses_page,
         'categories': categories,
         'selected_category': category,
         'selected_difficulty': difficulty,
         'selected_type': course_type,
         'search': search,
         'sort': sort,
-        'total_courses': Course.objects.count(),
-        'category_courses': category_courses,  # NEW: Category-wise grouped
-        'total_categories': len(category_courses),  # NEW: Total categories count
+        'total_courses': Course.objects.filter(is_active=True, status='published').count(),
+        'category_courses': category_courses,
+        'total_categories': len(category_courses),
     }
     
     return render(request, 'students/browse_courses.html', context)
+
 
 @login_required
 def student_progress(request):
@@ -1674,6 +1730,65 @@ def email_limit_settings(request):
         'email_limit_setting': email_limit_setting
     })
 
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .models import EmailSMTPConfiguration
+
+@login_required
+def email_smtp_settings(request):
+    """Manage Email SMTP Configuration (NOT limits - that's separate)"""
+    if request.user.role != 'superadmin':
+        messages.error(request, 'Only Super Admin can access this page!')
+        return redirect('user_login')
+    
+    # Get active SMTP configuration
+    smtp_config = EmailSMTPConfiguration.objects.filter(is_active=True).first()
+    
+    if request.method == 'POST':
+        # Extract form data
+        email_host = request.POST.get('email_host', 'smtp.gmail.com').strip()
+        email_port = request.POST.get('email_port', 587)
+        email_use_tls = request.POST.get('email_use_tls') == 'on'
+        email_host_user = request.POST.get('email_host_user', '').strip()
+        email_host_password = request.POST.get('email_host_password', '').strip()
+        default_from_email = request.POST.get('default_from_email', '').strip()
+        
+        try:
+            # Validate data
+            email_port = int(email_port)
+            
+            if not email_host_user or not email_host_password:
+                messages.error(request, 'Email and Password are required!')
+                return redirect('email_smtp_settings')
+            
+            # Deactivate old configurations
+            EmailSMTPConfiguration.objects.filter(is_active=True).update(is_active=False)
+            
+            # Create new configuration
+            EmailSMTPConfiguration.objects.create(
+                email_host=email_host,
+                email_port=email_port,
+                email_use_tls=email_use_tls,
+                email_host_user=email_host_user,
+                email_host_password=email_host_password,
+                default_from_email=default_from_email or email_host_user,
+                is_active=True
+            )
+            
+            messages.success(request, '✅ Email SMTP configuration updated successfully!')
+            return redirect('email_smtp_settings')
+            
+        except ValueError:
+            messages.error(request, 'Please enter valid port number!')
+            return redirect('email_smtp_settings')
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+            return redirect('email_smtp_settings')
+    
+    return render(request, 'email_configuration.html', {
+        'smtp_config': smtp_config
+    })
 
 @login_required
 def email_logs(request):

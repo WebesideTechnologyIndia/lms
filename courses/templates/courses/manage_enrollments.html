@@ -79,6 +79,7 @@
     </div>
     <div class="card-body">
         <form method="get" class="row g-3">
+            {% csrf_token %}
             <!-- Search -->
             <div class="col-md-4">
                 <label for="search" class="form-label">Search Students</label>
@@ -524,212 +525,390 @@
 
 {% block extra_js %}
 <script>
+    // CSRF Token Helper
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
     // Auto-submit form on filter change
-    document.addEventListener('DOMContentLoaded', function() {
-        ['status', 'course', 'sort'].forEach(function(id) {
-            const element = document.getElementById(id);
-            if (element) {
-                element.addEventListener('change', function() {
-                    this.form.submit();
-                });
-            }
-        });
-
-        // Checkbox functionality
-        const selectAll = document.getElementById('selectAll');
-        const checkboxes = document.querySelectorAll('.enrollment-checkbox');
-        
-        if (selectAll) {
-            selectAll.addEventListener('change', function() {
-                checkboxes.forEach(checkbox => {
-                    checkbox.checked = this.checked;
-                });
-                updateBulkActions();
+    ['status', 'course', 'sort'].forEach(function(id) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('change', function() {
+                this.form.submit();
             });
         }
-
-        checkboxes.forEach(checkbox => {
-            checkbox.addEventListener('change', updateBulkActions);
-        });
     });
 
-    function updateBulkActions() {
-        const selected = document.querySelectorAll('.enrollment-checkbox:checked');
-        const bulkBar = document.getElementById('bulkActionsBar');
-        const selectedCount = document.getElementById('selectedCount');
-        
-        if (selected.length > 0) {
-            bulkBar.style.display = 'block';
-            selectedCount.textContent = selected.length;
-        } else {
-            bulkBar.style.display = 'none';
-        }
-    }
-
-    function viewEnrollment(enrollmentId) {
-        window.location.href = `/enrollment-details/${enrollmentId}/`;
-    }
-
-    function editEnrollment(enrollmentId) {
-        fetch(`/courses/api/enrollment/${enrollmentId}/`)
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('editEnrollmentId').value = enrollmentId;
-                document.getElementById('editStatus').value = data.status;
-                document.getElementById('editProgress').value = data.progress_percentage;
-                document.getElementById('editGrade').value = data.grade || '';
-                document.getElementById('editPaymentStatus').value = data.payment_status;
-                
-                new bootstrap.Modal(document.getElementById('editModal')).show();
-            })
-            .catch(error => {
-                alert('Error loading enrollment data');
+    // Checkbox functionality
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.enrollment-checkbox');
+    
+    if (selectAll) {
+        selectAll.addEventListener('change', function() {
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = this.checked;
             });
-    }
-
-    function updateEnrollment() {
-        const enrollmentId = document.getElementById('editEnrollmentId').value;
-        const formData = {
-            status: document.getElementById('editStatus').value,
-            progress_percentage: document.getElementById('editProgress').value,
-            grade: document.getElementById('editGrade').value,
-            payment_status: document.getElementById('editPaymentStatus').value
-        };
-
-        fetch(`/courses/api/enrollment/${enrollmentId}/update/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            },
-            body: JSON.stringify(formData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Error updating enrollment: ' + data.message);
-            }
-        })
-        .catch(error => {
-            alert('Error updating enrollment');
+            updateBulkActions();
         });
     }
 
-    function sendEmail(studentId, email) {
-        document.getElementById('emailTo').value = email;
-        document.getElementById('emailSubject').value = '';
-        document.getElementById('emailBody').value = '';
-        
-        new bootstrap.Modal(document.getElementById('emailModal')).show();
-    }
-
-    function sendEmailToStudent() {
-        const emailData = {
-            to: document.getElementById('emailTo').value,
-            subject: document.getElementById('emailSubject').value,
-            body: document.getElementById('emailBody').value,
-            template: document.getElementById('emailTemplate').value
-        };
-
-        if (!emailData.subject || !emailData.body) {
-            alert('Please fill in both subject and message');
-            return;
-        }
-
-        fetch('/courses/send-student-email/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-            },
-            body: JSON.stringify(emailData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Email sent successfully!');
-                bootstrap.Modal.getInstance(document.getElementById('emailModal')).hide();
-            } else {
-                alert('Error sending email: ' + data.message);
-            }
-        })
-        .catch(error => {
-            alert('Error sending email');
-        });
-    }
-
-    function deleteEnrollment(enrollmentId) {
-        if (confirm('Are you sure you want to remove this enrollment? This action cannot be undone.')) {
-            fetch(`/courses/api/enrollment/${enrollmentId}/delete/`, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert('Error removing enrollment: ' + data.message);
-                }
-            })
-            .catch(error => {
-                alert('Error removing enrollment');
-            });
-        }
-    }
-
-    function exportData(format) {
-        const params = new URLSearchParams(window.location.search);
-        params.set('export', format);
-        window.location.href = '?' + params.toString();
-    }
-
-    function bulkSendEmail() {
-        const selected = Array.from(document.querySelectorAll('.enrollment-checkbox:checked'))
-                             .map(cb => cb.value);
-        
-        if (selected.length === 0) {
-            alert('Please select enrollments first');
-            return;
-        }
-
-        document.getElementById('emailTo').value = `${selected.length} students selected`;
-        new bootstrap.Modal(document.getElementById('emailModal')).show();
-    }
-
-    // Email template change handler
-    document.getElementById('emailTemplate').addEventListener('change', function() {
-        const template = this.value;
-        const subjectField = document.getElementById('emailSubject');
-        const bodyField = document.getElementById('emailBody');
-
-        const templates = {
-            'welcome': {
-                subject: 'Welcome to {course_name}!',
-                body: 'Dear {student_name},\n\nWelcome to {course_name}! We are excited to have you in our course.\n\nYour instructor {instructor_name} will guide you through this learning journey.\n\nEnrollment Date: {enrollment_date}\n\nBest regards,\nLMS Team'
-            },
-            'completion': {
-                subject: 'Congratulations on completing {course_name}!',
-                body: 'Dear {student_name},\n\nCongratulations on successfully completing {course_name}!\n\nYour certificate will be available soon in your student dashboard.\n\nBest regards,\n{instructor_name}'
-            },
-            'payment_reminder': {
-                subject: 'Payment Reminder - {course_name}',
-                body: 'Dear {student_name},\n\nThis is a reminder that payment for {course_name} is still pending.\n\nPlease complete your payment to continue accessing course materials.\n\nBest regards,\nLMS Team'
-            }
-        };
-
-        if (templates[template]) {
-            subjectField.value = templates[template].subject;
-            bodyField.value = templates[template].body;
-        } else {
-            subjectField.value = '';
-            bodyField.value = '';
-        }
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateBulkActions);
     });
+
+    // Email template handler
+    const emailTemplate = document.getElementById('emailTemplate');
+    if (emailTemplate) {
+        emailTemplate.addEventListener('change', handleEmailTemplate);
+    }
+});
+
+function updateBulkActions() {
+    const selected = document.querySelectorAll('.enrollment-checkbox:checked');
+    const bulkBar = document.getElementById('bulkActionsBar');
+    const selectedCount = document.getElementById('selectedCount');
+    
+    if (selected.length > 0) {
+        bulkBar.style.display = 'block';
+        selectedCount.textContent = selected.length;
+    } else {
+        bulkBar.style.display = 'none';
+    }
+}
+
+function viewEnrollment(enrollmentId) {
+    window.location.href = `/enrollment-details/${enrollmentId}/`;
+}
+
+function editEnrollment(enrollmentId) {
+    fetch(`/courses/api/enrollment/${enrollmentId}/`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.error) {
+                throw new Error(data.error);
+            }
+            
+            document.getElementById('editEnrollmentId').value = enrollmentId;
+            document.getElementById('editStatus').value = data.status;
+            document.getElementById('editProgress').value = data.progress_percentage;
+            document.getElementById('editGrade').value = data.grade || '';
+            document.getElementById('editPaymentStatus').value = data.payment_status;
+            
+            new bootstrap.Modal(document.getElementById('editModal')).show();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('❌ Error loading enrollment data: ' + error.message);
+        });
+}
+
+function updateEnrollment() {
+    const enrollmentId = document.getElementById('editEnrollmentId').value;
+    const formData = {
+        status: document.getElementById('editStatus').value,
+        progress_percentage: parseFloat(document.getElementById('editProgress').value),
+        grade: document.getElementById('editGrade').value,
+        payment_status: document.getElementById('editPaymentStatus').value
+    };
+
+    // Show loading state
+    const saveBtn = event.target;
+    const originalText = saveBtn.innerHTML;
+    saveBtn.disabled = true;
+    saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+
+    fetch(`/courses/api/enrollment/${enrollmentId}/update/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(formData)
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || `HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert('✅ ' + data.message);
+            bootstrap.Modal.getInstance(document.getElementById('editModal')).hide();
+            location.reload();
+        } else {
+            throw new Error(data.message || 'Update failed');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('❌ Error: ' + error.message);
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalText;
+    });
+}
+
+function sendEmail(studentId, email) {
+    document.getElementById('emailTo').value = email;
+    document.getElementById('emailSubject').value = '';
+    document.getElementById('emailBody').value = '';
+    document.getElementById('emailTemplate').value = '';
+    
+    new bootstrap.Modal(document.getElementById('emailModal')).show();
+}
+
+function sendEmailToStudent() {
+    const emailData = {
+        to: document.getElementById('emailTo').value,
+        subject: document.getElementById('emailSubject').value,
+        body: document.getElementById('emailBody').value,
+        template: document.getElementById('emailTemplate').value
+    };
+
+    if (!emailData.subject || !emailData.body) {
+        alert('⚠️ Please fill in both subject and message');
+        return;
+    }
+
+    const sendBtn = event.target;
+    const originalText = sendBtn.innerHTML;
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Sending...';
+
+    fetch('/courses/api/send-student-email/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(emailData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('✅ ' + data.message);
+            bootstrap.Modal.getInstance(document.getElementById('emailModal')).hide();
+        } else {
+            throw new Error(data.message || 'Email send failed');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('❌ Error: ' + error.message);
+    })
+    .finally(() => {
+        sendBtn.disabled = false;
+        sendBtn.innerHTML = originalText;
+    });
+}
+
+function deleteEnrollment(enrollmentId) {
+    if (!confirm('⚠️ Are you sure you want to remove this enrollment? This action cannot be undone.')) {
+        return;
+    }
+
+    fetch(`/courses/api/enrollment/${enrollmentId}/delete/`, {
+        method: 'POST',  // Using POST instead of DELETE for better compatibility
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || `HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert('✅ ' + data.message);
+            location.reload();
+        } else {
+            throw new Error(data.message || 'Delete failed');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('❌ Error: ' + error.message);
+    });
+}
+
+function exportData(format) {
+    const params = new URLSearchParams(window.location.search);
+    params.set('export', format);
+    window.location.href = '?' + params.toString();
+}
+
+function bulkSendEmail() {
+    const selected = Array.from(document.querySelectorAll('.enrollment-checkbox:checked'))
+                         .map(cb => cb.value);
+    
+    if (selected.length === 0) {
+        alert('⚠️ Please select enrollments first');
+        return;
+    }
+
+    document.getElementById('emailTo').value = `${selected.length} students selected`;
+    document.getElementById('emailTemplate').value = '';
+    new bootstrap.Modal(document.getElementById('emailModal')).show();
+}
+
+function bulkUpdateStatus() {
+    const selected = Array.from(document.querySelectorAll('.enrollment-checkbox:checked'))
+                         .map(cb => cb.value);
+    
+    if (selected.length === 0) {
+        alert('⚠️ Please select enrollments first');
+        return;
+    }
+
+    const status = prompt('Enter new status:\n• enrolled\n• completed\n• dropped\n• suspended');
+    if (!status) return;
+
+    const validStatuses = ['enrolled', 'completed', 'dropped', 'suspended'];
+    if (!validStatuses.includes(status.toLowerCase())) {
+        alert('❌ Invalid status! Use: enrolled, completed, dropped, or suspended');
+        return;
+    }
+
+    if (!confirm(`Update ${selected.length} enrollments to "${status}"?`)) {
+        return;
+    }
+
+    fetch('/courses/api/bulk-update-status/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            enrollment_ids: selected,
+            status: status.toLowerCase()
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || `HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert(`✅ ${data.updated_count} enrollments updated successfully!`);
+            location.reload();
+        } else {
+            throw new Error(data.message || 'Update failed');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('❌ Error: ' + error.message);
+    });
+}
+
+function bulkDelete() {
+    const selected = Array.from(document.querySelectorAll('.enrollment-checkbox:checked'))
+                         .map(cb => cb.value);
+    
+    if (selected.length === 0) {
+        alert('⚠️ Please select enrollments first');
+        return;
+    }
+
+    if (!confirm(`⚠️ WARNING!\n\nYou are about to PERMANENTLY DELETE ${selected.length} enrollments.\n\nThis action CANNOT be undone!\n\nAre you absolutely sure?`)) {
+        return;
+    }
+
+    fetch('/courses/api/bulk-delete-enrollments/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            enrollment_ids: selected
+        })
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(err => {
+                throw new Error(err.message || `HTTP error! status: ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            alert(`✅ ${data.deleted_count} enrollments deleted successfully!`);
+            location.reload();
+        } else {
+            throw new Error(data.message || 'Delete failed');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('❌ Error: ' + error.message);
+    });
+}
+
+function handleEmailTemplate() {
+    const template = this.value;
+    const subjectField = document.getElementById('emailSubject');
+    const bodyField = document.getElementById('emailBody');
+
+    const templates = {
+        'welcome': {
+            subject: 'Welcome to {course_name}!',
+            body: 'Dear {student_name},\n\nWelcome to {course_name}! We are excited to have you in our course.\n\nYour instructor {instructor_name} will guide you through this learning journey.\n\nEnrollment Date: {enrollment_date}\n\nBest regards,\nLMS Team'
+        },
+        'reminder': {
+            subject: 'Course Reminder - {course_name}',
+            body: 'Dear {student_name},\n\nThis is a friendly reminder about your enrollment in {course_name}.\n\nPlease log in to continue your learning journey.\n\nBest regards,\n{instructor_name}'
+        },
+        'completion': {
+            subject: 'Congratulations on completing {course_name}!',
+            body: 'Dear {student_name},\n\nCongratulations on successfully completing {course_name}!\n\nYour certificate will be available soon in your student dashboard.\n\nBest regards,\n{instructor_name}'
+        },
+        'payment_reminder': {
+            subject: 'Payment Reminder - {course_name}',
+            body: 'Dear {student_name},\n\nThis is a reminder that payment for {course_name} is still pending.\n\nPlease complete your payment to continue accessing course materials.\n\nBest regards,\nLMS Team'
+        }
+    };
+
+    if (templates[template]) {
+        subjectField.value = templates[template].subject;
+        bodyField.value = templates[template].body;
+    } else {
+        subjectField.value = '';
+        bodyField.value = '';
+    }
+}
 </script>
 
 <style>
@@ -747,6 +926,7 @@
 
     .progress-bar {
         border-radius: 10px;
+        background: linear-gradient(90deg, #4CAF50 0%, #45a049 100%);
     }
 
     .btn-group-sm > .btn {
@@ -757,10 +937,12 @@
     .card {
         border: none;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-radius: 8px;
     }
 
     .badge {
         font-size: 0.75em;
+        padding: 0.35em 0.65em;
     }
 
     .table-responsive {
@@ -769,6 +951,53 @@
 
     #bulkActionsBar {
         border-left: 4px solid var(--bs-primary);
+        animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .btn-outline-primary:hover,
+    .btn-outline-secondary:hover,
+    .btn-outline-success:hover,
+    .btn-outline-danger:hover {
+        transform: translateY(-2px);
+        transition: all 0.2s ease;
+    }
+
+    .table tbody tr:hover {
+        background-color: #f8f9fa;
+        transition: background-color 0.2s ease;
+    }
+
+    .modal-content {
+        border-radius: 8px;
+        border: none;
+    }
+
+    .modal-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+    }
+
+    .modal-header .btn-close {
+        filter: brightness(0) invert(1);
+    }
+
+    .form-select:focus,
+    .form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
     }
 </style>
 {% endblock %}
