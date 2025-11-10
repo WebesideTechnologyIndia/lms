@@ -1,4 +1,3 @@
-
 {% extends base_template %}
 
 {% load static %}
@@ -7,59 +6,366 @@
 
 {% block extra_css %}
 <style>
+    /* Main Container Styling */
+    body {
+        background-color: #f3f4f6;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    }
+
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+
+    /* Map Styling */
     #map {
         height: 450px;
         width: 100%;
-        border-radius: 8px;
+        border-radius: 12px;
         border: 2px solid #e5e7eb;
         margin: 20px 0;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     }
+
+    /* Location Info Box */
     .location-info {
-        background: #f0f9ff;
-        padding: 15px;
-        border-radius: 8px;
-        margin: 10px 0;
-        border-left: 4px solid #3b82f6;
+        background: linear-gradient(135deg, #e0f2fe 0%, #bfdbfe 100%);
+        padding: 20px;
+        border-radius: 12px;
+        margin: 15px 0;
+        border-left: 5px solid #3b82f6;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
     }
+
+    .location-info p {
+        margin: 5px 0;
+    }
+
+    /* Form Section Cards */
     .form-section {
         background: white;
-        padding: 25px;
-        border-radius: 12px;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
+        padding: 30px;
+        border-radius: 16px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+        margin-bottom: 24px;
+        transition: all 0.3s ease;
     }
+
+    .form-section:hover {
+        box-shadow: 0 6px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .form-section h3 {
+        color: #1f2937;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    /* Search Box */
     .search-box {
         position: relative;
-        margin-bottom: 15px;
+        margin-bottom: 20px;
     }
+
     .search-box input {
         width: 100%;
-        padding: 12px 40px 12px 15px;
+        padding: 14px 45px 14px 20px;
         border: 2px solid #e5e7eb;
-        border-radius: 8px;
-        font-size: 14px;
+        border-radius: 12px;
+        font-size: 15px;
+        transition: all 0.3s ease;
+        background: white;
     }
+
     .search-box input:focus {
         outline: none;
         border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
     }
+
     .search-icon {
         position: absolute;
-        right: 15px;
+        right: 18px;
         top: 50%;
         transform: translateY(-50%);
-        color: #9ca3af;
+        font-size: 20px;
+        pointer-events: none;
+    }
+
+    /* Form Inputs */
+    input[type="text"],
+    input[type="date"],
+    input[type="time"],
+    select {
+        width: 100%;
+        padding: 12px 16px;
+        border: 2px solid #e5e7eb;
+        border-radius: 10px;
+        font-size: 15px;
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    input[type="text"]:focus,
+    input[type="date"]:focus,
+    input[type="time"]:focus,
+    select:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    /* Labels */
+    label {
+        display: block;
+        color: #374151;
+        font-weight: 600;
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+
+    /* Buttons */
+    button[type="button"],
+    button[type="submit"],
+    .btn {
+        padding: 12px 24px;
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .btn-green {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+    }
+
+    .btn-green:hover {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-blue {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: white;
+    }
+
+    .btn-blue:hover {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+        color: white;
+        padding: 14px 32px;
+        font-size: 16px;
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+    }
+
+    .btn-secondary {
+        background: #e5e7eb;
+        color: #374151;
+        padding: 14px 32px;
+        font-size: 16px;
+    }
+
+    .btn-secondary:hover {
+        background: #d1d5db;
+        transform: translateY(-2px);
+    }
+
+    /* Range Slider */
+    input[type="range"] {
+        width: 100%;
+        height: 8px;
+        border-radius: 5px;
+        background: #e5e7eb;
+        outline: none;
+        -webkit-appearance: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #3b82f6;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: #3b82f6;
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Grid Layout */
+    .grid {
+        display: grid;
+        gap: 1rem;
+    }
+
+    .grid-cols-3 {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    @media (max-width: 768px) {
+        .grid-cols-3 {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Header */
+    .page-header {
+        margin-bottom: 2rem;
+        text-align: center;
+    }
+
+    .page-header h1 {
+        font-size: 2.5rem;
+        font-weight: 800;
+        color: #1f2937;
+        margin-bottom: 0.5rem;
+    }
+
+    .page-header p {
+        color: #6b7280;
+        font-size: 1.1rem;
+    }
+
+    /* Button Container */
+    .button-group {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 20px;
+    }
+
+    .submit-group {
+        display: flex;
+        gap: 16px;
+        margin-top: 2rem;
+    }
+
+    /* Radius Display */
+    .radius-display {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 10px;
+    }
+
+    .radius-display span {
+        font-size: 14px;
+        color: #6b7280;
+    }
+
+    #radiusValue {
+        font-weight: 700;
+        color: #3b82f6;
+        font-size: 16px;
+    }
+
+    /* Helper Text */
+    .helper-text {
+        font-size: 13px;
+        color: #6b7280;
+        margin-top: 8px;
+    }
+
+    /* Fallback Map Message */
+    .map-fallback {
+        height: 450px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f9fafb;
+        border-radius: 12px;
+        border: 2px dashed #d1d5db;
+    }
+
+    .map-fallback-content {
+        text-align: center;
+        padding: 40px;
+    }
+
+    .map-fallback-content .icon {
+        font-size: 64px;
+        margin-bottom: 20px;
+    }
+
+    .map-fallback-content h3 {
+        color: #374151;
+        margin-bottom: 12px;
+        font-size: 1.5rem;
+    }
+
+    .map-fallback-content p {
+        color: #6b7280;
+        margin-bottom: 8px;
+    }
+
+    .manual-coords-input {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 20px;
+        flex-wrap: wrap;
+    }
+
+    .manual-coords-input input {
+        width: 200px;
+        padding: 10px;
+        border: 2px solid #d1d5db;
+        border-radius: 8px;
+    }
+
+    .manual-coords-input button {
+        padding: 10px 20px;
+        background: #3b82f6;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    .manual-coords-input button:hover {
+        background: #2563eb;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="max-w-4xl mx-auto">
+<div class="container">
+    <div style="max-width: 1000px; margin: 0 auto;">
         <!-- Header -->
-        <div class="mb-6">
-            <h1 class="text-3xl font-bold text-gray-800">📍 Create Attendance Session</h1>
-            <p class="text-gray-600 mt-2">Set up QR-based attendance with location verification</p>
+        <div class="page-header">
+            <h1>📍 Create Attendance Session</h1>
+            <p>Set up QR-based attendance with location verification</p>
         </div>
 
         <form method="POST" id="sessionForm">
@@ -67,10 +373,10 @@
 
             <!-- Batch Selection -->
             <div class="form-section">
-                <h3 class="text-xl font-semibold mb-4">1️⃣ Select Batch</h3>
-                <div class="mb-4">
-                    <label class="block text-gray-700 font-medium mb-2">Batch *</label>
-                    <select name="batch" required class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                <h3><span>1️⃣</span> Select Batch</h3>
+                <div>
+                    <label for="batch">Batch *</label>
+                    <select name="batch" id="batch" required>
                         <option value="">-- Select Batch --</option>
                         {% for batch in batches %}
                         <option value="{{ batch.id }}">{{ batch.name }} - {{ batch.course.name }}</option>
@@ -81,50 +387,44 @@
 
             <!-- Date & Time -->
             <div class="form-section">
-                <h3 class="text-xl font-semibold mb-4">2️⃣ Schedule</h3>
-                <div class="grid md:grid-cols-3 gap-4">
+                <h3><span>2️⃣</span> Schedule</h3>
+                <div class="grid grid-cols-3">
                     <div>
-                        <label class="block text-gray-700 font-medium mb-2">Date *</label>
-                        <input type="date" name="date" value="{{ today|date:'Y-m-d' }}" required 
-                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <label for="date">Date *</label>
+                        <input type="date" name="date" id="date" value="{{ today|date:'Y-m-d' }}" required>
                     </div>
                     <div>
-                        <label class="block text-gray-700 font-medium mb-2">Start Time *</label>
-                        <input type="time" name="start_time" required 
-                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <label for="start_time">Start Time *</label>
+                        <input type="time" name="start_time" id="start_time" required>
                     </div>
                     <div>
-                        <label class="block text-gray-700 font-medium mb-2">End Time *</label>
-                        <input type="time" name="end_time" required 
-                               class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <label for="end_time">End Time *</label>
+                        <input type="time" name="end_time" id="end_time" required>
                     </div>
                 </div>
             </div>
 
             <!-- Location Setup -->
             <div class="form-section">
-                <h3 class="text-xl font-semibold mb-4">3️⃣ Classroom Location</h3>
+                <h3><span>3️⃣</span> Classroom Location</h3>
                 
-                <div class="mb-4">
-                    <label class="block text-gray-700 font-medium mb-2">Location Name *</label>
+                <div style="margin-bottom: 20px;">
+                    <label for="locationInput">Location Name *</label>
                     <input type="text" name="classroom_location" id="locationInput" 
-                           placeholder="e.g., Room 101, Building A" required
-                           class="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                           placeholder="e.g., Room 101, Building A" required>
                 </div>
 
                 <!-- Search Box -->
                 <div class="search-box">
-                    <input type="text" id="search-input" placeholder="🔍 Search for location...">
+                    <input type="text" id="search-input" placeholder="🔍 Search for location on map...">
                     <span class="search-icon">🔍</span>
                 </div>
 
-                <div class="flex gap-3 mb-4">
-                    <button type="button" onclick="getCurrentLocation()" 
-                            class="bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 font-semibold">
+                <div class="button-group">
+                    <button type="button" onclick="getCurrentLocation()" class="btn btn-green">
                         📍 Use My Current Location
                     </button>
-                    <button type="button" onclick="setDefaultLocation()" 
-                            class="bg-blue-500 text-white px-6 py-2 rounded-lg hover:bg-blue-600 font-semibold">
+                    <button type="button" onclick="setDefaultLocation()" class="btn btn-blue">
                         🏫 Use Default Location
                     </button>
                 </div>
@@ -132,35 +432,33 @@
                 <div id="map"></div>
 
                 <div id="locationInfo" class="location-info" style="display: none;">
-                    <p class="font-semibold text-blue-800">📌 Selected Location:</p>
-                    <p id="coordsDisplay" class="text-sm text-gray-700 mt-1"></p>
-                    <p class="text-xs text-gray-500 mt-2">💡 Drag the marker to adjust position</p>
+                    <p style="font-weight: 700; color: #1e40af; font-size: 16px;">📌 Selected Location:</p>
+                    <p id="coordsDisplay" style="color: #374151; margin-top: 5px;"></p>
+                    <p class="helper-text">💡 Drag the marker on the map to adjust position</p>
                 </div>
 
                 <input type="hidden" name="latitude" id="latitude" required>
                 <input type="hidden" name="longitude" id="longitude" required>
 
-                <div class="mt-4">
-                    <label class="block text-gray-700 font-medium mb-2">Allowed Radius (meters)</label>
+                <div style="margin-top: 24px;">
+                    <label for="radiusSlider">Allowed Radius (meters)</label>
                     <input type="range" name="allowed_radius_meters" id="radiusSlider" 
-                           value="50" min="10" max="500" step="10"
-                           class="w-full" onchange="updateRadius()">
-                    <div class="flex justify-between text-sm text-gray-600 mt-1">
+                           value="50" min="10" max="500" step="10" oninput="updateRadius()">
+                    <div class="radius-display">
                         <span>10m</span>
-                        <span id="radiusValue" class="font-bold text-blue-600">50m</span>
+                        <span id="radiusValue">50m</span>
                         <span>500m</span>
                     </div>
-                    <p class="text-sm text-gray-500 mt-2">Students must be within this distance to mark attendance</p>
+                    <p class="helper-text">Students must be within this distance to mark attendance</p>
                 </div>
             </div>
 
             <!-- Submit -->
-            <div class="flex gap-4">
-                <button type="submit" class="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-semibold">
+            <div class="submit-group">
+                <button type="submit" class="btn btn-primary">
                     ✅ Create Session
                 </button>
-                <a href="{% url 'attendance:instructor_sessions' %}" 
-                   class="bg-gray-200 text-gray-700 px-8 py-3 rounded-lg hover:bg-gray-300 font-semibold">
+                <a href="{% url 'attendance:instructor_sessions' %}" class="btn btn-secondary" style="text-decoration: none;">
                     Cancel
                 </a>
             </div>
@@ -168,7 +466,7 @@
     </div>
 </div>
 
-<!-- Google Maps API - Load at the end -->
+<!-- Google Maps API Script -->
 <script>
 // Global variables
 let map;
@@ -180,11 +478,9 @@ let selectedLng = null;
 
 // Initialize map function
 function initMap() {
-    // Default location (Delhi, India)
     const defaultLocation = { lat: 28.6139, lng: 77.2090 };
     
     try {
-        // Create map
         map = new google.maps.Map(document.getElementById('map'), {
             center: defaultLocation,
             zoom: 15,
@@ -196,7 +492,6 @@ function initMap() {
 
         console.log('Map initialized successfully');
 
-        // Setup search box
         const input = document.getElementById('search-input');
         searchBox = new google.maps.places.SearchBox(input);
         
@@ -204,7 +499,6 @@ function initMap() {
             searchBox.setBounds(map.getBounds());
         });
 
-        // Listen for place selection
         searchBox.addListener('places_changed', function() {
             const places = searchBox.getPlaces();
             if (places.length === 0) return;
@@ -218,12 +512,10 @@ function initMap() {
             map.setZoom(17);
         });
 
-        // Add click listener to map
         map.addListener('click', function(event) {
             placeMarker({ lat: event.latLng.lat(), lng: event.latLng.lng() });
         });
 
-        // Try to get current location automatically
         getCurrentLocation();
 
     } catch (error) {
@@ -233,17 +525,9 @@ function initMap() {
 }
 
 function placeMarker(location) {
-    // Remove existing marker
-    if (marker) {
-        marker.setMap(null);
-    }
-    
-    // Remove existing circle
-    if (circle) {
-        circle.setMap(null);
-    }
+    if (marker) marker.setMap(null);
+    if (circle) circle.setMap(null);
 
-    // Create new marker
     marker = new google.maps.Marker({
         position: location,
         map: map,
@@ -252,15 +536,11 @@ function placeMarker(location) {
         title: 'Classroom Location'
     });
 
-    // Make marker draggable
     marker.addListener('dragend', function(event) {
         updateLocation(event.latLng.lat(), event.latLng.lng());
     });
 
-    // Update location
     updateLocation(location.lat, location.lng);
-    
-    // Center map on marker
     map.panTo(location);
 }
 
@@ -268,30 +548,23 @@ function updateLocation(lat, lng) {
     selectedLat = lat;
     selectedLng = lng;
 
-    // Update form fields
     document.getElementById('latitude').value = lat.toFixed(6);
     document.getElementById('longitude').value = lng.toFixed(6);
 
-    // Update display
     document.getElementById('coordsDisplay').textContent = 
         `Latitude: ${lat.toFixed(6)}, Longitude: ${lng.toFixed(6)}`;
     document.getElementById('locationInfo').style.display = 'block';
 
-    // Draw radius circle
     drawCircle();
 }
 
 function drawCircle() {
     if (!selectedLat || !selectedLng) return;
     
-    // Remove existing circle
-    if (circle) {
-        circle.setMap(null);
-    }
+    if (circle) circle.setMap(null);
 
     const radius = parseInt(document.getElementById('radiusSlider').value);
 
-    // Create new circle
     circle = new google.maps.Circle({
         map: map,
         center: { lat: selectedLat, lng: selectedLng },
@@ -330,19 +603,17 @@ function getCurrentLocation() {
             }
         );
     } else {
-        alert('Geolocation is not supported by this browser. Please click on the map to set location.');
+        alert('Geolocation is not supported by this browser.');
     }
 }
 
 function setDefaultLocation() {
-    // Set to a default location (you can customize this)
-    const defaultPos = { lat: 28.6139, lng: 77.2090 }; // Delhi
+    const defaultPos = { lat: 28.6139, lng: 77.2090 };
     placeMarker(defaultPos);
     map.setCenter(defaultPos);
     map.setZoom(15);
 }
 
-// Form validation
 document.getElementById('sessionForm').addEventListener('submit', function(e) {
     if (!selectedLat || !selectedLng) {
         e.preventDefault();
@@ -351,9 +622,7 @@ document.getElementById('sessionForm').addEventListener('submit', function(e) {
     }
 });
 
-// Load Google Maps API
 function loadGoogleMaps() {
-    // Replace YOUR_API_KEY with actual key, or remove &key parameter for testing
     const script = document.createElement('script');
     script.src = 'https://maps.googleapis.com/maps/api/js?libraries=places&callback=initMap';
     script.async = true;
@@ -361,21 +630,16 @@ function loadGoogleMaps() {
     script.onerror = function() {
         console.error('Failed to load Google Maps');
         document.getElementById('map').innerHTML = `
-            <div style="height: 450px; display: flex; align-items: center; justify-content: center; background: #f3f4f6; border-radius: 8px;">
-                <div style="text-align: center; padding: 20px;">
-                    <div style="font-size: 48px; margin-bottom: 15px;">🗺️</div>
-                    <h3 style="color: #374151; margin-bottom: 10px;">Google Maps Not Available</h3>
+            <div class="map-fallback">
+                <div class="map-fallback-content">
+                    <div class="icon">🗺️</div>
+                    <h3>Google Maps Not Available</h3>
                     <p style="color: #6b7280;">Please add Google Maps API key to enable map functionality.</p>
                     <p style="color: #9ca3af; font-size: 14px; margin-top: 10px;">You can still create sessions by entering coordinates manually:</p>
-                    <div style="margin-top: 15px;">
-                        <input type="number" step="0.000001" placeholder="Latitude" id="manualLat" 
-                               style="width: 200px; padding: 8px; margin: 5px; border: 1px solid #d1d5db; border-radius: 4px;">
-                        <input type="number" step="0.000001" placeholder="Longitude" id="manualLng" 
-                               style="width: 200px; padding: 8px; margin: 5px; border: 1px solid #d1d5db; border-radius: 4px;">
-                        <button onclick="useManualCoords()" type="button"
-                                style="padding: 8px 16px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">
-                            Set Location
-                        </button>
+                    <div class="manual-coords-input">
+                        <input type="number" step="0.000001" placeholder="Latitude" id="manualLat">
+                        <input type="number" step="0.000001" placeholder="Longitude" id="manualLng">
+                        <button onclick="useManualCoords()" type="button">Set Location</button>
                     </div>
                 </div>
             </div>
@@ -384,7 +648,6 @@ function loadGoogleMaps() {
     document.head.appendChild(script);
 }
 
-// Manual coordinate entry fallback
 function useManualCoords() {
     const lat = parseFloat(document.getElementById('manualLat').value);
     const lng = parseFloat(document.getElementById('manualLng').value);
@@ -403,7 +666,6 @@ function useManualCoords() {
     alert('✅ Location set successfully!');
 }
 
-// Load map when page is ready
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', loadGoogleMaps);
 } else {

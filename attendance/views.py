@@ -864,6 +864,7 @@ def reject_manual_request(request, request_id):
         return redirect('attendance:pending_requests')
 # ==================== MANUAL MARK ATTENDANCE ====================
 
+
 @login_required
 def manual_mark_attendance(request, session_id, student_id):
     """Instructor/Superadmin manually marks attendance for individual student"""
@@ -946,6 +947,8 @@ def manual_mark_attendance(request, session_id, student_id):
     }
     
     return render(request, 'attendance/manual_mark.html', context)
+
+
 # ==================== MARK ATTENDANCE PAGE ====================
 
 @login_required
@@ -990,6 +993,8 @@ def mark_attendance(request, session_id):
     }
     
     return render(request, 'attendance/mark_attendance.html', context)
+
+
 @login_required
 def mark_attendance_instructor(request, session_id):
     """Instructor/Superadmin marks attendance for multiple students"""
