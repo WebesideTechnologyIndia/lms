@@ -3365,8 +3365,48 @@ def instructor_content_management(request):
     
     return render(request, 'instructor/content_management.html', context)
 
+@login_required
 def instructor_batch_management(request):
-    return render(request,'instructor/batch_management.html')
+    """Instructor: Main batch management dashboard"""
+    if request.user.role != 'instructor':
+        return redirect('user_login')
+    
+    # ✅ YEH CHANGE - Batch ke instructor ke unique courses
+    all_batches = Batch.objects.filter(
+        instructor=request.user
+    ).select_related('course', 'instructor').order_by('-created_at')
+    
+    # ✅ Unique courses from batches (jinke batches instructor ne banaye hain)
+    instructor_courses = Course.objects.filter(
+        batches__instructor=request.user
+    ).distinct()
+    
+    # Recent batches (latest 5 for activity section)
+    recent_batches = all_batches[:5]
+    
+    # Calculate stats
+    stats = {
+        'total_batches': all_batches.count(),
+        'active_batches': all_batches.filter(status='active').count(),
+        'total_students': BatchEnrollment.objects.filter(
+            batch__instructor=request.user,
+            is_active=True
+        ).count(),
+        'total_courses': instructor_courses.count(),
+    }
+    
+    # Add enrolled count to each batch
+    for batch in recent_batches:
+        batch.enrolled_count = batch.get_enrolled_count()
+    
+    context = {
+        'batches': recent_batches,
+        'stats': stats,
+        'user': request.user,
+        'instructor_courses': instructor_courses,  # ✅ YEH ADD KARO
+    }
+    
+    return render(request, 'instructor/batch_management.html', context)
 
 def instructor_student_management(request):
     return render(request,'instructor/student_management.html')

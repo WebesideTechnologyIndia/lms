@@ -18,6 +18,7 @@ from django.core.exceptions import ValidationError
 
 User = get_user_model()
 
+
 class ZoomConfiguration(models.Model):
     """Dynamic Zoom API Configuration - Admin can change anytime"""
     
@@ -455,6 +456,7 @@ class SessionAttendance(models.Model):
         self.attendance_percentage = 0
         self.save()
 
+
 class ZoomRecording(models.Model):
     """Zoom Recordings Management"""
     
@@ -527,6 +529,7 @@ class ZoomRecording(models.Model):
         self.view_count += 1
         self.save(update_fields=['view_count'])
 
+
 class SessionFeedback(models.Model):
     """Session Feedback from Students"""
     
@@ -568,6 +571,7 @@ class SessionFeedback(models.Model):
     
     def __str__(self):
         return f"{self.session.title} - {self.student.get_full_name()} ({self.overall_rating}★)"
+
 
 class ZoomWebhookLog(models.Model):
     """Log Zoom webhook events"""

@@ -2713,7 +2713,7 @@ def create_batch_lesson(request, course_id, batch_id, module_id):
 
 
 
-
+from .forms import BulkBatchEnrollForm
 
 @login_required
 def batch_enrollments(request, course_id, batch_id):
@@ -2737,35 +2737,105 @@ def batch_enrollments(request, course_id, batch_id):
             messages.error(request, status_message.get(course.status))
             return redirect('courses:batch_enrollments', course_id=course.id, batch_id=batch.id)
         
-        form = BatchEnrollForm(request.POST)
-        if form.is_valid():
-            student = form.cleaned_data['student']
-            
-            # Check if already enrolled
-            if batch.enrollments.filter(student=student, is_active=True).exists():
-                messages.error(request, f"{student.username} is already enrolled!")
-            else:
-                BatchEnrollment.objects.create(
-                    student=student,
-                    batch=batch
-                )
-                messages.success(request, f"{student.username} enrolled successfully!")
-            
-            return redirect('courses:batch_enrollments', course_id=course.id, batch_id=batch.id)
+        # Check which form was submitted
+        if 'single_enroll' in request.POST:
+            form = BatchEnrollForm(request.POST)
+            if form.is_valid():
+                enrollment = form.save(commit=False)
+                student = enrollment.student
+                
+                # Check if already enrolled
+                if batch.enrollments.filter(student=student, is_active=True).exists():
+                    messages.error(request, f"{student.get_full_name() or student.username} is already enrolled!")
+                else:
+                    enrollment.batch = batch
+                    enrollment.save()
+                    messages.success(request, f"{student.get_full_name() or student.username} enrolled successfully!")
+                
+                return redirect('courses:batch_enrollments', course_id=course.id, batch_id=batch.id)
+        
+        elif 'bulk_enroll' in request.POST:
+            bulk_form = BulkBatchEnrollForm(request.POST)
+            if bulk_form.is_valid():
+                students = bulk_form.cleaned_data['students']
+                
+                enrolled_count = 0
+                already_enrolled = []
+                
+                for student in students:
+                    if not batch.enrollments.filter(student=student, is_active=True).exists():
+                        BatchEnrollment.objects.create(
+                            student=student,
+                            batch=batch
+                        )
+                        enrolled_count += 1
+                    else:
+                        already_enrolled.append(student.get_full_name() or student.username)
+                
+                if enrolled_count > 0:
+                    messages.success(request, f"{enrolled_count} students enrolled successfully!")
+                
+                if already_enrolled:
+                    messages.warning(request, f"Already enrolled: {', '.join(already_enrolled)}")
+                
+                return redirect('courses:batch_enrollments', course_id=course.id, batch_id=batch.id)
     else:
         form = BatchEnrollForm()
+        bulk_form = BulkBatchEnrollForm()
     
     context = {
         'course': course,
         'batch': batch,
         'enrollments': enrollments,
         'form': form,
+        'bulk_form': bulk_form,
         'enrollment_allowed': enrollment_allowed,
         'status_message': status_message.get(course.status),
         'course_status': course.status,
     }
     
     return render(request, 'courses/batch_enrollments.html', context)
+
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+
+@login_required
+@require_POST
+def bulk_remove_batch_enrollments(request, course_id, batch_id):
+    """Bulk remove students from batch"""
+    try:
+        import json
+        data = json.loads(request.body)
+        enrollment_ids = data.get('enrollment_ids', [])
+        
+        if not enrollment_ids:
+            return JsonResponse({
+                'success': False,
+                'message': 'No students selected'
+            })
+        
+        # Get the batch to verify access
+        batch = get_object_or_404(Batch, id=batch_id, course_id=course_id)
+        
+        # Delete the enrollments
+        deleted_count = BatchEnrollment.objects.filter(
+            id__in=enrollment_ids,
+            batch=batch
+        ).delete()[0]
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'{deleted_count} students removed successfully!',
+            'deleted_count': deleted_count
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=400)
+
 
 
 @login_required  
@@ -2783,6 +2853,7 @@ def student_batch_list(request):
     }
     
     return render(request, 'courses/student_batches.html', context)
+
 
 
 @login_required
@@ -2809,6 +2880,8 @@ def student_batch_content(request, batch_id):
     }
     
     return render(request, 'courses/student_batch_content.html', context)
+
+
 
 
 # courses/views.py में add करें:
@@ -2839,6 +2912,8 @@ def course_specific_analytics(request, course_id):
     }
     return render(request, 'courses/course_analytics.html', context)
 
+
+
 @login_required
 def course_students(request, course_id):
     course = get_object_or_404(Course, id=course_id)
@@ -2857,6 +2932,8 @@ def course_students(request, course_id):
     }
     return render(request, 'courses/course_students.html', context)
 
+
+
 @login_required
 def course_enrollments(request, course_id):
     course = get_object_or_404(Course, id=course_id)
@@ -2873,6 +2950,8 @@ def course_enrollments(request, course_id):
         'sidebar_courses': get_sidebar_courses(request.user),
     }
     return render(request, 'courses/course_enrollments.html', context)
+
+
 
 # Helper function
 def get_sidebar_courses(user):
@@ -2952,6 +3031,7 @@ def instructor_batch_list(request, course_id):
     return render(request, 'batch_management_instructor/batch_list.html', context)
 # Add this view to your instructor views.py file
 
+
 @login_required
 def instructor_view_all_batches(request):
     """Instructor: View all batches across all courses"""
@@ -2960,8 +3040,9 @@ def instructor_view_all_batches(request):
     
     # Get all batches for instructor's courses
     batches = Batch.objects.filter(
-        course__instructor=request.user
+        instructor=request.user  # Course ke instructor ke bajaye batch ka instructor
     ).select_related('course').prefetch_related('enrollments').order_by('-created_at')
+    
     
     # Filter by status if requested
     status_filter = request.GET.get('status', '')
@@ -3094,6 +3175,7 @@ def instructor_batch_detail(request, course_id, batch_id):
     }
     
     return render(request, 'batch_management_instructor/batch_detail.html', context)
+
 
 # views.py - DEBUGGED VERSION
 from .forms import BatchEditForm  # Add this import

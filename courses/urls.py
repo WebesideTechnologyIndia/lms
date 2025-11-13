@@ -232,6 +232,14 @@ path(
         views.batch_enrollments,
         name="batch_enrollments",
     ),
+
+    # Batch enrollment operations mein yeh add karo
+path(
+    '<int:course_id>/batches/<int:batch_id>/enrollments/bulk-remove/',
+    views.bulk_remove_batch_enrollments,
+    name='bulk_remove_batch_enrollments',
+),
+
     # Student batch views
     path("my-batches/", views.student_batch_list, name="student_batch_list"),
     path(

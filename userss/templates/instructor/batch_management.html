@@ -144,22 +144,22 @@
                 <div class="card-body">
                     <p class="card-text">Manage batches for specific courses. Create and organize course-specific batches.</p>
                     <div class="d-grid gap-2">
-                        {% for course in user.instructor_courses.all|slice:":3" %}
-                        <!-- FIXED URL - instructor_batch_list -->
-                        <a href="{% url 'courses:instructor_batch_list' course.id %}" class="btn btn-outline-success btn-sm">
-                            <i class="bi bi-folder me-1"></i>{{ course.title }}
-                        </a>
-                        {% empty %}
-                        <div class="text-muted text-center">
-                            <small>No courses available</small>
-                        </div>
-                        {% endfor %}
-                        {% if user.instructor_courses.count > 3 %}
-                        <a href="{% url 'courses:manage_courses' %}" class="btn btn-success btn-sm">
-                            <i class="bi bi-three-dots me-1"></i>View All Courses
-                        </a>
-                        {% endif %}
-                    </div>
+    {% for course in instructor_courses|slice:":3" %}
+    <!-- YEH CHANGE - user.instructor_courses ke bajaye instructor_courses -->
+    <a href="{% url 'courses:instructor_batch_list' course.id %}" class="btn btn-outline-success btn-sm">
+        <i class="bi bi-folder me-1"></i>{{ course.title }}
+    </a>
+    {% empty %}
+    <div class="text-muted text-center">
+        <small>No courses available</small>
+    </div>
+    {% endfor %}
+    {% if instructor_courses.count > 3 %}
+    <a href="{% url 'courses:manage_courses' %}" class="btn btn-success btn-sm">
+        <i class="bi bi-three-dots me-1"></i>View All Courses
+    </a>
+    {% endif %}
+</div>
                 </div>
                 <div class="card-footer bg-light text-muted">
                     <small>{{ user.instructor_courses.count }} courses available</small>

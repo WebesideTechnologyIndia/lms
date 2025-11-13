@@ -257,7 +257,8 @@ class UserActivityLog(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.action} at {self.timestamp}"
-    
+
+
 class EmailLimitSet(models.Model):
     email_limit_per_day = models.IntegerField(default=50)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -394,6 +395,8 @@ class DailyEmailSummary(models.Model):
 
 
 # Add this model to your existing models.py
+
+
 
 import random
 from django.utils import timezone

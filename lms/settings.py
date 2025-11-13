@@ -21,90 +21,92 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-a-y5&-k$e0j)a*s5*2soduaclhy3%m+r*mu3r*o@xrz+ml(a@('
+SECRET_KEY = "django-insecure-a-y5&-k$e0j)a*s5*2soduaclhy3%m+r*mu3r*o@xrz+ml(a@("
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = ["*"]
 
-
+CSRF_TRUSTED_ORIGINS = [
+    "https://lms.webesidetechnology.com",
+    "http://lms.webesidetechnology.com",
+]
 # Application definition
 
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'userss',
-    'courses',
-    'exams',
-    'webinars',
-    'fees',
-    'zoom',
-    'django_crontab',
-    'ckeditor',
-    'ckeditor_uploader',
-    'attendance',
-
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+    "userss",
+    "courses",
+    "exams",
+    "webinars",
+    "fees",
+    "zoom",
+    "django_crontab",
+    "ckeditor",
+    "ckeditor_uploader",
+    "attendance",
 ]
 
 CKEDITOR_UPLOAD_PATH = "uploads/"
 CKEDITOR_CONFIGS = {
-    'default': {
-        'toolbar': 'full',
-        'height': 300,
+    "default": {
+        "toolbar": "full",
+        "height": 300,
     },
 }
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'courses.middleware.AttendanceTrackingMiddleware',
-    'courses.middleware.DeviceTrackingMiddleware',
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "courses.middleware.AttendanceTrackingMiddleware",
+    "courses.middleware.DeviceTrackingMiddleware",
 ]
 
 
-ROOT_URLCONF = 'lms.urls'
+ROOT_URLCONF = "lms.urls"
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
-                'django.template.context_processors.media',  # ✅ ADD THIS
-                'lms.context_processors.sidebar_context',
-                'lms.context_processors.instructor_permissions',
-                'userss.context_processors.instructor_navigation',
-                'userss.context_processors.student_context',
-                'userss.context_processors.instructor_permissions',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
+                "django.template.context_processors.media",  # ✅ ADD THIS
+                "lms.context_processors.sidebar_context",
+                "lms.context_processors.instructor_permissions",
+                "userss.context_processors.instructor_navigation",
+                "userss.context_processors.student_context",
+                "userss.context_processors.instructor_permissions",
             ],
         },
     },
 ]
 
-WSGI_APPLICATION = 'lms.wsgi.application'
+WSGI_APPLICATION = "lms.wsgi.application"
 
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
 
@@ -113,19 +115,19 @@ DATABASES = {
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-        'OPTIONS': {
-            'min_length': 8,
-        }
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+        "OPTIONS": {
+            "min_length": 8,
+        },
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -133,9 +135,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'Asia/Kolkata'
+TIME_ZONE = "Asia/Kolkata"
 
 USE_I18N = True
 
@@ -144,107 +146,75 @@ USE_TZ = True
 
 # ==================== STATIC FILES ====================
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
 
 # Additional locations of static files
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, 'static'),
+    os.path.join(BASE_DIR, "static"),
 ]
 
 
 # ==================== MEDIA FILES (QR CODES, UPLOADS) ====================
 # CRITICAL: This is what makes QR codes visible
-MEDIA_URL = '/media/'
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-AUTH_USER_MODEL = 'userss.CustomUser'
+AUTH_USER_MODEL = "userss.CustomUser"
 
 
 # settings.py
 
-# ✅ Fetch Email Configuration Dynamically
-def get_email_settings():
-    """Fetch SMTP and Limit settings from database"""
-    settings = {
-        'EMAIL_HOST': 'smtp.gmail.com',
-        'EMAIL_PORT': 587,
-        'EMAIL_USE_TLS': True,
-        'EMAIL_HOST_USER': 'webeside.agency@gmail.com',
-        'EMAIL_HOST_PASSWORD': 'zxki gfti crqy xwry',
-        'DEFAULT_FROM_EMAIL': 'LMS System <webeside.agency@gmail.com>',
-        'EMAIL_DAILY_LIMIT': 50,
-    }
-    
-    try:
-        # Import models
-        from userss.models import EmailSMTPConfiguration, EmailLimitSet
-        
-        # Get SMTP Config
-        smtp = EmailSMTPConfiguration.objects.filter(is_active=True).first()
-        if smtp:
-            settings['EMAIL_HOST'] = smtp.email_host
-            settings['EMAIL_PORT'] = smtp.email_port
-            settings['EMAIL_USE_TLS'] = smtp.email_use_tls
-            settings['EMAIL_HOST_USER'] = smtp.email_host_user
-            settings['EMAIL_HOST_PASSWORD'] = smtp.email_host_password
-            settings['DEFAULT_FROM_EMAIL'] = smtp.default_from_email
-        
-        # Get Email Limit
-        limit = EmailLimitSet.objects.filter(is_active=True).first()
-        if limit:
-            settings['EMAIL_DAILY_LIMIT'] = limit.email_limit_per_day
-            
-    except Exception as e:
-        print(f"Error loading email settings: {e}")
-    
-    return settings
+import os
 
-# Apply configuration
-EMAIL_SETTINGS = get_email_settings()
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = EMAIL_SETTINGS['EMAIL_HOST']
-EMAIL_PORT = EMAIL_SETTINGS['EMAIL_PORT']
-EMAIL_USE_TLS = EMAIL_SETTINGS['EMAIL_USE_TLS']
-EMAIL_HOST_USER = EMAIL_SETTINGS['EMAIL_HOST_USER']
-EMAIL_HOST_PASSWORD = EMAIL_SETTINGS['EMAIL_HOST_PASSWORD']
-DEFAULT_FROM_EMAIL = EMAIL_SETTINGS['DEFAULT_FROM_EMAIL']
-EMAIL_DAILY_LIMIT_DEFAULT = EMAIL_SETTINGS['EMAIL_DAILY_LIMIT']
+# ✅ DEFAULT EMAIL SETTINGS (Startup ke liye)
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
+EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "webeside.agency@gmail.com")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "zxki gfti crqy xwry")
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL", "LMS System <webeside.agency@gmail.com>"
+)
+EMAIL_DAILY_LIMIT_DEFAULT = int(os.getenv("EMAIL_DAILY_LIMIT", 50))
+
+# ℹ️ Yeh settings AppConfig.ready() mein override ho jayengi
 
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-            'style': '{',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {process:d} {thread:d} {message}",
+            "style": "{",
         },
     },
-    'handlers': {
-        'file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': 'email_logs.log',
-            'formatter': 'verbose',
+    "handlers": {
+        "file": {
+            "level": "INFO",
+            "class": "logging.FileHandler",
+            "filename": "email_logs.log",
+            "formatter": "verbose",
         },
-        'console': {
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
+        "console": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
         },
     },
-    'loggers': {
-        'lms.views': {
-            'handlers': ['file', 'console'],
-            'level': 'INFO',
-            'propagate': True,
+    "loggers": {
+        "lms.views": {
+            "handlers": ["file", "console"],
+            "level": "INFO",
+            "propagate": True,
         },
     },
 }
@@ -262,7 +232,7 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 100 * 1024 * 1024  # 100MB
 
 CRONJOBS = [
     # ✅ Check every 5 minutes for ended sessions
-    ('*/5 * * * *', 'attendance.utils.mark_absent_for_ended_sessions'),
+    ("*/5 * * * *", "attendance.utils.mark_absent_for_ended_sessions"),
 ]
 
 # ✅ Cron job settings

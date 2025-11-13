@@ -5,13 +5,72 @@
 {% block title %}Course Modules - {{ course.title }}{% endblock %}
 
 {% block extra_css %}
+
 <style>
     .course-header {
         background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
         color: white;
-        padding: 25px;
+        padding: 30px;
         border-radius: 15px;
         margin-bottom: 30px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    .header-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .header-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 10px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .header-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        color: white;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .header-btn-primary {
+        background: white;
+        color: var(--primary-color);
+        border: none;
+    }
+
+    .header-btn-primary:hover {
+        background: #f8f9fa;
+        color: var(--primary-color);
+    }
+
+    .batch-dropdown .dropdown-menu {
+        border-radius: 10px;
+        border: none;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        padding: 10px;
+        min-width: 280px;
+    }
+
+    .batch-dropdown .dropdown-item {
+        border-radius: 8px;
+        padding: 12px 15px;
+        margin-bottom: 5px;
+        transition: all 0.2s ease;
+    }
+
+    .batch-dropdown .dropdown-item:hover {
+        background: #e3f2fd;
+        transform: translateX(5px);
     }
 
     .module-card {
@@ -49,6 +108,7 @@
         padding: 20px;
         text-align: center;
         border: none;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     }
 
     .action-btn {
@@ -98,7 +158,22 @@
         background: #e8f5e8;
         color: #388e3c;
     }
+
+    .course-info-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .course-badge {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 14px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
 </style>
+
 {% endblock %}
 
 {% block content %}
@@ -106,75 +181,79 @@
 
     <!-- Course Header -->
     <div class="course-header">
-        <div class="row align-items-center">
-            <div class="col-md-8">
+        <div class="row align-items-start">
+            <!-- Left Side - Course Info -->
+            <div class="col-lg-8 mb-4 mb-lg-0">
                 <div class="d-flex align-items-center mb-3">
-                    <i class="bi bi-collection me-3" style="font-size: 2rem;"></i>
+                    <i class="bi bi-collection me-3" style="font-size: 2.5rem;"></i>
                     <div>
-                        <h2 class="mb-1">{{ course.title }} - Modules</h2>
-                        <p class="mb-0 opacity-75">{{ course.course_code }} • Content Management</p>
+                        <h2 class="mb-1 fw-bold">{{ course.title }}</h2>
+                        <p class="mb-0 opacity-75 fs-6">{{ course.course_code }} • Content Management</p>
                     </div>
                 </div>
 
-                <div class="d-flex flex-wrap gap-3">
-                    <span class="badge bg-light text-dark fs-6">
+                <div class="course-info-badges">
+                    <span class="course-badge">
                         <i class="bi bi-collection me-1"></i>{{ total_modules }} modules
                     </span>
-                    <span class="badge bg-light text-dark fs-6">
+                    <span class="course-badge">
                         <i class="bi bi-play-circle me-1"></i>{{ total_lessons }} lessons
                     </span>
-                    <span class="badge bg-light text-dark fs-6">
+                    <span class="course-badge">
                         <i class="bi bi-people me-1"></i>{{ course.get_enrolled_count }} students
                     </span>
                 </div>
             </div>
 
-            <div class="col-md-4 text-end">
-                <div class="btn-group-vertical d-grid gap-2">
-                    <div class="col-md-4 text-end">
-                        <div class="btn-group-vertical d-grid gap-2">
-                            {% if batches %}
-                            <div class="dropdown">
-                                <button class="btn btn-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                    <i class="bi bi-plus-circle me-2"></i>Add Module to Batch
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li>
-                                        <h6 class="dropdown-header">Select Batch:</h6>
-                                    </li>
-                                    {% for batch in batches %}
-                                    <li>
-                                        <a class="dropdown-item"
-                                            href="{% url 'courses:instructor_create_batch_module' course.id batch.id %}">
-                                            <i class="bi bi-collection me-2"></i>{{ batch.name }}
-                                            <small class="text-muted d-block">{{ batch.get_enrolled_count }}
-                                                students</small>
-                                        </a>
-                                    </li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                            {% else %}
-                            <a href="{% url 'courses:instructor_batch_list' course.id %}" class="btn btn-light">
-                                <i class="bi bi-plus-circle me-2"></i>Create Batch First
-                            </a>
-                            {% endif %}
+            <!-- Right Side - Action Buttons -->
+            <div class="col-lg-4">
+                <div class="header-actions">
+                    <!-- Add Module Button -->
+                    <a href="{% url 'courses:create_module_instructor' course.id %}" class="header-btn header-btn-primary">
+                        <i class="bi bi-plus-circle me-2"></i>Add New Module
+                    </a>
 
-                            <a href="{% url 'courses:instructor_batch_list' course.id %}" class="btn btn-outline-light">
-                                <i class="bi bi-collection me-2"></i>Manage Batches
-                            </a>
-                        </div>
+                    <!-- Add Module to Batch Dropdown -->
+                    {% if batches %}
+                    <div class="batch-dropdown">
+                        <button class="header-btn w-100 dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-collection me-2"></i>Add Module to Batch
+                        </button>
+                        <ul class="dropdown-menu w-100">
+                            <li>
+                                <h6 class="dropdown-header text-primary fw-bold">
+                                    <i class="bi bi-collection me-2"></i>Select Batch
+                                </h6>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            {% for batch in batches %}
+                            <li>
+                                <a class="dropdown-item" href="{% url 'courses:instructor_create_batch_module' course.id batch.id %}">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-folder2-open me-2 text-primary"></i>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-medium">{{ batch.name }}</div>
+                                            <small class="text-muted">
+                                                <i class="bi bi-people me-1"></i>{{ batch.get_enrolled_count }} students
+                                            </small>
+                                        </div>
+                                    </div>
+                                </a>
+                            </li>
+                            {% endfor %}
+                        </ul>
                     </div>
-                    <a href="{% url 'courses:instructor_batch_list' course.id %}" class="btn btn-outline-light">
-                        <i class="bi bi-collection me-2"></i>View Batches
+                    {% else %}
+                    <a href="{% url 'courses:instructor_batch_list' course.id %}" class="header-btn">
+                        <i class="bi bi-plus-circle me-2"></i>Create Batch First
+                    </a>
+                    {% endif %}
+
+                    <!-- Manage Batches Button -->
+                    <a href="{% url 'courses:instructor_batch_list' course.id %}" class="header-btn">
+                        <i class="bi bi-collection me-2"></i>Manage Batches
                     </a>
                 </div>
-                <div class="col-md-4 text-end">
-            <a href="{% url 'courses:create_module_instructor' course.id %}" class="btn btn-light btn-lg">
-                <i class="fas fa-plus me-2"></i>
-                Add Module
-            </a>
-        </div>
             </div>
         </div>
     </div>
@@ -245,12 +324,6 @@
                             class="btn btn-light btn-sm">
                             <i class="bi bi-plus me-1"></i>Add Lesson
                         </a>
-                        <!-- <a href="{% url 'courses:edit_module' course.id module.id %}" class="btn btn-outline-light btn-sm">
-                            <i class="bi bi-pencil me-1"></i>Editt
-                        </a>
-                        <a href="{% url 'courses:delete_module' course.id module.id %}" class="btn btn-outline-danger btn-sm">
-                            <i class="bi bi-trash me-1"></i>Delete
-                        </a> -->
                     </div>
                 </div>
 
@@ -300,11 +373,6 @@
                                                 class="btn btn-outline-primary btn-sm" title="View">
                                                 <i class="bi bi-eye"></i>
                                             </a>
-                                            <!-- <a href="{% url 'courses:edit_lesson' course.id module.id lesson.id %}" 
-                                               class="btn btn-outline-warning btn-sm" title="Edit">
-                                                <i class="bi bi-pencil"></i>
-                                            </a> -->
-
                                         </div>
                                     </div>
                                 </div>

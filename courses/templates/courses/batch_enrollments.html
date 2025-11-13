@@ -1,5 +1,3 @@
-<!-- courses/templates/courses/batch_enrollments.html -->
-
 {% extends "base.html" %}
 {% load static %}
 
@@ -23,6 +21,13 @@
         </div>
     </div>
 
+    <!-- Status Alert -->
+    {% if not enrollment_allowed %}
+    <div class="alert alert-warning">
+        <i class="fas fa-exclamation-triangle me-2"></i>{{ status_message }}
+    </div>
+    {% endif %}
+
     <div class="row">
         <!-- Enrollment Stats -->
         <div class="col-md-3 mb-4">
@@ -39,9 +44,7 @@
             <div class="card bg-success text-white">
                 <div class="card-body text-center">
                     <i class="fas fa-user-check fa-2x mb-2"></i>
-                    <h4 class="mb-0">
-                        {{ enrollments|dictsort:"status"|dictsortreversed:"enrolled"|length }}
-                    </h4>
+                    <h4 class="mb-0">{{ enrollments|length }}</h4>
                     <small>Active Students</small>
                 </div>
             </div>
@@ -71,38 +74,126 @@
     </div>
 
     <div class="row">
-        <!-- Add Student Form -->
+        <!-- Add Student Forms -->
         <div class="col-md-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-success text-white">
-                    <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Add New Student</h5>
-                </div>
-                <div class="card-body">
-                    <form method="post">
-                        {% csrf_token %}
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.student.id_for_label }}" class="form-label">
-                                <strong>Select Student</strong>
-                            </label>
-                            {{ form.student }}
-                            {% if form.student.errors %}
-                                <div class="text-danger small mt-1">{{ form.student.errors.0 }}</div>
-                            {% endif %}
+            <!-- Tabs for Single/Bulk -->
+            <ul class="nav nav-tabs mb-3" id="enrollmentTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="single-tab" data-bs-toggle="tab" data-bs-target="#single" type="button" style="color: black !important;">
+                        <i class="fas fa-user me-1"></i>Single Student
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="bulk-tab" data-bs-toggle="tab" data-bs-target="#bulk" type="button" style="color: black !important;>
+                        <i class="fas fa-users me-1"></i>Bulk Enroll
+                    </button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="enrollmentTabContent">
+                <!-- Single Student Enrollment -->
+                <div class="tab-pane fade show active" id="single">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>Add Single Student</h5>
                         </div>
-                        
-                        <button type="submit" class="btn btn-success w-100">
-                            <i class="fas fa-plus me-2"></i>Enroll Student
-                        </button>
-                    </form>
-                    
-                    <hr>
-                    
-                    <div class="text-center">
-                        <small class="text-muted">
-                            <i class="fas fa-info-circle me-1"></i>
-                            Students must have 'student' role to be enrolled
-                        </small>
+                        <div class="card-body">
+                            <form method="post">
+                                {% csrf_token %}
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.student.id_for_label }}" class="form-label">
+                                        <strong>Select Student</strong>
+                                    </label>
+                                    {{ form.student }}
+                                    {% if form.student.errors %}
+                                        <div class="text-danger small mt-1">{{ form.student.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <button type="submit" name="single_enroll" class="btn btn-success w-100" {% if not enrollment_allowed %}disabled{% endif %}>
+                                    <i class="fas fa-plus me-2"></i>Enroll Student
+                                </button>
+                            </form>
+                            
+                            <hr>
+                            
+                            <div class="text-center">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Students must have 'student' role to be enrolled
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bulk Student Enrollment -->
+                <div class="tab-pane fade" id="bulk">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0"><i class="fas fa-users me-2"></i>Bulk Enroll Students</h5>
+                        </div>
+                        <div class="card-body">
+                            <form method="post" id="bulkEnrollForm">
+                                {% csrf_token %}
+                                
+                                <div class="mb-3">
+                                    <label class="form-label">
+                                        <strong>Select Multiple Students</strong>
+                                    </label>
+                                    
+                                    <!-- Search Box -->
+                                    <input type="text" id="studentSearch" class="form-control mb-2" placeholder="Search students...">
+                                    
+                                    <!-- Select All -->
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="checkbox" id="selectAllEnroll">
+                                        <label class="form-check-label fw-bold" for="selectAllEnroll">
+                                            Select All
+                                        </label>
+                                    </div>
+                                    
+                                    <hr>
+                                    
+                                    <!-- Students List -->
+                                    <div style="max-height: 400px; overflow-y: auto;" id="studentsList">
+                                        {% for student in bulk_form.students.field.queryset %}
+                                        <div class="form-check student-item" data-student-name="{{ student.get_full_name|default:student.username|lower }}">
+                                            <input class="form-check-input student-checkbox" type="checkbox" 
+                                                   name="students" value="{{ student.id }}" 
+                                                   id="student_{{ student.id }}">
+                                            <label class="form-check-label" for="student_{{ student.id }}">
+                                                <div class="d-flex align-items-center">
+                                                    <i class="fas fa-user-circle text-primary me-2"></i>
+                                                    <div>
+                                                        <div>{{ student.get_full_name|default:student.username }}</div>
+                                                        <small class="text-muted">{{ student.email }}</small>
+                                                    </div>
+                                                </div>
+                                            </label>
+                                        </div>
+                                        <hr class="my-2">
+                                        {% empty %}
+                                        <p class="text-muted text-center">No students available</p>
+                                        {% endfor %}
+                                    </div>
+                                    
+                                    {% if bulk_form.students.errors %}
+                                        <div class="text-danger small mt-2">{{ bulk_form.students.errors.0 }}</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="alert alert-info small">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    <span id="selectedEnrollCount">0</span> students selected
+                                </div>
+                                
+                                <button type="submit" name="bulk_enroll" class="btn btn-primary w-100" {% if not enrollment_allowed %}disabled{% endif %}>
+                                    <i class="fas fa-users me-2"></i>Enroll Selected Students
+                                </button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -114,25 +205,52 @@
                 <div class="card-header bg-primary text-white">
                     <div class="d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="fas fa-list me-2"></i>Enrolled Students</h5>
-                        <span class="badge bg-light text-dark">{{ enrollments|length }} students</span>
+                        <div>
+                            <span class="badge bg-light text-dark me-2">{{ enrollments|length }} students</span>
+                            <button class="btn btn-sm btn-danger" id="bulkRemoveBtn" style="display: none;" onclick="bulkRemoveStudents()">
+                                <i class="fas fa-trash me-1"></i>Remove Selected (<span id="selectedRemoveCount">0</span>)
+                            </button>
+                        </div>
                     </div>
                 </div>
                 
                 <div class="card-body p-0">
                     {% if enrollments %}
+                        <!-- Search Box for Enrolled Students -->
+                        <div class="p-3 border-bottom">
+                            <input type="text" id="enrolledStudentSearch" class="form-control" placeholder="Search enrolled students...">
+                        </div>
+
+                        <!-- Select All for Remove -->
+                        <div class="p-3 border-bottom bg-light">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="selectAllRemove">
+                                <label class="form-check-label fw-bold" for="selectAllRemove">
+                                    Select All Students
+                                </label>
+                            </div>
+                        </div>
+
                         <div class="table-responsive">
                             <table class="table table-hover mb-0">
                                 <thead class="table-light">
                                     <tr>
+                                        <th style="width: 50px;">
+                                            <i class="fas fa-check-square"></i>
+                                        </th>
                                         <th><i class="fas fa-user me-1"></i>Student</th>
                                         <th><i class="fas fa-calendar me-1"></i>Enrolled</th>
                                         <th><i class="fas fa-flag me-1"></i>Status</th>
                                         <th><i class="fas fa-cogs me-1"></i>Actions</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="enrolledStudentsTable">
                                     {% for enrollment in enrollments %}
-                                        <tr>
+                                        <tr class="enrolled-student-row" data-student-name="{{ enrollment.student.get_full_name|default:enrollment.student.username|lower }}">
+                                            <td>
+                                                <input class="form-check-input enrollment-checkbox" type="checkbox" 
+                                                       value="{{ enrollment.id }}" id="enroll_{{ enrollment.id }}">
+                                            </td>
                                             <td>
                                                 <div class="d-flex align-items-center">
                                                     <div class="me-3">
@@ -202,7 +320,7 @@
                         <div class="text-center py-5">
                             <i class="fas fa-user-plus text-muted fa-3x mb-3"></i>
                             <h5 class="text-muted">No Students Enrolled</h5>
-                            <p class="text-muted">Use the form on the left to add your first student to this batch.</p>
+                            <p class="text-muted">Use the forms on the left to add students to this batch.</p>
                         </div>
                     {% endif %}
                 </div>
@@ -212,6 +330,146 @@
 </div>
 
 <script>
+// ==================== ENROLL TAB FUNCTIONALITY ====================
+
+// Select All for Enrollment
+document.getElementById('selectAllEnroll')?.addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.student-checkbox');
+    checkboxes.forEach(checkbox => {
+        if (checkbox.closest('.student-item').style.display !== 'none') {
+            checkbox.checked = this.checked;
+        }
+    });
+    updateEnrollSelectedCount();
+});
+
+// Update selected count for enrollment
+function updateEnrollSelectedCount() {
+    const checkedBoxes = document.querySelectorAll('.student-checkbox:checked');
+    document.getElementById('selectedEnrollCount').textContent = checkedBoxes.length;
+}
+
+// Add event listeners to enrollment checkboxes
+document.querySelectorAll('.student-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', updateEnrollSelectedCount);
+});
+
+// Search functionality for enrollment
+document.getElementById('studentSearch')?.addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const studentItems = document.querySelectorAll('.student-item');
+    
+    studentItems.forEach(item => {
+        const studentName = item.getAttribute('data-student-name');
+        if (studentName.includes(searchTerm)) {
+            item.style.display = 'block';
+            item.nextElementSibling.style.display = 'block';
+        } else {
+            item.style.display = 'none';
+            item.nextElementSibling.style.display = 'none';
+        }
+    });
+});
+
+// ==================== REMOVE TAB FUNCTIONALITY ====================
+
+// Select All for Remove
+document.getElementById('selectAllRemove')?.addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.enrollment-checkbox');
+    checkboxes.forEach(checkbox => {
+        if (checkbox.closest('.enrolled-student-row').style.display !== 'none') {
+            checkbox.checked = this.checked;
+        }
+    });
+    updateRemoveSelectedCount();
+});
+
+// Update selected count for removal
+function updateRemoveSelectedCount() {
+    const checkedBoxes = document.querySelectorAll('.enrollment-checkbox:checked');
+    const count = checkedBoxes.length;
+    document.getElementById('selectedRemoveCount').textContent = count;
+    
+    // Show/hide bulk remove button
+    const bulkRemoveBtn = document.getElementById('bulkRemoveBtn');
+    if (count > 0) {
+        bulkRemoveBtn.style.display = 'inline-block';
+    } else {
+        bulkRemoveBtn.style.display = 'none';
+    }
+}
+
+// Add event listeners to enrollment checkboxes for removal
+document.querySelectorAll('.enrollment-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', updateRemoveSelectedCount);
+});
+
+// Search functionality for enrolled students
+document.getElementById('enrolledStudentSearch')?.addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const studentRows = document.querySelectorAll('.enrolled-student-row');
+    
+    studentRows.forEach(row => {
+        const studentName = row.getAttribute('data-student-name');
+        if (studentName.includes(searchTerm)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+});
+
+// Bulk Remove Students
+function bulkRemoveStudents() {
+    const checkedBoxes = document.querySelectorAll('.enrollment-checkbox:checked');
+    const enrollmentIds = Array.from(checkedBoxes).map(cb => cb.value);
+    
+    if (enrollmentIds.length === 0) {
+        alert('Please select at least one student to remove.');
+        return;
+    }
+    
+    if (!confirm(`Are you sure you want to remove ${enrollmentIds.length} student(s) from this batch?\n\nThis action cannot be undone.`)) {
+        return;
+    }
+    
+    // Show loading state
+    const bulkRemoveBtn = document.getElementById('bulkRemoveBtn');
+    const originalText = bulkRemoveBtn.innerHTML;
+    bulkRemoveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Removing...';
+    bulkRemoveBtn.disabled = true;
+    
+    fetch('{% url "courses:bulk_remove_batch_enrollments" course.id batch.id %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            enrollment_ids: enrollmentIds
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(data.message);
+            location.reload();
+        } else {
+            alert('Error: ' + data.message);
+            bulkRemoveBtn.innerHTML = originalText;
+            bulkRemoveBtn.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Something went wrong. Please try again.');
+        bulkRemoveBtn.innerHTML = originalText;
+        bulkRemoveBtn.disabled = false;
+    });
+}
+
+// ==================== INDIVIDUAL OPERATIONS ====================
+
 function changeStatus(enrollmentId, newStatus) {
     if (!confirm('Are you sure you want to change this student\'s status?')) {
         return;
@@ -267,4 +525,5 @@ function removeStudent(enrollmentId) {
     });
 }
 </script>
+
 {% endblock %}

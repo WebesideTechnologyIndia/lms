@@ -71,10 +71,14 @@ class CourseForm(forms.ModelForm):
         # Filter instructors
         self.fields['instructor'].queryset = User.objects.filter(role='instructor', is_active=True)
         self.fields['co_instructors'].queryset = User.objects.filter(role='instructor', is_active=True)
-        
+
         # Make some fields required
         self.fields['category'].required = True
         self.fields['instructor'].required = True
+
+        # YEH ADD KARO - Price ko not required banao
+        self.fields['price'].required = False
+        self.fields['discounted_price'].required = False
         
     def clean(self):
         cleaned_data = super().clean()
@@ -723,7 +727,6 @@ class SimpleBatchLessonForm(forms.ModelForm):
             'order': 'Order in which this lesson appears (auto-set if empty)'
         }
 
-
 class BatchEnrollForm(forms.ModelForm):
     """Simple enrollment form"""
     
@@ -739,6 +742,17 @@ class BatchEnrollForm(forms.ModelForm):
         self.fields['student'].queryset = User.objects.filter(role='student', is_active=True)
 
 
+# Naya form for bulk enrollment
+class BulkBatchEnrollForm(forms.Form):
+    students = forms.ModelMultipleChoiceField(
+        queryset=User.objects.filter(role='student', is_active=True),
+        widget=forms.CheckboxSelectMultiple(attrs={
+            'class': 'form-check-input'
+        }),
+        label='Select Students',
+        required=True
+    )
+    
 # courses/forms.py - Create this file or add to existing forms
 
 from django import forms

@@ -1563,7 +1563,10 @@ def attendance_analytics(request):
         'batch_stats': batch_stats,
         'recent_sessions': recent_sessions,
         'page_title': 'Attendance Analytics',
-        'base_template': base_template  # ✅ Add this
+        'base_template': base_template,
     }
     
     return render(request, 'attendance/attendance_analytics.html', context)
+
+
+
