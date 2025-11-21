@@ -51,7 +51,16 @@ INSTALLED_APPS = [
     "ckeditor",
     "ckeditor_uploader",
     "attendance",
+    'certificates',
+    'tinymce',
 ]
+
+TINYMCE_DEFAULT_CONFIG = {
+    'height': 600,
+    'width': '100%',
+    'plugins': 'code table link image',
+    'toolbar': 'undo redo | bold italic | alignleft aligncenter alignright | code',
+}
 
 CKEDITOR_UPLOAD_PATH = "uploads/"
 CKEDITOR_CONFIGS = {
@@ -237,3 +246,6 @@ CRONJOBS = [
 
 # ✅ Cron job settings
 CRONTAB_LOCK_JOBS = True  # Prevent duplicate runs
+
+
+

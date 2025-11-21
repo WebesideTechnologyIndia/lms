@@ -50,7 +50,13 @@ urlpatterns = [
     # AJAX/API URLs
     path('api/update-registration/<int:registration_id>/', views.update_registration_status, name='update_registration_status'),
     path('api/upcoming-webinars/', views.api_upcoming_webinars, name='api_upcoming_webinars'),
-    
+    # Student Panel URLs - Add these
+path('student/my-webinars/', views.student_my_webinars, name='student_my_webinars'),
+path('student/browse/', views.student_browse_webinars, name='student_browse_webinars'),
+path('student/history/', views.student_webinar_history, name='student_webinar_history'),
+path('student/webinar/<int:webinar_id>/', views.student_webinar_detail, name='student_webinar_detail'),
+path('student/quick-register/<int:webinar_id>/', views.student_quick_register, name='student_quick_register'),
+path('admin/registration/<int:registration_id>/send-payment-reminder/', views.admin_send_payment_reminder, name='admin_send_payment_reminder'),
     # Testing URLs
     path('test/', views.simple_landing, name='simple_landing'),
     path('ajax-register/', views.ajax_register, name='ajax_register'),

@@ -501,6 +501,42 @@ def manage_student_fees(request):
     
     return render(request, 'fees/manage_student_fees.html', context)
 
+
+
+
+@login_required
+def edit_student_fee_assignment(request, pk):
+    """Edit existing student fee assignment"""
+    if not check_admin_permission(request.user):
+        messages.error(request, "Access denied")
+        return redirect('admin_dashboard')
+    
+    assignment = get_object_or_404(StudentFeeAssignment, pk=pk)
+    
+    if request.method == 'POST':
+        form = StudentFeeAssignmentForm(request.POST, instance=assignment)
+        if form.is_valid():
+            updated_assignment = form.save(commit=False)
+            updated_assignment.assigned_by = request.user
+            updated_assignment.save()
+            messages.success(request, f"Fee assignment updated for {updated_assignment.student.get_full_name()}")
+            return redirect('fees:manage_student_fees')
+    else:
+        form = StudentFeeAssignmentForm(instance=assignment)
+    
+    context = {
+        'form': form,
+        'title': 'Edit Fee Assignment',
+        'assignment': assignment,
+        'is_edit': True,
+    }
+    
+    return render(request, 'fees/student_fee_assignment_form.html', context)
+
+from decimal import Decimal
+from django.db.models import Sum, Q
+from datetime import date
+
 @login_required
 def assign_fee_to_student(request):
     """Assign fee structure to student"""
@@ -526,6 +562,11 @@ def assign_fee_to_student(request):
     
     return render(request, 'fees/student_fee_assignment_form.html', context)
 
+
+
+
+
+
 @login_required
 def student_fee_detail(request, assignment_id):
     """View detailed fee information for a student"""
@@ -538,25 +579,36 @@ def student_fee_detail(request, assignment_id):
         id=assignment_id
     )
     
-    # Calculate total paid amount
+    # Calculate total paid amount from PaymentRecord (source of truth)
     total_paid = PaymentRecord.objects.filter(
         fee_assignment=assignment,
         status='completed'
-    ).aggregate(total=Sum('amount'))['total'] or 0
+    ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+    
+    # Sync assignment's amount_paid if needed
+    if assignment.amount_paid != total_paid:
+        assignment.amount_paid = total_paid
+        assignment.save(update_fields=['amount_paid', 'amount_pending'])
     
     # Check if payment is complete
     is_payment_complete = total_paid >= assignment.total_amount
     
-    # Get EMI schedule - only show if payment is not complete
+    # Calculate pending amount
+    amount_pending = assignment.total_amount - total_paid
+    
+    # Get EMI schedule
+    emi_schedules = assignment.emi_schedules.all().order_by('installment_number')
+    
+    # Calculate overdue information
     if is_payment_complete:
-        emi_schedules = EMISchedule.objects.none()  # Empty queryset
         overdue_emis = EMISchedule.objects.none()
-        overdue_amount = 0
+        overdue_amount = Decimal('0.00')
     else:
-        emi_schedules = assignment.emi_schedules.all().order_by('installment_number')
-        # Calculate overdue information
-        overdue_emis = emi_schedules.filter(status='overdue')
-        overdue_amount = overdue_emis.aggregate(total=Sum('amount'))['total'] or 0
+        overdue_emis = emi_schedules.filter(
+            status='overdue',
+            due_date__lt=date.today()
+        )
+        overdue_amount = overdue_emis.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
     
     # Get payment history
     payments = assignment.payments.filter(status='completed').order_by('-payment_date')
@@ -573,13 +625,12 @@ def student_fee_detail(request, assignment_id):
         'batch_controls': batch_controls,
         'overdue_emis': overdue_emis,
         'overdue_amount': overdue_amount,
-        'is_payment_complete': is_payment_complete,  # Template me use karo
+        'is_payment_complete': is_payment_complete,
         'total_paid': total_paid,
+        'amount_pending': amount_pending,
     }
     
     return render(request, 'fees/student_fee_detail.html', context)
-
-
 # ==================== PAYMENT MANAGEMENT ====================
 
 # fees/views.py - Updated views with AJAX endpoints
@@ -2092,8 +2143,8 @@ def handle_unlock_course(request, reason):
     except Exception as e:
         return JsonResponse({'success': False, 'message': f'Error unlocking course: {str(e)}'})
 
-# fees/views.py - Updated with debugging
 
+# fees/views.py - Updated with debugging
 def handle_lock_batch(request, reason):
     """Lock ONLY this specific batch - NOT course"""
     student_id = request.POST.get('student_id')
@@ -2113,23 +2164,23 @@ def handle_lock_batch(request, reason):
         print(f"Student found: {student.username}")
         print(f"Batch found: {batch.name}")
         
-        # METHOD 1: Use BatchAccessControl (RECOMMENDED)
+        # Update/Create BatchAccessControl - LOCKED
         batch_control, created = BatchAccessControl.objects.update_or_create(
             student=student,
             batch=batch,
             defaults={
-                'access_type': 'locked',
-                'is_access_allowed': False,  # THIS is the lock
+                'access_type': 'locked',  # Use access_type field, not is_access_allowed
                 'reason': reason,
                 'created_by': request.user,
-                'effective_from': date.today()
+                'effective_from': date.today(),
+                'override_access': False,  # No override when locking
             }
         )
         
         print(f"BatchAccessControl {'created' if created else 'updated'}")
-        print(f"is_access_allowed: {batch_control.is_access_allowed}")
+        print(f"access_type: {batch_control.access_type}")
         
-        # Optional: Also deactivate enrollment for extra safety
+        # Also deactivate batch enrollment
         enrollment = BatchEnrollment.objects.filter(
             student=student,
             batch=batch
@@ -2146,7 +2197,7 @@ def handle_lock_batch(request, reason):
             'debug': {
                 'batch_id': batch.id,
                 'student_id': student.id,
-                'is_access_allowed': batch_control.is_access_allowed,
+                'access_type': batch_control.access_type,
                 'enrollment_active': enrollment.is_active if enrollment else None
             }
         })
@@ -2173,23 +2224,23 @@ def handle_unlock_batch(request, reason):
         student = get_object_or_404(CustomUser, id=student_id, role='student')
         batch = get_object_or_404(Batch, id=batch_id)
         
-        # METHOD 1: Update BatchAccessControl
+        # Update/Create BatchAccessControl - UNLOCKED
         batch_control, created = BatchAccessControl.objects.update_or_create(
             student=student,
             batch=batch,
             defaults={
-                'access_type': 'unlocked',
-                'is_access_allowed': True,  # THIS unlocks it
+                'access_type': 'unlocked',  # Use access_type field
                 'reason': reason,
                 'created_by': request.user,
-                'override_access': True,
+                'effective_from': date.today(),
+                'override_access': True,  # Admin override
                 'override_reason': reason
             }
         )
         
-        print(f"BatchAccessControl unlocked: {batch_control.is_access_allowed}")
+        print(f"BatchAccessControl unlocked: {batch_control.access_type}")
         
-        # METHOD 2: Activate enrollment
+        # Activate batch enrollment
         enrollment = BatchEnrollment.objects.filter(
             student=student,
             batch=batch
@@ -2204,13 +2255,15 @@ def handle_unlock_batch(request, reason):
             'success': True,
             'message': f'Batch "{batch.name}" unlocked for {student.get_full_name()}',
             'debug': {
-                'is_access_allowed': batch_control.is_access_allowed,
+                'access_type': batch_control.access_type,
                 'enrollment_active': enrollment.is_active if enrollment else None
             }
         })
         
     except Exception as e:
         print(f"ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return JsonResponse({'success': False, 'message': f'Error: {str(e)}'})
 
 
@@ -2258,6 +2311,8 @@ def handle_lock_course(request, reason):
     except Exception as e:
         print(f"ERROR: {str(e)}")
         return JsonResponse({'success': False, 'message': f'Error: {str(e)}'})
+
+
 
 @require_POST
 @login_required

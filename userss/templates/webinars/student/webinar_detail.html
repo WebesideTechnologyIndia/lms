@@ -1,0 +1,167 @@
+{% extends 'students/student_base.html' %}
+{% load static %}
+
+{% block title %}{{ webinar.title }} - Student Panel{% endblock %}
+
+{% block page_title %}Webinar Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <!-- Main Content -->
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <h4 class="mb-0">{{ webinar.title }}</h4>
+                </div>
+                <div class="card-body">
+                    <!-- Webinar Info -->
+                    <div class="row mb-4">
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <i class="fas fa-calendar text-primary me-2"></i>
+                                <strong>Date:</strong> {{ webinar.scheduled_date|date:"F d, Y" }}
+                            </p>
+                            <p class="mb-2">
+                                <i class="fas fa-clock text-primary me-2"></i>
+                                <strong>Time:</strong> {{ webinar.scheduled_date|date:"h:i A" }}
+                            </p>
+                            <p class="mb-2">
+                                <i class="fas fa-hourglass text-primary me-2"></i>
+                                <strong>Duration:</strong> {{ webinar.duration_minutes }} minutes
+                            </p>
+                        </div>
+                        <div class="col-md-6">
+                            <p class="mb-2">
+                                <i class="fas fa-user text-primary me-2"></i>
+                                <strong>Instructor:</strong> {{ webinar.instructor.get_full_name }}
+                            </p>
+                            <p class="mb-2">
+                                <i class="fas fa-tag text-primary me-2"></i>
+                                <strong>Type:</strong>
+                                {% if webinar.webinar_type == 'free' %}
+                                    <span class="badge bg-success">FREE</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">PAID - ₹{{ webinar.price }}</span>
+                                {% endif %}
+                            </p>
+                            <p class="mb-2">
+                                <i class="fas fa-users text-primary me-2"></i>
+                                <strong>Spots:</strong> {{ webinar.get_available_spots }} available
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Description -->
+                    <h5 class="mb-3">About This Webinar</h5>
+                    <p>{{ webinar.description|linebreaks }}</p>
+
+                    <!-- Join Link Section -->
+                    {% if time_until_start != None %}
+                    <div class="alert alert-info mt-4">
+                        <h6 class="alert-heading">
+                            <i class="fas fa-info-circle me-2"></i>Webinar Access
+                        </h6>
+                        {% if can_join %}
+                            {% if webinar.webinar_link %}
+                                <p class="mb-2">The webinar is ready to join!</p>
+                                <a href="{{ webinar.webinar_link }}" target="_blank" class="btn btn-success">
+                                    <i class="fas fa-video me-2"></i>Join Now
+                                </a>
+                            {% else %}
+                                <p class="mb-0">Join link will be available shortly.</p>
+                            {% endif %}
+                        {% elif time_until_start > 0 %}
+                            <p class="mb-0">
+                                Webinar starts in <strong>{{ time_until_start }} minutes</strong>. 
+                                Join link will be available 15 minutes before start time.
+                            </p>
+                        {% else %}
+                            <p class="mb-0">This webinar has ended.</p>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Registration Status -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-check-circle me-2"></i>Registration Status
+                    </h6>
+                </div>
+               <div class="card-body">
+    <p class="mb-2">
+        <strong>Status:</strong>
+        {% if registration.status == 'attended' %}
+            <span class="badge bg-success">
+                <i class="fas fa-check-circle me-1"></i>{{ registration.get_status_display }}
+            </span>
+        {% elif registration.status == 'registered' %}
+            <span class="badge bg-primary">
+                <i class="fas fa-user-check me-1"></i>{{ registration.get_status_display }}
+            </span>
+        {% elif registration.status == 'no_show' %}
+            <span class="badge bg-danger">
+                <i class="fas fa-times-circle me-1"></i>{{ registration.get_status_display }}
+            </span>
+        {% elif registration.status == 'cancelled' %}
+            <span class="badge bg-secondary">
+                <i class="fas fa-ban me-1"></i>{{ registration.get_status_display }}
+            </span>
+        {% else %}
+            <span class="badge bg-info">{{ registration.get_status_display }}</span>
+        {% endif %}
+    </p>
+    <p class="mb-2">
+        <strong>Registered On:</strong><br>
+        {{ registration.registered_at|date:"M d, Y h:i A" }}
+    </p>
+    
+    {% if webinar.webinar_type == 'paid' %}
+    <hr>
+    <p class="mb-2">
+        <strong>Payment Status:</strong>
+        {% if registration.payment_status == 'paid' %}
+            <span class="badge bg-success">
+                <i class="fas fa-check-circle me-1"></i>Paid
+            </span>
+        {% else %}
+            <span class="badge bg-warning text-dark">
+                <i class="fas fa-exclamation-triangle me-1"></i>Pending
+            </span>
+        {% endif %}
+    </p>
+    {% if registration.payment_status != 'paid' %}
+    <a href="{% url 'webinars:confirm_payment' registration.id %}" class="btn btn-warning btn-sm w-100 mt-2">
+        <i class="fas fa-credit-card me-1"></i>Complete Payment
+    </a>
+    {% endif %}
+    {% endif %}
+</div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h6 class="mb-0">
+                        <i class="fas fa-bolt me-2"></i>Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <a href="{% url 'webinars:student_my_webinars' %}" class="btn btn-outline-primary btn-sm w-100 mb-2">
+                        <i class="fas fa-arrow-left me-1"></i>Back to My Webinars
+                    </a>
+                    <a href="{% url 'webinars:student_browse_webinars' %}" class="btn btn-outline-secondary btn-sm w-100">
+                        <i class="fas fa-search me-1"></i>Browse More Webinars
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

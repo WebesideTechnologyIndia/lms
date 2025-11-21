@@ -5,132 +5,557 @@
 {% block title %}Student Management - Instructor Panel{% endblock %}
 
 {% block extra_css %}
+
 <style>
-.stats-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 15px;
-    padding: 20px;
-    margin-bottom: 20px;
-}
+    .page-header {
+        margin-bottom: 30px;
+        animation: slideDown 0.5s ease;
+    }
 
-.filter-section {
-    background: #f8f9fa;
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 25px;
-}
+    @keyframes slideDown {
+        from {
+            opacity: 0;
+            transform: translateY(-20px);
+        }
 
-.student-table {
-    background: white;
-    border-radius: 10px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    overflow: hidden;
-}
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 
-.student-table th {
-    background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
-    color: white;
-    border: none;
-    padding: 15px 12px;
-    font-weight: 600;
-}
+    .page-header h2 {
+        color: #1f2937;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
 
-.student-table td {
-    padding: 12px;
-    vertical-align: middle;
-    border-bottom: 1px solid #eee;
-}
+    .page-header h2 i {
+        color: #6366f1;
+    }
 
-.student-table tbody tr:hover {
-    background-color: #f8f9fa;
-}
+    .stats-card {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        transition: all 0.3s ease;
+        border-left: 4px solid #6366f1;
+        animation: fadeIn 0.6s ease;
+        position: relative;
+        overflow: hidden;
+    }
 
-.status-badge {
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-}
+    .stats-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 100px;
+        height: 100px;
+        background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(79, 70, 229, 0.05) 100%);
+        border-radius: 0 0 0 100%;
+    }
 
-.status-enrolled { background: #d4edda; color: #155724; }
-.status-completed { background: #d1ecf1; color: #0c5460; }
-.status-dropped { background: #f8d7da; color: #721c24; }
-.status-suspended { background: #fff3cd; color: #856404; }
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
 
-.btn-toggle {
-    padding: 5px 15px;
-    border-radius: 20px;
-    border: none;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 
-.btn-toggle.active {
-    background: #28a745;
-    color: white;
-}
+    .stats-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 30px rgba(99, 102, 241, 0.2);
+    }
 
-.btn-toggle.inactive {
-    background: #dc3545;
-    color: white;
-}
+    .stats-card:nth-child(1) {
+        border-left-color: #6366f1;
+        animation-delay: 0.1s;
+    }
 
-.progress-bar-custom {
-    height: 8px;
-    border-radius: 4px;
-    background: #e9ecef;
-    overflow: hidden;
-}
+    .stats-card:nth-child(2) {
+        border-left-color: #10b981;
+        animation-delay: 0.2s;
+    }
 
-.progress-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #28a745 0%, #20c997 100%);
-    transition: width 0.3s ease;
-}
+    .stats-card:nth-child(3) {
+        border-left-color: #f59e0b;
+        animation-delay: 0.3s;
+    }
 
-.action-buttons .btn {
-    padding: 5px 10px;
-    margin: 2px;
-    border-radius: 5px;
-    font-size: 12px;
-}
+    .stats-card:nth-child(4) {
+        border-left-color: #ef4444;
+        animation-delay: 0.4s;
+    }
 
-.pagination-custom {
-    margin-top: 20px;
-}
+    .stats-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        margin-bottom: 15px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transition: transform 0.3s ease;
+    }
 
-.search-box {
-    position: relative;
-}
+    .stats-card:hover .stats-icon {
+        transform: scale(1.1) rotate(5deg);
+    }
 
-.search-box input {
-    padding-left: 40px;
-}
+    .stats-card:nth-child(1) .stats-icon {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: white;
+    }
 
-.search-box i {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #6c757d;
-}
+    .stats-card:nth-child(2) .stats-icon {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+    }
+
+    .stats-card:nth-child(3) .stats-icon {
+        background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        color: white;
+    }
+
+    .stats-card:nth-child(4) .stats-icon {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+    }
+
+    .stats-number {
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 8px;
+        animation: countUp 1s ease;
+        position: relative;
+        z-index: 1;
+    }
+
+    @keyframes countUp {
+        from {
+            opacity: 0;
+            transform: scale(0.5);
+        }
+
+        to {
+            opacity: 1;
+            transform: scale(1);
+        }
+    }
+
+    .stats-label {
+        color: #6b7280;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        font-weight: 600;
+        position: relative;
+        z-index: 1;
+    }
+
+    .filter-section {
+        background: white;
+        border-radius: 15px;
+        padding: 25px;
+        margin-bottom: 25px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        animation: fadeIn 0.7s ease;
+    }
+
+    .filter-section h5 {
+        color: #1f2937;
+        font-weight: 700;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .filter-section h5 i {
+        color: #6366f1;
+    }
+
+    .form-control,
+    .form-select {
+        border: 2px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 10px 15px;
+        transition: all 0.3s ease;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+        transform: translateY(-1px);
+    }
+
+    .student-table {
+        background: white;
+        border-radius: 15px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        animation: fadeIn 0.8s ease;
+    }
+
+    .table {
+        margin-bottom: 0;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .table thead th {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: white;
+        border: none;
+        padding: 16px 15px;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        letter-spacing: 0.5px;
+        position: relative;
+    }
+
+    .table thead th:first-child {
+        border-top-left-radius: 15px;
+    }
+
+    .table thead th:last-child {
+        border-top-right-radius: 15px;
+    }
+
+    .table tbody td {
+        padding: 16px 15px;
+        vertical-align: middle;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    .table tbody tr {
+        transition: all 0.3s ease;
+        background: white;
+    }
+
+    .table tbody tr:hover {
+        background: linear-gradient(to right, #f8fafc 0%, #f1f5f9 100%);
+        transform: scale(1.005);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        position: relative;
+        z-index: 1;
+    }
+
+    .student-avatar-wrapper {
+        width: 45px;
+        height: 45px;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        transition: transform 0.3s ease;
+    }
+
+    .student-avatar-wrapper:hover {
+        transform: scale(1.1) rotate(5deg);
+    }
+
+    .student-avatar-wrapper img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .student-avatar-placeholder {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: white;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 1.1rem;
+    }
+
+    .status-badge {
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .status-enrolled {
+        background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+        color: #166534;
+    }
+
+    .status-completed {
+        background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+        color: #1e40af;
+    }
+
+    .status-dropped {
+        background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+        color: #991b1b;
+    }
+
+    .status-suspended {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        color: #92400e;
+    }
+
+    .btn-toggle {
+        padding: 6px 16px;
+        border-radius: 8px;
+        border: none;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .btn-toggle.active {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+    }
+
+    .btn-toggle.active:hover {
+        background: linear-gradient(135deg, #059669 0%, #047857 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .btn-toggle.inactive {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        color: white;
+    }
+
+    .btn-toggle.inactive:hover {
+        background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
+
+    .progress-bar-custom {
+        height: 10px;
+        border-radius: 6px;
+        background: #e9ecef;
+        overflow: hidden;
+        box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+        transition: width 0.5s ease;
+        box-shadow: 0 1px 3px rgba(16, 185, 129, 0.5);
+    }
+
+    .action-buttons .btn {
+        padding: 6px 12px;
+        margin: 2px;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        transition: all 0.3s ease;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .action-buttons .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+
+    .btn-outline-primary {
+        border: 2px solid #6366f1;
+        color: #6366f1;
+    }
+
+    .btn-outline-primary:hover {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: white;
+        border-color: #6366f1;
+    }
+
+    .btn-outline-success {
+        border: 2px solid #10b981;
+        color: #10b981;
+    }
+
+    .btn-outline-success:hover {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        color: white;
+        border-color: #10b981;
+    }
+
+    .btn-outline-secondary {
+        border: 2px solid #6b7280;
+        color: #6b7280;
+    }
+
+    .btn-outline-secondary:hover {
+        background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+        color: white;
+        border-color: #6b7280;
+    }
+
+    .search-box {
+        position: relative;
+    }
+
+    .search-box input {
+        padding-left: 45px;
+    }
+
+    .search-box i {
+        position: absolute;
+        left: 18px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #9ca3af;
+        transition: color 0.3s ease;
+    }
+
+    .search-box input:focus~i {
+        color: #6366f1;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        border: none;
+        border-radius: 10px;
+        padding: 10px 20px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:hover {
+        background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 15px;
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        color: #9ca3af;
+        margin-bottom: 20px;
+        animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+
+        0%,
+        100% {
+            transform: translateY(0);
+        }
+
+        50% {
+            transform: translateY(-10px);
+        }
+    }
+
+    #bulkActionsBar {
+        box-shadow: 0 -4px 20px rgba(99, 102, 241, 0.3);
+        animation: slideUp 0.3s ease;
+    }
+
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translate(-50%, 20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translate(-50%, 0);
+        }
+    }
+
+    .badge {
+        padding: 6px 12px;
+        border-radius: 8px;
+        font-weight: 600;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .badge.bg-info {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%) !important;
+    }
+
+    .pagination-custom .page-link {
+        border-radius: 8px;
+        margin: 0 3px;
+        border: 2px solid #e5e7eb;
+        color: #6366f1;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+
+    .pagination-custom .page-link:hover {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        color: white;
+        border-color: #6366f1;
+        transform: translateY(-2px);
+    }
+
+    .pagination-custom .page-item.active .page-link {
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        border-color: #6366f1;
+    }
+
+    @media (max-width: 768px) {
+        .stats-card {
+            margin-bottom: 15px;
+        }
+
+        .stats-number {
+            font-size: 2rem;
+        }
+
+        .filter-section .row>div {
+            margin-bottom: 10px;
+        }
+    }
 </style>
+
 {% endblock %}
 
 {% block content %}
 <div class="container-fluid">
     <!-- Page Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="page-header d-flex justify-content-between align-items-center">
         <div>
-            <h2 class="mb-1">Student Management</h2>
+            <h2><i class="fas fa-users-cog"></i>Student Management</h2>
             <p class="text-muted mb-0">Manage all your enrolled students across courses and batches</p>
         </div>
         <div>
             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#exportModal">
-                <i class="bi bi-download me-2"></i>Export Data
+                <i class="fas fa-download me-2"></i>Export Data
             </button>
         </div>
     </div>
@@ -138,91 +563,96 @@
     <!-- Statistics Cards -->
     <div class="row mb-4">
         <div class="col-md-3">
-            <div class="stats-card text-center">
-                <h3 class="mb-2">{{ total_students }}</h3>
-                <p class="mb-0">Total Students</p>
+            <div class="stats-card">
+                <div class="stats-icon">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+                <div class="stats-number">{{ total_students }}</div>
+                <div class="stats-label">Total Students</div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="stats-card text-center">
-                <h3 class="mb-2">{{ active_students }}</h3>
-                <p class="mb-0">Active Students</p>
+            <div class="stats-card">
+                <div class="stats-icon">
+                    <i class="fas fa-user-check"></i>
+                </div>
+                <div class="stats-number">{{ active_students }}</div>
+                <div class="stats-label">Active Students</div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="stats-card text-center">
-                <h3 class="mb-2">{{ total_courses }}</h3>
-                <p class="mb-0">My Courses</p>
+            <div class="stats-card">
+                <div class="stats-icon">
+                    <i class="fas fa-book-open"></i>
+                </div>
+                <div class="stats-number">{{ total_courses }}</div>
+                <div class="stats-label">My Courses</div>
             </div>
         </div>
         <div class="col-md-3">
-            <div class="stats-card text-center">
-                <h3 class="mb-2">{{ total_batches }}</h3>
-                <p class="mb-0">Active Batches</p>
+            <div class="stats-card">
+                <div class="stats-icon">
+                    <i class="fas fa-users-class"></i>
+                </div>
+                <div class="stats-number">{{ total_batches }}</div>
+                <div class="stats-label">Active Batches</div>
             </div>
         </div>
     </div>
 
     <!-- Filters Section -->
-    <div class="filter-section">
-        <h5 class="mb-3">
-            <i class="bi bi-funnel me-2"></i>Filter Students
-        </h5>
-        <form method="GET" id="filterForm">
-            <div class="row">
-                <div class="col-md-3">
-                    <div class="search-box">
-                        <i class="bi bi-search"></i>
-                        <input type="text" class="form-control" name="search" value="{{ request.GET.search }}" 
-                               placeholder="Search by name or email...">
-                    </div>
-                </div>
-                <div class="col-md-2">
-                    <select class="form-select" name="course" onchange="loadBatches(this.value)">
-                        <option value="">All Courses</option>
-                        {% for course in my_courses %}
-                            <option value="{{ course.id }}" {% if request.GET.course == course.id|stringformat:"s" %}selected{% endif %}>
-                                {{ course.course_code }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select class="form-select" name="batch" id="batchSelect">
-                        <option value="">All Batches</option>
-                        {% for batch in available_batches %}
-                            <option value="{{ batch.id }}" {% if request.GET.batch == batch.id|stringformat:"s" %}selected{% endif %}>
-                                {{ batch.name }}
-                            </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select class="form-select" name="status">
-                        <option value="">All Status</option>
-                        <option value="enrolled" {% if request.GET.status == 'enrolled' %}selected{% endif %}>Enrolled</option>
-                        <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
-                        <option value="dropped" {% if request.GET.status == 'dropped' %}selected{% endif %}>Dropped</option>
-                        <option value="suspended" {% if request.GET.status == 'suspended' %}selected{% endif %}>Suspended</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <select class="form-select" name="sort_by">
-                        <option value="recent" {% if request.GET.sort_by == 'recent' %}selected{% endif %}>Recently Joined</option>
-                        <option value="name" {% if request.GET.sort_by == 'name' %}selected{% endif %}>Name (A-Z)</option>
-                        <option value="progress" {% if request.GET.sort_by == 'progress' %}selected{% endif %}>Progress</option>
-                        <option value="course" {% if request.GET.sort_by == 'course' %}selected{% endif %}>Course</option>
-                    </select>
-                </div>
-                <div class="col-md-1">
-                    <button type="submit" class="btn btn-primary w-100">
-                        <i class="bi bi-search"></i>
-                    </button>
+  <div class="filter-section">
+    <h5><i class="fas fa-filter"></i>Filter Students</h5>
+    <form method="GET" id="filterForm">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" class="form-control" name="search" value="{{ request.GET.search }}"
+                        placeholder="Search by name or email...">
                 </div>
             </div>
-        </form>
-    </div>
-
+            <div class="col-md-2">
+                <select class="form-select" name="course" onchange="loadBatches(this.value)">
+                    <option value="">All Courses</option>
+                    {% for course in my_courses %}
+                    <option value="{{ course.id }}" {% if request.GET.course == course.id|stringformat:"s" %}selected{% endif %}>{{ course.course_code }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" name="batch" id="batchSelect">
+                    <option value="">All Batches</option>
+                    {% for batch in available_batches %}
+                    <option value="{{ batch.id }}" {% if request.GET.batch == batch.id|stringformat:"s" %}selected{% endif %}>{{ batch.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" name="status">
+                    <option value="">All Status</option>
+                    <option value="enrolled" {% if request.GET.status == 'enrolled' %}selected{% endif %}>Enrolled</option>
+                    <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
+                    <option value="dropped" {% if request.GET.status == 'dropped' %}selected{% endif %}>Dropped</option>
+                    <option value="suspended" {% if request.GET.status == 'suspended' %}selected{% endif %}>Suspended</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <select class="form-select" name="sort_by">
+                    <option value="recent" {% if request.GET.sort_by == 'recent' %}selected{% endif %}>Recently Joined</option>
+                    <option value="name" {% if request.GET.sort_by == 'name' %}selected{% endif %}>Name (A-Z)</option>
+                    <option value="progress" {% if request.GET.sort_by == 'progress' %}selected{% endif %}>Progress</option>
+                    <option value="course" {% if request.GET.sort_by == 'course' %}selected{% endif %}>Course</option>
+                </select>
+            </div>
+            <div class="col-md-1">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="fas fa-search"></i>
+                </button>
+            </div>
+        </div>
+    </form>
+</div>
     <!-- Students Table -->
     <div class="student-table">
         <div class="table-responsive">
@@ -249,22 +679,21 @@
                         </td>
                         <td>
                             <div class="d-flex align-items-center">
-                                <div class="me-3">
+                                <div class="student-avatar-wrapper me-3">
                                     {% if enrollment.student.profile_picture %}
-                                        <img src="{{ enrollment.student.profile_picture.url }}" 
-                                             class="rounded-circle" width="40" height="40" alt="Profile">
+                                    <img src="{{ enrollment.student.profile_picture.url }}" alt="Profile">
                                     {% else %}
-                                        <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center text-white" 
-                                             style="width: 40px; height: 40px; font-size: 16px;">
-                                            {{ enrollment.student.first_name|first }}{{ enrollment.student.last_name|first }}
-                                        </div>
+                                    <div class="student-avatar-placeholder">
+                                        {{ enrollment.student.first_name|first }}{{ enrollment.student.last_name|first
+                                        }}
+                                    </div>
                                     {% endif %}
                                 </div>
                                 <div>
                                     <h6 class="mb-0">{{ enrollment.student.get_full_name }}</h6>
                                     <small class="text-muted">{{ enrollment.student.email }}</small>
                                     {% if enrollment.student.phone_number %}
-                                        <br><small class="text-muted">{{ enrollment.student.phone_number }}</small>
+                                    <br><small class="text-muted">{{ enrollment.student.phone_number }}</small>
                                     {% endif %}
                                 </div>
                             </div>
@@ -277,10 +706,10 @@
                         </td>
                         <td>
                             {% if enrollment.batch_enrollment %}
-                                <span class="badge bg-info">{{ enrollment.batch_enrollment.batch.name }}</span>
-                                <br><small class="text-muted">{{ enrollment.batch_enrollment.batch.code }}</small>
+                            <span class="badge bg-info">{{ enrollment.batch_enrollment.batch.name }}</span>
+                            <br><small class="text-muted">{{ enrollment.batch_enrollment.batch.code }}</small>
                             {% else %}
-                                <span class="text-muted">Direct Enrollment</span>
+                            <span class="text-muted">Direct Enrollment</span>
                             {% endif %}
                         </td>
                         <td>
@@ -300,41 +729,49 @@
                         </td>
                         <td>
                             <div class="action-buttons">
-                                <!-- Status Toggle -->
-                                <button class="btn-toggle {% if enrollment.is_active %}active{% else %}inactive{% endif %}" 
-                                        onclick="toggleEnrollmentStatus({{ enrollment.id }})">
+                                <button
+                                    class="btn-toggle {% if enrollment.is_active %}active{% else %}inactive{% endif %}"
+                                    onclick="toggleEnrollmentStatus({{ enrollment.id }})">
                                     {% if enrollment.is_active %}Active{% else %}Inactive{% endif %}
                                 </button>
-                                
-                                <!-- View Details -->
-                                <button class="btn btn-outline-primary btn-sm" 
+
+                                <!-- <button class="btn btn-outline-primary btn-sm" 
                                         onclick="viewStudentDetails({{ enrollment.student.id }}, {{ enrollment.course.id }})">
-                                    <i class="bi bi-eye"></i>
+                                    <i class="fas fa-eye"></i>
+                                </button> -->
+                                <button class="btn btn-outline-primary btn-sm" ">
+                                    <!-- student_list.html or wherever -->
+<a href=" {% url 'instructor_view_student_profile' enrollment.student.id %}" class="btn btn-info">
+                                    View Profile
+                                    </a>
                                 </button>
-                                
-                                <!-- Send Message -->
-                                <button class="btn btn-outline-success btn-sm" 
-                                        onclick="sendMessage({{ enrollment.student.id }})">
-                                    <i class="bi bi-envelope"></i>
-                                </button>
-                                
-                                <!-- More Actions -->
+
+                                <!-- <button class="btn btn-outline-success btn-sm"
+                                    onclick="sendMessage({{ enrollment.student.id }})">
+                                    <i class="fas fa-envelope"></i>
+                                </button> -->
+
                                 <div class="btn-group">
-                                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" 
-                                            data-bs-toggle="dropdown">
-                                        <i class="bi bi-three-dots"></i>
+                                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle"
+                                        data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
                                     </button>
                                     <ul class="dropdown-menu">
-                                        <li><a class="dropdown-item" href="#" onclick="changeStatus({{ enrollment.id }}, 'completed')">
-                                            <i class="bi bi-check-circle me-2"></i>Mark Completed
-                                        </a></li>
-                                        <li><a class="dropdown-item" href="#" onclick="changeStatus({{ enrollment.id }}, 'suspended')">
-                                            <i class="bi bi-pause-circle me-2"></i>Suspend Student
-                                        </a></li>
-                                        <li><hr class="dropdown-divider"></li>
-                                        <li><a class="dropdown-item text-danger" href="#" onclick="removeStudent({{ enrollment.id }})">
-                                            <i class="bi bi-trash me-2"></i>Remove Student
-                                        </a></li>
+                                        <li><a class="dropdown-item" href="#"
+                                                onclick="changeStatus({{ enrollment.id }}, 'completed')">
+                                                <i class="fas fa-check-circle me-2"></i>Mark Completed
+                                            </a></li>
+                                        <li><a class="dropdown-item" href="#"
+                                                onclick="changeStatus({{ enrollment.id }}, 'suspended')">
+                                                <i class="fas fa-pause-circle me-2"></i>Suspend Student
+                                            </a></li>
+                                        <li>
+                                            <hr class="dropdown-divider">
+                                        </li>
+                                        <!-- <li><a class="dropdown-item text-danger" href="#"
+                                                onclick="removeStudent({{ enrollment.id }})">
+                                                <i class="fas fa-trash me-2"></i>Remove Student
+                                            </a></li> -->
                                     </ul>
                                 </div>
                             </div>
@@ -343,10 +780,10 @@
                     {% empty %}
                     <tr>
                         <td colspan="8" class="text-center py-5">
-                            <div class="text-muted">
-                                <i class="bi bi-people-fill fs-1 mb-3 d-block"></i>
+                            <div class="empty-state">
+                                <i class="fas fa-users"></i>
                                 <h5>No students found</h5>
-                                <p>No students match your current filters.</p>
+                                <p class="text-muted">No students match your current filters.</p>
                             </div>
                         </td>
                     </tr>
@@ -358,369 +795,453 @@
 
     <!-- Pagination -->
     {% if enrollments.has_other_pages %}
-    <nav class="pagination-custom">
+    <nav class="pagination-custom mt-4">
         <ul class="pagination justify-content-center">
             {% if enrollments.has_previous %}
-                <li class="page-item">
-                    <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.course %}course={{ request.GET.course }}&{% endif %}{% if request.GET.batch %}batch={{ request.GET.batch }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ enrollments.previous_page_number }}">Previous</a>
-                </li>
+            <li class="page-item">
+                <a class="page-link"
+                    href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.course %}course={{ request.GET.course }}&{% endif %}{% if request.GET.batch %}batch={{ request.GET.batch }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ enrollments.previous_page_number }}">Previous</a>
+            </li>
             {% endif %}
-            
+
             {% for num in enrollments.paginator.page_range %}
-                {% if enrollments.number == num %}
-                    <li class="page-item active">
-                        <span class="page-link">{{ num }}</span>
-                    </li>
-                {% elif num > enrollments.number|add:'-3' and num < enrollments.number|add:'3' %}
-                    <li class="page-item">
-                        <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.course %}course={{ request.GET.course }}&{% endif %}{% if request.GET.batch %}batch={{ request.GET.batch }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ num }}">{{ num }}</a>
-                    </li>
-                {% endif %}
-            {% endfor %}
-            
-            {% if enrollments.has_next %}
+            {% if enrollments.number == num %}
+            <li class="page-item active">
+                <span class="page-link">{{ num }}</span>
+            </li>
+            {% elif num > enrollments.number|add:'-3' and num < enrollments.number|add:'3' %} <li class="page-item">
+                <a class="page-link"
+                    href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.course %}course={{ request.GET.course }}&{% endif %}{% if request.GET.batch %}batch={{ request.GET.batch }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ num }}">{{
+                    num }}</a>
+                </li>{% endif %}
+                {% endfor %}
+
+                {% if enrollments.has_next %}
                 <li class="page-item">
-                    <a class="page-link" href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.course %}course={{ request.GET.course }}&{% endif %}{% if request.GET.batch %}batch={{ request.GET.batch }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ enrollments.next_page_number }}">Next</a>
+                    <a class="page-link"
+                        href="?{% if request.GET.search %}search={{ request.GET.search }}&{% endif %}{% if request.GET.course %}course={{ request.GET.course }}&{% endif %}{% if request.GET.batch %}batch={{ request.GET.batch }}&{% endif %}{% if request.GET.status %}status={{ request.GET.status }}&{% endif %}page={{ enrollments.next_page_number }}">Next</a>
                 </li>
-            {% endif %}
+                {% endif %}
         </ul>
     </nav>
     {% endif %}
 
-    <!-- Bulk Actions Bar (appears when students are selected) -->
-    <div id="bulkActionsBar" class="position-fixed bottom-0 start-50 translate-middle-x bg-primary text-white rounded-top px-4 py-3" style="display: none; z-index: 1050;">
-        <div class="d-flex align-items-center gap-3">
-            <span id="selectedCount">0 students selected</span>
-            <button class="btn btn-light btn-sm" onclick="bulkChangeStatus('completed')">Mark Completed</button>
-            <button class="btn btn-warning btn-sm" onclick="bulkChangeStatus('suspended')">Suspend</button>
-            <button class="btn btn-success btn-sm" onclick="bulkSendEmail()">Send Email</button>
-            <button class="btn btn-outline-light btn-sm" onclick="clearSelection()">Clear</button>
+    <!-- Bulk Actions Bar (Hidden by default) -->
+    <div id="bulkActionsBar"
+        class="position-fixed bottom-0 start-50 translate-middle-x bg-white rounded-top shadow-lg p-3"
+        style="display: none; width: 600px; z-index: 1000;">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <strong id="selectedCount">0</strong> students selected
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-sm btn-outline-success" onclick="bulkAction('activate')">
+                    <i class="fas fa-check me-1"></i>Activate
+                </button>
+                <button class="btn btn-sm btn-outline-warning" onclick="bulkAction('suspend')">
+                    <i class="fas fa-pause me-1"></i>Suspend
+                </button>
+                <button class="btn btn-sm btn-outline-primary" onclick="bulkSendMessage()">
+                    <i class="fas fa-envelope me-1"></i>Message
+                </button>
+                <button class="btn btn-sm btn-outline-danger" onclick="bulkAction('remove')">
+                    <i class="fas fa-trash me-1"></i>Remove
+                </button>
+            </div>
+            <button class="btn btn-sm btn-secondary" onclick="clearSelection()">
+                <i class="fas fa-times"></i>
+            </button>
         </div>
     </div>
 </div>
 
 <!-- Export Modal -->
+<!-- Export Modal -->
 <div class="modal fade" id="exportModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Export Student Data</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h5 class="modal-title"><i class="fas fa-download me-2"></i>Export Student Data</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="exportForm">
+                <form id="exportForm" method="GET" action="{% url 'export_students' %}">
                     <div class="mb-3">
                         <label class="form-label">Export Format</label>
-                        <select class="form-select" name="format">
+                        <select class="form-select" name="format" required>
+                            <option value="csv">CSV (Excel Compatible)</option>
                             <option value="excel">Excel (.xlsx)</option>
-                            <option value="csv">CSV (.csv)</option>
                             <option value="pdf">PDF Report</option>
                         </select>
                     </div>
+
                     <div class="mb-3">
-                        <label class="form-label">Include Data</label>
-                        <div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="include_progress" checked>
-                                <label class="form-check-label">Progress Data</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="include_contact" checked>
-                                <label class="form-check-label">Contact Information</label>
-                            </div>
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="include_enrollment_history">
-                                <label class="form-check-label">Enrollment History</label>
-                            </div>
+                        <label class="form-label">Filter by Course</label>
+                        <select class="form-select" name="course">
+                            <option value="">All Courses</option>
+                            {% for course in my_courses %}
+                            <option value="{{ course.id }}">{{ course.course_code }} - {{ course.title }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Filter by Status</label>
+                        <select class="form-select" name="status">
+                            <option value="">All Status</option>
+                            <option value="enrolled">Enrolled</option>
+                            <option value="completed">Completed</option>
+                            <option value="dropped">Dropped</option>
+                            <option value="suspended">Suspended</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Include Fields</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="fields" value="basic_info" checked>
+                            <label class="form-check-label">Basic Information</label>
                         </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="fields" value="contact" checked>
+                            <label class="form-check-label">Contact Details</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="fields" value="enrollment" checked>
+                            <label class="form-check-label">Enrollment Details</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="fields" value="progress" checked>
+                            <label class="form-check-label">Progress & Performance</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="fields" value="attendance">
+                            <label class="form-check-label">Attendance Records</label>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        The export will include all students based on your current filters.
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="exportData()">Export</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-2"></i>Cancel
+                </button>
+                <button type="submit" form="exportForm" class="btn btn-primary">
+                    <i class="fas fa-download me-2"></i>Export Data
+                </button>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Student Details Modal -->
+<div class="modal fade" id="studentDetailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-user me-2"></i>Student Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="studentDetailsContent">
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Message Modal -->
+<div class="modal fade" id="messageModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-envelope me-2"></i>Send Message</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="messageForm">
+                    {% csrf_token %}
+                    <input type="hidden" id="messageStudentId" name="student_id">
+                    <div class="mb-3">
+                        <label class="form-label">Subject</label>
+                        <input type="text" class="form-control" name="subject" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Message</label>
+                        <textarea class="form-control" name="message" rows="5" required></textarea>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input class="form-check-input" type="checkbox" name="send_email" checked>
+                        <label class="form-check-label">
+                            Also send via email
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-paper-plane me-2"></i>Send Message
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
 <script>
-// Filter and search functionality
-function loadBatches(courseId) {
-    const batchSelect = document.getElementById('batchSelect');
-    batchSelect.innerHTML = '<option value="">Loading...</option>';
-    
-    if (!courseId) {
-        batchSelect.innerHTML = '<option value="">All Batches</option>';
-        return;
+    // Toggle all checkboxes
+    function toggleAllCheckboxes() {
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.student-checkbox');
+        checkboxes.forEach(cb => cb.checked = selectAll.checked);
+        updateBulkActionsBar();
     }
-    
-    fetch(`/api/course/${courseId}/batches/`)
-        .then(response => response.json())
-        .then(data => {
-            batchSelect.innerHTML = '<option value="">All Batches</option>';
-            data.batches.forEach(batch => {
-                batchSelect.innerHTML += `<option value="${batch.id}">${batch.name}</option>`;
+
+    // Update bulk actions bar
+    function updateBulkActionsBar() {
+        const checkboxes = document.querySelectorAll('.student-checkbox:checked');
+        const bulkBar = document.getElementById('bulkActionsBar');
+        const selectedCount = document.getElementById('selectedCount');
+
+        if (checkboxes.length > 0) {
+            bulkBar.style.display = 'block';
+            selectedCount.textContent = checkboxes.length;
+        } else {
+            bulkBar.style.display = 'none';
+        }
+    }
+
+    // Clear selection
+    function clearSelection() {
+        document.getElementById('selectAll').checked = false;
+        document.querySelectorAll('.student-checkbox').forEach(cb => cb.checked = false);
+        updateBulkActionsBar();
+    }
+
+    // Add event listeners to checkboxes
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.student-checkbox').forEach(cb => {
+            cb.addEventListener('change', updateBulkActionsBar);
+        });
+    });
+
+    // Load batches based on selected course
+    function loadBatches(courseId) {
+        if (!courseId) {
+            document.getElementById('batchSelect').innerHTML = '<option value="">All Batches</option>';
+            return;
+        }
+
+        fetch(`/instructor/api/batches/?course_id=${courseId}`)
+            .then(response => response.json())
+            .then(data => {
+                let options = '<option value="">All Batches</option>';
+                data.batches.forEach(batch => {
+                    options += `<option value="${batch.id}">${batch.name}</option>`;
+                });
+                document.getElementById('batchSelect').innerHTML = options;
+            })
+            .catch(error => console.error('Error loading batches:', error));
+    }
+
+    // Toggle enrollment status
+    function toggleEnrollmentStatus(enrollmentId) {
+        if (!confirm('Are you sure you want to toggle the enrollment status?')) {
+            return;
+        }
+
+        fetch(`/instructor/api/enrollment/${enrollmentId}/toggle-status/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while updating the status.');
             });
-        })
-        .catch(error => {
-            batchSelect.innerHTML = '<option value="">All Batches</option>';
-            console.error('Error loading batches:', error);
-        });
-}
-
-// Checkbox management
-function toggleAllCheckboxes() {
-    const selectAll = document.getElementById('selectAll');
-    const checkboxes = document.querySelectorAll('.student-checkbox');
-    
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = selectAll.checked;
-    });
-    
-    updateBulkActionsBar();
-}
-
-function updateBulkActionsBar() {
-    const checkedBoxes = document.querySelectorAll('.student-checkbox:checked');
-    const bulkBar = document.getElementById('bulkActionsBar');
-    const selectedCount = document.getElementById('selectedCount');
-    
-    if (checkedBoxes.length > 0) {
-        selectedCount.textContent = `${checkedBoxes.length} student${checkedBoxes.length > 1 ? 's' : ''} selected`;
-        bulkBar.style.display = 'block';
-    } else {
-        bulkBar.style.display = 'none';
     }
-}
 
-// Individual checkbox events
-document.addEventListener('DOMContentLoaded', function() {
-    const checkboxes = document.querySelectorAll('.student-checkbox');
-    checkboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateBulkActionsBar);
-    });
-});
+    function viewStudentDetails(studentId, courseId) {
+        // Student profile page open hoga
+        window.location.href = `/instructor/student/${studentId}/`;
+    }
+    // Send message to student
+    function sendMessage(studentId) {
+        document.getElementById('messageStudentId').value = studentId;
+        const modal = new bootstrap.Modal(document.getElementById('messageModal'));
+        modal.show();
+    }
 
-// Student management functions
-function toggleEnrollmentStatus(enrollmentId) {
-    if (confirm('Are you sure you want to toggle this student\'s status?')) {
-        fetch(`/instructor/enrollment/${enrollmentId}/toggle-status/`, {
+    // Handle message form submission
+    document.getElementById('messageForm')?.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const formData = new FormData(this);
+
+        fetch('/instructor/api/send-message/', {
             method: 'POST',
             headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-                'Content-Type': 'application/json',
-            }
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: formData
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Error: ' + data.message);
-            }
-        })
-        .catch(error => {
-            alert('An error occurred. Please try again.');
-            console.error('Error:', error);
-        });
-    }
-}
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Message sent successfully!');
+                    bootstrap.Modal.getInstance(document.getElementById('messageModal')).hide();
+                    this.reset();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while sending the message.');
+            });
+    });
 
-function changeStatus(enrollmentId, newStatus) {
-    const statusNames = {
-        'completed': 'completed',
-        'suspended': 'suspended',
-        'dropped': 'dropped'
-    };
-    
-    if (confirm(`Are you sure you want to mark this student as ${statusNames[newStatus]}?`)) {
-        fetch(`/instructor/enrollment/${enrollmentId}/change-status/`, {
+    // Change student status
+    function changeStatus(enrollmentId, status) {
+        if (!confirm(`Are you sure you want to mark this student as ${status}?`)) {
+            return;
+        }
+
+        fetch(`/instructor/api/enrollment/${enrollmentId}/change-status/`, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
                 'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({ status: status })
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while changing the status.');
+            });
+    }
+
+    // Remove student
+    function removeStudent(enrollmentId) {
+        if (!confirm('Are you sure you want to remove this student? This action cannot be undone.')) {
+            return;
+        }
+
+        fetch(`/instructor/api/enrollment/${enrollmentId}/remove/`, {
+            method: 'DELETE',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while removing the student.');
+            });
+    }
+
+    // Bulk actions
+    function bulkAction(action) {
+        const selectedIds = Array.from(document.querySelectorAll('.student-checkbox:checked'))
+            .map(cb => cb.value);
+
+        if (selectedIds.length === 0) {
+            alert('Please select at least one student.');
+            return;
+        }
+
+        if (!confirm(`Are you sure you want to ${action} ${selectedIds.length} student(s)?`)) {
+            return;
+        }
+
+        fetch(`/instructor/api/bulk-action/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
             },
             body: JSON.stringify({
-                'status': newStatus
+                action: action,
+                enrollment_ids: selectedIds
             })
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Error: ' + data.message);
-            }
-        })
-        .catch(error => {
-            alert('An error occurred. Please try again.');
-            console.error('Error:', error);
-        });
-    }
-}
-
-function viewStudentDetails(studentId, courseId) {
-    window.open(`/instructor/student/${studentId}/course/${courseId}/details/`, '_blank');
-}
-
-function sendMessage(studentId) {
-    window.open(`/instructor/message/compose/?student=${studentId}`, '_blank');
-}
-
-function removeStudent(enrollmentId) {
-    if (confirm('Are you sure you want to remove this student? This action cannot be undone.')) {
-        fetch(`/instructor/enrollment/${enrollmentId}/remove/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Error: ' + data.message);
-            }
-        })
-        .catch(error => {
-            alert('An error occurred. Please try again.');
-            console.error('Error:', error);
-        });
-    }
-}
-
-// Bulk actions
-function bulkChangeStatus(status) {
-    const checkedBoxes = document.querySelectorAll('.student-checkbox:checked');
-    const enrollmentIds = Array.from(checkedBoxes).map(cb => cb.value);
-    
-    if (enrollmentIds.length === 0) {
-        alert('Please select students first.');
-        return;
-    }
-    
-    if (confirm(`Change status to ${status} for ${enrollmentIds.length} selected students?`)) {
-        fetch('/instructor/enrollment/bulk-change-status/', {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': getCookie('csrftoken'),
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                'enrollment_ids': enrollmentIds,
-                'status': status
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(`Successfully ${action}d ${data.count} student(s).`);
+                    location.reload();
+                } else {
+                    alert('Error: ' + data.message);
+                }
             })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert('Error: ' + data.message);
-            }
-        })
-        .catch(error => {
-            alert('An error occurred. Please try again.');
-            console.error('Error:', error);
-        });
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An error occurred while performing the bulk action.');
+            });
     }
-}
 
-function bulkSendEmail() {
-    const checkedBoxes = document.querySelectorAll('.student-checkbox:checked');
-    const enrollmentIds = Array.from(checkedBoxes).map(cb => cb.value);
-    
-    if (enrollmentIds.length === 0) {
-        alert('Please select students first.');
-        return;
-    }
-    
-    window.open(`/instructor/message/bulk-compose/?enrollments=${enrollmentIds.join(',')}`, '_blank');
-}
+    // Bulk send message
+    function bulkSendMessage() {
+        const selectedIds = Array.from(document.querySelectorAll('.student-checkbox:checked'))
+            .map(cb => cb.value);
 
-function clearSelection() {
-    const checkboxes = document.querySelectorAll('.student-checkbox');
-    const selectAll = document.getElementById('selectAll');
-    
-    checkboxes.forEach(checkbox => checkbox.checked = false);
-    selectAll.checked = false;
-    updateBulkActionsBar();
-}
-
-function exportData() {
-    const form = document.getElementById('exportForm');
-    const formData = new FormData(form);
-    
-    // Add current filters to export
-    const urlParams = new URLSearchParams(window.location.search);
-    for (let [key, value] of urlParams) {
-        formData.append(key, value);
-    }
-    
-    fetch('/instructor/students/export/', {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': getCookie('csrftoken'),
-        },
-        body: formData
-    })
-    .then(response => {
-        if (response.ok) {
-            return response.blob();
+        if (selectedIds.length === 0) {
+            alert('Please select at least one student.');
+            return;
         }
-        throw new Error('Export failed');
-    })
-    .then(blob => {
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.style.display = 'none';
-        a.href = url;
-        a.download = 'students_export.' + formData.get('format');
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        
-        // Close modal
-        const modal = bootstrap.Modal.getInstance(document.getElementById('exportModal'));
-        modal.hide();
-    })
-    .catch(error => {
-        alert('Export failed. Please try again.');
-        console.error('Error:', error);
-    });
-}
 
-// Utility function to get CSRF token
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
+        // Open message modal with multiple recipients
+        document.getElementById('messageStudentId').value = selectedIds.join(',');
+        const modal = new bootstrap.Modal(document.getElementById('messageModal'));
+        modal.show();
+    }
+
+    // Get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
             }
         }
+        return cookieValue;
     }
-    return cookieValue;
-}
-
-// Auto-submit filter form on change (optional)
-document.addEventListener('DOMContentLoaded', function() {
-    const filterForm = document.getElementById('filterForm');
-    const filterSelects = filterForm.querySelectorAll('select');
-    
-    filterSelects.forEach(select => {
-        select.addEventListener('change', function() {
-            if (this.name !== 'course') { // Don't auto-submit on course change as it loads batches
-                setTimeout(() => filterForm.submit(), 100);
-            }
-        });
-    });
-});
 </script>
 {% endblock %}

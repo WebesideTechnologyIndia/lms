@@ -1,0 +1,302 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Issue Certificate - Admin Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.form-card {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.template-select-card {
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.template-select-card:hover {
+    border-color: #667eea;
+    background: #f8f9fa;
+}
+
+.template-select-card.selected {
+    border-color: #667eea;
+    background: #e7f3ff;
+}
+
+.student-item {
+    padding: 10px;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.student-item:hover {
+    background: #f8f9fa;
+}
+
+.student-item.selected {
+    background: #e7f3ff;
+    border-color: #667eea;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-2">
+                    <i class="bi bi-award me-3"></i>Issue Certificates
+                </h1>
+                <p class="mb-0 opacity-75">Assign certificates to students</p>
+            </div>
+            <div>
+                <a href="{% url 'certificates:admin_dashboard' %}" class="btn btn-light btn-lg">
+                    <i class="bi bi-arrow-left me-2"></i>Back
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" id="issueCertForm">
+        {% csrf_token %}
+        
+        <div class="row">
+            <!-- Step 1: Select Template -->
+            <div class="col-lg-12 mb-4">
+                <div class="form-card">
+                    <h5 class="mb-4">
+                        <span class="badge bg-primary me-2">1</span>
+                        Select Certificate Template
+                    </h5>
+
+                    <div class="row" id="templatesList">
+                        {% for template in templates %}
+                        <div class="col-md-3 mb-3">
+                            <label class="template-select-card" onclick="selectTemplate({{ template.id }})">
+                                <input type="radio" name="template_id" value="{{ template.id }}" 
+                                       class="form-check-input me-2" required>
+                                <div>
+                                    <div class="fw-bold">{{ template.name }}</div>
+                                    <small class="text-muted">{{ template.certificate_type.name }}</small>
+                                </div>
+                                {% if template.thumbnail %}
+                                    <img src="{{ template.thumbnail.url }}" class="img-fluid mt-2 rounded">
+                                {% endif %}
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 2: Select Issue Type -->
+            <div class="col-lg-12 mb-4">
+                <div class="form-card">
+                    <h5 class="mb-4">
+                        <span class="badge bg-primary me-2">2</span>
+                        Select Issue Type
+                    </h5>
+
+                    <div class="btn-group w-100" role="group">
+                        <input type="radio" class="btn-check" name="issue_type" id="typeIndividual" 
+                               value="individual" checked onclick="showSection('individual')">
+                        <label class="btn btn-outline-primary" for="typeIndividual">
+                            <i class="bi bi-person me-2"></i>Individual Students
+                        </label>
+
+                        <input type="radio" class="btn-check" name="issue_type" id="typeBatch" 
+                               value="batch" onclick="showSection('batch')">
+                        <label class="btn btn-outline-primary" for="typeBatch">
+                            <i class="bi bi-people me-2"></i>Entire Batch
+                        </label>
+
+                        <input type="radio" class="btn-check" name="issue_type" id="typeCourse" 
+                               value="course" onclick="showSection('course')">
+                        <label class="btn btn-outline-primary" for="typeCourse">
+                            <i class="bi bi-book me-2"></i>Entire Course
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Select Recipients -->
+            <div class="col-lg-12 mb-4">
+                <div class="form-card">
+                    <h5 class="mb-4">
+                        <span class="badge bg-primary me-2">3</span>
+                        Select Recipients
+                    </h5>
+
+                    <!-- Individual Students Section -->
+                    <div id="individualSection" class="recipient-section">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Filter by Course (Optional)</label>
+                                <select class="form-select" name="course_id" id="courseFilter">
+                                    <option value="">All Courses</option>
+                                    {% for course in courses %}
+                                    <option value="{{ course.id }}">{{ course.title }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Filter by Batch (Optional)</label>
+                                <select class="form-select" name="batch_id" id="batchFilter">
+                                    <option value="">All Batches</option>
+                                    {% for batch in batches %}
+                                    <option value="{{ batch.id }}">{{ batch.name }} - {{ batch.course.title }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <input type="text" class="form-control" placeholder="Search students..." 
+                                   id="studentSearch" onkeyup="filterStudents()">
+                        </div>
+
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="selectAllStudents" 
+                                   onclick="toggleAllStudents()">
+                            <label class="form-check-label" for="selectAllStudents">
+                                <strong>Select All Students</strong>
+                            </label>
+                        </div>
+
+                        <div style="max-height: 400px; overflow-y: auto;">
+                            {% for student in students %}
+                            <div class="student-item">
+                                <input type="checkbox" class="form-check-input me-2" 
+                                       name="selected_students" value="{{ student.id }}">
+                                <strong>{{ student.get_full_name|default:student.username }}</strong>
+                                <br>
+                                <small class="text-muted">{{ student.email }}</small>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <!-- Batch Section -->
+                    <div id="batchSection" class="recipient-section" style="display: none;">
+                        <select class="form-select form-select-lg" name="batch_id">
+                            <option value="">Select Batch</option>
+                            {% for batch in batches %}
+                            <option value="{{ batch.id }}">
+                                {{ batch.name }} - {{ batch.course.title }} ({{ batch.get_enrolled_count }} students)
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Course Section -->
+                    <div id="courseSection" class="recipient-section" style="display: none;">
+                        <select class="form-select form-select-lg" name="course_id">
+                            <option value="">Select Course</option>
+                            {% for course in courses %}
+                            <option value="{{ course.id }}">
+                                {{ course.title }} ({{ course.get_enrolled_count }} students)
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="col-lg-12">
+                <div class="form-card">
+                    <div class="d-flex gap-3">
+                        <button type="submit" class="btn btn-primary btn-lg flex-fill">
+                            <i class="bi bi-award me-2"></i>Issue Certificates
+                        </button>
+                        <a href="{% url 'certificates:admin_dashboard' %}" class="btn btn-outline-secondary btn-lg">
+                            Cancel
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function selectTemplate(templateId) {
+    document.querySelectorAll('.template-select-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    event.currentTarget.classList.add('selected');
+}
+
+function showSection(type) {
+    document.querySelectorAll('.recipient-section').forEach(section => {
+        section.style.display = 'none';
+    });
+    
+    if (type === 'individual') {
+        document.getElementById('individualSection').style.display = 'block';
+    } else if (type === 'batch') {
+        document.getElementById('batchSection').style.display = 'block';
+    } else if (type === 'course') {
+        document.getElementById('courseSection').style.display = 'block';
+    }
+}
+
+function toggleAllStudents() {
+    const checked = document.getElementById('selectAllStudents').checked;
+    document.querySelectorAll('input[name="selected_students"]').forEach(cb => {
+        cb.checked = checked;
+        if (checked) {
+            cb.closest('.student-item').classList.add('selected');
+        } else {
+            cb.closest('.student-item').classList.remove('selected');
+        }
+    });
+}
+
+function filterStudents() {
+    const query = document.getElementById('studentSearch').value.toLowerCase();
+    document.querySelectorAll('.student-item').forEach(item => {
+        const text = item.textContent.toLowerCase();
+        item.style.display = text.includes(query) ? 'block' : 'none';
+    });
+}
+
+// Toggle selected class on checkbox change
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('input[name="selected_students"]').forEach(cb => {
+        cb.addEventListener('change', function() {
+            if (this.checked) {
+                this.closest('.student-item').classList.add('selected');
+            } else {
+                this.closest('.student-item').classList.remove('selected');
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -400,54 +400,82 @@ const response = await fetch(`${API_CONFIG.baseUrl}/webinars/ajax-register/`, {
         }
 
         // Handle webinar card registrations
-        document.querySelectorAll('.webinar-registration-form').forEach(form => {
-            form.addEventListener('submit', async function(e) {
-                e.preventDefault();
-                
-                const submitBtn = this.querySelector('button[type="submit"]');
-                const btnText = submitBtn.querySelector('.btn-text');
-                const loading = submitBtn.querySelector('.loading');
-                const webinarId = this.dataset.webinarId;
-                
-                // Show loading state
-                btnText.style.display = 'none';
-                loading.classList.add('show');
-                submitBtn.disabled = true;
-                
-                // Get form data
-                const formData = new FormData(this);
-                const data = Object.fromEntries(formData.entries());
-                
-                // Register for webinar
-                const result = await registerForWebinar(data, webinarId);
-                
-                // Hide loading state
-                btnText.style.display = 'inline';
-                loading.classList.remove('show');
-                submitBtn.disabled = false;
-                
-                if (result.success) {
-                    // Show success modal
-                    document.getElementById('success-message').innerHTML = `
-                        <div class="alert alert-success">
-                            <strong>Welcome ${data.first_name}!</strong><br>
-                            You've been successfully registered for this webinar.<br>
-                            <strong>Username:</strong> ${result.data.login_details.username}<br>
-                            <strong>Login URL:</strong> <a href="${result.data.login_details.login_url}" target="_blank">${result.data.login_details.login_url}</a>
-                        </div>
-                    `;
-                    const modal = new bootstrap.Modal(document.getElementById('successModal'));
-                    modal.show();
-                    
-                    // Reset form
-                    this.reset();
-                } else {
-                    // Show error
-                    alert(`Registration failed: ${result.data?.error || result.error || 'Unknown error'}`);
-                }
+document.querySelectorAll('.webinar-registration-form').forEach(form => {
+    form.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const btnText = submitBtn.querySelector('.btn-text');
+        const loading = submitBtn.querySelector('.loading');
+        const webinarId = this.dataset.webinarId;
+        
+        // Show loading state
+        btnText.style.display = 'none';
+        loading.classList.add('show');
+        submitBtn.disabled = true;
+        
+        // Get form data
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData.entries());
+        
+        try {
+            const response = await fetch('/webinars/ajax-register/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    webinar_id: webinarId,
+                    first_name: data.first_name,
+                    last_name: data.last_name,
+                    email: data.email,
+                    phone_number: data.phone_number || '',
+                    company: data.company || '',
+                    designation: data.designation || ''
+                })
             });
-        });
 
+            const result = await response.json();
+            
+            console.log('API Response:', result);  // Debug log
+            
+            // Hide loading state
+            btnText.style.display = 'inline';
+            loading.classList.remove('show');
+            submitBtn.disabled = false;
+            
+            if (result.success && result.login_details) {
+                // Show success modal
+                document.getElementById('success-message').innerHTML = `
+                    <div class="alert alert-success">
+                        <strong>Welcome ${data.first_name}!</strong><br>
+                        You've been successfully registered for this webinar.<br><br>
+                        <strong>Username:</strong> ${result.login_details.username}<br>
+                        <strong>Email:</strong> ${result.login_details.email}<br>
+                        <strong>Login URL:</strong> <a href="${result.login_details.login_url}" target="_blank">${result.login_details.login_url}</a>
+                    </div>
+                `;
+                const modal = new bootstrap.Modal(document.getElementById('successModal'));
+                modal.show();
+                
+                // Reset form
+                this.reset();
+            } else {
+                // Show error
+                alert(`Registration failed: ${result.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            
+            // Hide loading state
+            btnText.style.display = 'inline';
+            loading.classList.remove('show');
+            submitBtn.disabled = false;
+            
+            alert(`Registration failed: ${error.message}`);
+        }
+    });
+});
         // Handle manual test form
         document.getElementById('manual-test-form').addEventListener('submit', async function(e) {
             e.preventDefault();

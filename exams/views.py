@@ -77,6 +77,10 @@ def exam_dashboard(request):
     
     return render(request, 'exam/dashboard.html', context)
 
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .forms import ExamForm
 
 @login_required
 def create_exam(request):
@@ -112,7 +116,6 @@ def create_exam(request):
     }
     
     return render(request, 'exam/create_exam.html', context)
-
 
 @login_required
 def add_mcq_questions(request, exam_id):
@@ -412,7 +415,7 @@ User = get_user_model()
 
 @login_required 
 def assign_exam(request):
-    """Enhanced assign exam view with better data loading"""
+    """Enhanced assign exam view with duplicate check"""
     if request.user.role != 'superadmin':
         return redirect('user_login')
     
@@ -449,7 +452,10 @@ def assign_exam(request):
                 return redirect('assign_exam')
         
         assigned_count = 0
+        already_assigned_count = 0
+        already_assigned_list = []
         
+        # ============ INDIVIDUAL STUDENT ASSIGNMENT ============
         if assignment_type == 'individual':
             selected_students = request.POST.getlist('selected_students')
             
@@ -457,32 +463,48 @@ def assign_exam(request):
                 try:
                     student = User.objects.get(id=student_id, role='student')
                     
-                    assignment, created = ExamAssignment.objects.get_or_create(
+                    # ✅ CHECK IF ALREADY ASSIGNED & ACTIVE
+                    existing = ExamAssignment.objects.filter(
                         exam=exam,
                         assignment_type='individual',
                         student=student,
-                        defaults={
-                            'assigned_by': request.user,
-                            'custom_start_datetime': custom_start_datetime,
-                            'custom_end_datetime': custom_end_datetime,
-                        }
-                    )
+                        is_active=True
+                    ).first()
                     
-                    if created:
-                        assigned_count += 1
-                    elif not assignment.is_active:
-                        # Reactivate if it was previously deactivated
-                        assignment.is_active = True
-                        assignment.custom_start_datetime = custom_start_datetime
-                        assignment.custom_end_datetime = custom_end_datetime
-                        assignment.save()
-                        assigned_count += 1
+                    if existing:
+                        already_assigned_count += 1
+                        already_assigned_list.append(student.get_full_name() or student.username)
+                        continue
+                    
+                    # Create new assignment
+                    assignment = ExamAssignment.objects.create(
+                        exam=exam,
+                        assignment_type='individual',
+                        student=student,
+                        assigned_by=request.user,
+                        custom_start_datetime=custom_start_datetime,
+                        custom_end_datetime=custom_end_datetime,
+                    )
+                    assigned_count += 1
                         
                 except User.DoesNotExist:
                     continue
             
-            messages.success(request, f'Exam assigned to {assigned_count} students!')
+            # Success/Warning messages
+            if assigned_count > 0:
+                messages.success(request, f'✅ Exam assigned to {assigned_count} student(s)!')
+            
+            if already_assigned_count > 0:
+                students_str = ", ".join(already_assigned_list[:5])
+                if len(already_assigned_list) > 5:
+                    students_str += f" and {len(already_assigned_list) - 5} more"
+                
+                messages.warning(
+                    request, 
+                    f'⚠️ Exam already assigned to {already_assigned_count} student(s): {students_str}'
+                )
         
+        # ============ BATCH ASSIGNMENT ============
         elif assignment_type == 'batch' and Batch is not None:
             selected_batches = request.POST.getlist('selected_batches')
             
@@ -490,31 +512,49 @@ def assign_exam(request):
                 try:
                     batch = Batch.objects.get(id=batch_id)
                     
-                    assignment, created = ExamAssignment.objects.get_or_create(
+                    # ✅ CHECK IF ALREADY ASSIGNED & ACTIVE
+                    existing = ExamAssignment.objects.filter(
                         exam=exam,
                         assignment_type='batch',
                         batch=batch,
-                        defaults={
-                            'assigned_by': request.user,
-                            'custom_start_datetime': custom_start_datetime,
-                            'custom_end_datetime': custom_end_datetime,
-                        }
-                    )
+                        is_active=True
+                    ).first()
                     
-                    if created:
-                        assigned_count += 1
-                    elif not assignment.is_active:
-                        assignment.is_active = True
-                        assignment.custom_start_datetime = custom_start_datetime
-                        assignment.custom_end_datetime = custom_end_datetime
-                        assignment.save()
-                        assigned_count += 1
+                    if existing:
+                        already_assigned_count += 1
+                        already_assigned_list.append(batch.name)
+                        continue
+                    
+                    # Create new assignment
+                    assignment = ExamAssignment.objects.create(
+                        exam=exam,
+                        assignment_type='batch',
+                        batch=batch,
+                        assigned_by=request.user,
+                        custom_start_datetime=custom_start_datetime,
+                        custom_end_datetime=custom_end_datetime,
+                    )
+                    assigned_count += 1
                         
-                except:
+                except Exception as e:
+                    print(f"Error assigning to batch {batch_id}: {e}")
                     continue
             
-            messages.success(request, f'Exam assigned to {assigned_count} batches!')
+            # Success/Warning messages
+            if assigned_count > 0:
+                messages.success(request, f'✅ Exam assigned to {assigned_count} batch(es)!')
+            
+            if already_assigned_count > 0:
+                batches_str = ", ".join(already_assigned_list[:3])
+                if len(already_assigned_list) > 3:
+                    batches_str += f" and {len(already_assigned_list) - 3} more"
+                
+                messages.warning(
+                    request, 
+                    f'⚠️ Exam already assigned to {already_assigned_count} batch(es): {batches_str}'
+                )
         
+        # ============ COURSE ASSIGNMENT ============
         elif assignment_type == 'course' and Course is not None:
             selected_courses = request.POST.getlist('selected_courses')
             
@@ -522,30 +562,51 @@ def assign_exam(request):
                 try:
                     course = Course.objects.get(id=course_id)
                     
-                    assignment, created = ExamAssignment.objects.get_or_create(
+                    # ✅ CHECK IF ALREADY ASSIGNED & ACTIVE
+                    existing = ExamAssignment.objects.filter(
                         exam=exam,
                         assignment_type='course',
                         course=course,
-                        defaults={
-                            'assigned_by': request.user,
-                            'custom_start_datetime': custom_start_datetime,
-                            'custom_end_datetime': custom_end_datetime,
-                        }
-                    )
+                        is_active=True
+                    ).first()
                     
-                    if created:
-                        assigned_count += 1
-                    elif not assignment.is_active:
-                        assignment.is_active = True
-                        assignment.custom_start_datetime = custom_start_datetime
-                        assignment.custom_end_datetime = custom_end_datetime
-                        assignment.save()
-                        assigned_count += 1
+                    if existing:
+                        already_assigned_count += 1
+                        already_assigned_list.append(course.title)
+                        continue
+                    
+                    # Create new assignment
+                    assignment = ExamAssignment.objects.create(
+                        exam=exam,
+                        assignment_type='course',
+                        course=course,
+                        assigned_by=request.user,
+                        custom_start_datetime=custom_start_datetime,
+                        custom_end_datetime=custom_end_datetime,
+                    )
+                    assigned_count += 1
                         
-                except:
+                except Exception as e:
+                    print(f"Error assigning to course {course_id}: {e}")
                     continue
             
-            messages.success(request, f'Exam assigned to {assigned_count} courses!')
+            # Success/Warning messages
+            if assigned_count > 0:
+                messages.success(request, f'✅ Exam assigned to {assigned_count} course(s)!')
+            
+            if already_assigned_count > 0:
+                courses_str = ", ".join(already_assigned_list[:3])
+                if len(already_assigned_list) > 3:
+                    courses_str += f" and {len(already_assigned_list) - 3} more"
+                
+                messages.warning(
+                    request, 
+                    f'⚠️ Exam already assigned to {already_assigned_count} course(s): {courses_str}'
+                )
+        
+        # ✅ FINAL CHECK - If nothing assigned
+        if assigned_count == 0 and already_assigned_count == 0:
+            messages.error(request, '❌ No valid selections made!')
         
         return redirect('assign_exam')
     
@@ -557,39 +618,36 @@ def assign_exam(request):
             is_active=True
         ).select_related('created_by').order_by('-created_at')
         
-        print(f"Found {exams.count()} exams")  # Debug
+        print(f"Found {exams.count()} exams")
         
-        # Get all active students with their profiles
+        # Get all active students
         students = User.objects.filter(
             role='student', 
             is_active=True
         ).order_by('first_name', 'last_name', 'username')
         
-        print(f"Found {students.count()} students")  # Debug
+        print(f"Found {students.count()} students")
         
         # Handle courses models with fallback
         if Batch is not None and Course is not None:
-            # Get all active batches with course and instructor info
             batches = Batch.objects.filter(
                 is_active=True
             ).select_related('course', 'instructor').order_by('course__title', 'name')
             
-            print(f"Found {batches.count()} batches")  # Debug
+            print(f"Found {batches.count()} batches")
             
-            # Get all active courses
             courses = Course.objects.filter(
                 is_active=True
             ).select_related('instructor').order_by('title')
             
-            # If courses have status field
             try:
                 courses = courses.filter(status='published')
             except:
-                pass  # Status field might not exist
+                pass
             
-            print(f"Found {courses.count()} courses")  # Debug
+            print(f"Found {courses.count()} courses")
         else:
-            print("Courses app not available - using empty querysets")
+            print("Courses app not available")
             batches = []
             courses = []
         
@@ -598,14 +656,13 @@ def assign_exam(request):
             'exam', 'student', 'batch', 'course', 'assigned_by'
         ).order_by('-assigned_at')[:10]
         
-        print(f"Found {recent_assignments.count()} recent assignments")  # Debug
+        print(f"Found {recent_assignments.count()} recent assignments")
         
     except Exception as e:
         print(f"Error loading data: {e}")
         import traceback
         traceback.print_exc()
         
-        # Provide empty querysets as fallback
         exams = Exam.objects.none()
         students = User.objects.none()
         batches = []
@@ -621,16 +678,6 @@ def assign_exam(request):
         'courses': courses,
         'recent_assignments': recent_assignments,
     }
-    
-    # Debug context
-    print("Context data:")
-    for key, value in context.items():
-        if hasattr(value, 'count'):
-            print(f"  {key}: {value.count()} items")
-        elif isinstance(value, list):
-            print(f"  {key}: {len(value)} items")
-        else:
-            print(f"  {key}: {type(value)}")
     
     return render(request, 'exam/assign_exam.html', context)
 
@@ -737,7 +784,7 @@ def view_exam_attempt(request, attempt_id):
         except AssignmentSubmission.DoesNotExist:
             context['assignment_submission'] = None
     
-    return render(request, 'exams/view_exam_attempt.html', context)
+    return render(request, 'exam/view_exam_attempt.html', context)
 
 
 # ==================== STUDENT EXAM VIEWS ====================
@@ -1167,6 +1214,8 @@ def exam_interface(request, attempt_id):
         
         return render(request, 'exam/assignment_interface.html', context)
 
+
+
 @login_required
 @require_http_methods(["POST"])
 def save_mcq_response(request, attempt_id):
@@ -1231,10 +1280,15 @@ def save_qa_response(request, attempt_id):
     except Exception as e:
         return JsonResponse({'success': False, 'message': str(e)})
 
+from django.utils import timezone  # ✅ Import at the top of file
+import json
+
+from django.utils import timezone
+import json
 
 @login_required
 def submit_exam(request, attempt_id):
-    """Submit exam attempt"""
+    """Submit exam attempt with complete statistics and auto pass/fail check"""
     if request.user.role != 'student':
         messages.error(request, 'Access denied.')
         return redirect('user_login')
@@ -1249,25 +1303,141 @@ def submit_exam(request, attempt_id):
         # Submit the exam
         attempt.status = 'submitted'
         attempt.submitted_at = timezone.now()
+        
+        # Calculate time spent
+        if attempt.started_at:
+            time_spent_seconds = (timezone.now() - attempt.started_at).total_seconds()
+            attempt.time_spent_minutes = round(time_spent_seconds / 60)
+        
         attempt.save()
         
-        # Calculate marks for MCQ exams
+        # ✅ MCQ: Calculate marks ONLY if show_results_immediately = True
         if attempt.exam.exam_type == 'mcq':
-            attempt.calculate_mcq_marks()
+            if attempt.exam.show_results_immediately:
+                # ✅ YES! Calculate marks + Show result immediately
+                attempt.calculate_mcq_marks()
+                attempt.refresh_from_db()
+                
+                if attempt.is_passed:
+                    messages.success(
+                        request, 
+                        f'🎉 Congratulations! You PASSED with {attempt.total_marks_obtained}/{attempt.exam.total_marks} marks ({attempt.percentage:.1f}%)'
+                    )
+                else:
+                    messages.warning(
+                        request, 
+                        f'You scored {attempt.total_marks_obtained}/{attempt.exam.total_marks} marks ({attempt.percentage:.1f}%). Passing marks: {attempt.exam.passing_marks}'
+                    )
+                return redirect('exam_result', attempt_id=attempt.id)
+            else:
+                # ✅ NO! Don't calculate marks, just submit
+                messages.success(request, 'Exam submitted successfully! Results will be published soon.')
+                return redirect('student_exams')
         
-        messages.success(request, 'Exam submitted successfully!')
-        
-        if attempt.exam.show_results_immediately and attempt.exam.exam_type == 'mcq':
-            return redirect('exam_result', attempt_id=attempt.id)
-        else:
+        # ✅ QA & Assignment: Manual evaluation required (No immediate results)
+        elif attempt.exam.exam_type in ['qa', 'assignment']:
+            attempt.is_graded = False
+            attempt.save()
+            messages.success(request, 'Exam submitted successfully! Results will be published after evaluation by instructor.')
             return redirect('student_exams')
     
-    # GET request - show confirmation page
+    # ✅ GET request - Show submit confirmation page with statistics
+    exam = attempt.exam
     context = {
         'attempt': attempt,
     }
     
+    # ✅ Calculate statistics based on exam type
+    if exam.exam_type == 'mcq':
+        all_questions = exam.mcq_questions.filter(is_active=True)
+        total_questions = all_questions.count()
+        
+        # Get existing responses
+        responses = {}
+        mcq_responses = MCQResponse.objects.filter(attempt=attempt).select_related('question', 'selected_option')
+        for response in mcq_responses:
+            if response.selected_option:
+                responses[response.question.id] = response.selected_option.id
+        
+        # Get answered questions
+        answered_responses = MCQResponse.objects.filter(
+            attempt=attempt,
+            selected_option__isnull=False
+        ).values('question').distinct()
+        answered_questions = answered_responses.count()
+        
+        # Calculate unanswered
+        unanswered_questions = total_questions - answered_questions
+        
+        # Calculate completion percentage
+        completion_percentage = (answered_questions / total_questions * 100) if total_questions > 0 else 0
+        
+        context.update({
+            'total_questions': total_questions,
+            'answered_questions': answered_questions,
+            'unanswered_questions': unanswered_questions,
+            'completion_percentage': completion_percentage,
+            'responses': responses,
+            'responses_json': json.dumps(responses),
+            'responses_list': list(responses.items()),
+        })
+    
+    elif exam.exam_type == 'qa':
+        all_questions = exam.qa_questions.filter(is_active=True)
+        total_questions = all_questions.count()
+        
+        # Get existing responses
+        responses = {}
+        qa_responses = QAResponse.objects.filter(attempt=attempt).select_related('question')
+        for response in qa_responses:
+            if response.answer_text:
+                responses[response.question.id] = response.answer_text
+        
+        # Get answered questions
+        answered_responses = QAResponse.objects.filter(
+            attempt=attempt
+        ).exclude(answer_text__isnull=True).exclude(answer_text__exact='').values('question').distinct()
+        answered_questions = answered_responses.count()
+        
+        # Calculate unanswered
+        unanswered_questions = total_questions - answered_questions
+        
+        # Calculate completion percentage
+        completion_percentage = (answered_questions / total_questions * 100) if total_questions > 0 else 0
+        
+        context.update({
+            'total_questions': total_questions,
+            'answered_questions': answered_questions,
+            'unanswered_questions': unanswered_questions,
+            'completion_percentage': completion_percentage,
+            'responses': responses,
+        })
+    
+    elif exam.exam_type == 'assignment':
+        try:
+            submission = AssignmentSubmission.objects.get(attempt=attempt)
+            files_uploaded = submission.uploaded_files if submission.uploaded_files else []
+            has_submission = bool(submission.submission_text or files_uploaded)
+            
+            context.update({
+                'files_uploaded': len(files_uploaded),
+                'has_submission': has_submission,
+                'submission': submission,
+            })
+        except AssignmentSubmission.DoesNotExist:
+            context.update({
+                'files_uploaded': 0,
+                'has_submission': False,
+            })
+    
+    # ✅ Calculate time spent (for display on confirmation page)
+    if attempt.started_at:
+        time_spent_seconds = (timezone.now() - attempt.started_at).total_seconds()
+        time_spent_minutes = round(time_spent_seconds / 60, 1)
+        context['time_spent'] = time_spent_minutes
+    
     return render(request, 'exam/submit_exam.html', context)
+
 
 
 @login_required
@@ -1400,52 +1570,111 @@ def grade_qa_attempt(request, attempt_id):
     return render(request, 'exam/grade_qa_attempt.html', context)
 
 
+# exams/views.py - Universal Grading View (Works for ALL exam types)
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.utils import timezone
+from .models import ExamAttempt, AssignmentSubmission, QAResponse, MCQResponse, ExamFile
+
 @login_required
 def grade_assignment_attempt(request, attempt_id):
-    """Grade assignment attempt"""
-    if request.user.role != 'superadmin':
+    """
+    Universal Grading View - Works for MCQ, Q&A, and Assignment
+    Both Admin and Instructor can use this
+    """
+    
+    # Check user role
+    if request.user.role not in ['superadmin', 'instructor']:
         messages.error(request, 'Access denied.')
         return redirect('user_login')
     
-    attempt = get_object_or_404(ExamAttempt, id=attempt_id, exam__exam_type='assignment')
+    # Get the attempt
+    attempt = get_object_or_404(
+        ExamAttempt, 
+        id=attempt_id,
+        status__in=['submitted', 'auto_submitted']
+    )
     
-    try:
-        submission = attempt.assignment_submission
-    except AssignmentSubmission.DoesNotExist:
-        messages.error(request, 'No submission found for this attempt.')
-        return redirect('pending_grading')
+    # If instructor, verify they created this exam
+    if request.user.role == 'instructor' and attempt.exam.created_by != request.user:
+        messages.error(request, 'You can only grade exams you created.')
+        return redirect('instructor_exam_submissions')
+    
+    exam = attempt.exam
+    
+    # Get submission based on exam type
+    submission = None
+    uploaded_files = []
+    qa_responses = []
+    mcq_responses = []
+    
+    if exam.exam_type == 'assignment':
+        try:
+            submission = attempt.assignment_submission
+            uploaded_files = ExamFile.objects.filter(assignment_submission=submission)
+        except AssignmentSubmission.DoesNotExist:
+            submission = None
+            
+    elif exam.exam_type == 'qa':
+        qa_responses = attempt.qa_responses.all().select_related('question')
+        
+    elif exam.exam_type == 'mcq':
+        mcq_responses = attempt.mcq_responses.all().select_related('question', 'selected_option')
     
     if request.method == 'POST':
-        form = AssignmentGradingForm(request.POST, instance=submission)
-        if form.is_valid():
-            graded_submission = form.save(commit=False)
-            graded_submission.is_graded = True
-            graded_submission.graded_at = timezone.now()
-            graded_submission.graded_by = request.user
-            graded_submission.save()
+        marks_obtained = request.POST.get('marks_obtained')
+        feedback = request.POST.get('feedback', '')
+        
+        try:
+            marks_obtained = float(marks_obtained)
             
-            # Update attempt
-            attempt.total_marks_obtained = float(graded_submission.marks_obtained)
-            attempt.calculate_percentage()
-            attempt.is_graded = True
-            attempt.graded_at = timezone.now()
-            attempt.graded_by = request.user
-            attempt.save()
-            
-            messages.success(request, 'Assignment graded successfully!')
-            return redirect('pending_grading')
-    else:
-        form = AssignmentGradingForm(instance=submission)
+            # Validate marks
+            if marks_obtained > exam.total_marks:
+                messages.error(request, f'Marks cannot exceed total marks ({exam.total_marks})')
+            elif marks_obtained < 0:
+                messages.error(request, 'Marks cannot be negative')
+            else:
+                # Update submission based on exam type
+                if exam.exam_type == 'assignment' and submission:
+                    submission.marks_obtained = marks_obtained
+                    submission.feedback = feedback
+                    submission.is_graded = True
+                    submission.graded_at = timezone.now()
+                    submission.graded_by = request.user
+                    submission.save()
+                
+                # Update attempt (works for all types)
+                attempt.total_marks_obtained = marks_obtained
+                attempt.calculate_percentage()
+                attempt.is_graded = True
+                attempt.graded_at = timezone.now()
+                attempt.graded_by = request.user
+                attempt.save()
+                
+                messages.success(request, f'Exam graded successfully! Marks: {marks_obtained}/{exam.total_marks}')
+                
+                # Redirect based on user role
+                if request.user.role == 'superadmin':
+                    return redirect('pending_grading')
+                else:
+                    return redirect('instructor_exam_submissions')
+                
+        except ValueError:
+            messages.error(request, 'Invalid marks entered. Please enter a valid number.')
     
     context = {
         'attempt': attempt,
         'submission': submission,
-        'form': form,
+        'uploaded_files': uploaded_files,
+        'qa_responses': qa_responses,
+        'mcq_responses': mcq_responses,
+        'exam': exam,
+        'student': attempt.student,
     }
     
     return render(request, 'exam/grade_assignment_attempt.html', context)
-
-
 # ==================== UTILITY VIEWS ====================
 
 
@@ -1983,7 +2212,7 @@ def instructor_my_exams(request):
 
 @login_required
 def instructor_assign_exam(request):
-    """Assign instructor's exams to students/batches/courses"""
+    """Assign instructor's exams to students/batches/courses with duplicate check"""
     if request.user.role != 'instructor':
         messages.error(request, 'Access denied.')
         return redirect('user_login')
@@ -2022,7 +2251,10 @@ def instructor_assign_exam(request):
                 return redirect('instructor_assign_exam')
         
         assigned_count = 0
+        already_assigned_count = 0
+        already_assigned_list = []
         
+        # ============ INDIVIDUAL STUDENT ASSIGNMENT ============
         if assignment_type == 'individual':
             selected_students = request.POST.getlist('selected_students')
             
@@ -2034,31 +2266,48 @@ def instructor_assign_exam(request):
                     if not instructor_can_assign_to_student(request.user, student):
                         continue
                     
-                    assignment, created = ExamAssignment.objects.get_or_create(
+                    # ✅ CHECK IF ALREADY ASSIGNED
+                    existing = ExamAssignment.objects.filter(
                         exam=exam,
                         assignment_type='individual',
                         student=student,
-                        defaults={
-                            'assigned_by': request.user,
-                            'custom_start_datetime': custom_start_datetime,
-                            'custom_end_datetime': custom_end_datetime,
-                        }
-                    )
+                        is_active=True
+                    ).first()
                     
-                    if created:
-                        assigned_count += 1
-                    elif not assignment.is_active:
-                        assignment.is_active = True
-                        assignment.custom_start_datetime = custom_start_datetime
-                        assignment.custom_end_datetime = custom_end_datetime
-                        assignment.save()
-                        assigned_count += 1
+                    if existing:
+                        already_assigned_count += 1
+                        already_assigned_list.append(student.get_full_name() or student.username)
+                        continue
+                    
+                    # Create new assignment
+                    assignment = ExamAssignment.objects.create(
+                        exam=exam,
+                        assignment_type='individual',
+                        student=student,
+                        assigned_by=request.user,
+                        custom_start_datetime=custom_start_datetime,
+                        custom_end_datetime=custom_end_datetime,
+                    )
+                    assigned_count += 1
                         
                 except User.DoesNotExist:
                     continue
             
-            messages.success(request, f'Exam assigned to {assigned_count} students!')
+            # Success/Warning messages
+            if assigned_count > 0:
+                messages.success(request, f'✅ Exam assigned to {assigned_count} student(s)!')
+            
+            if already_assigned_count > 0:
+                students_str = ", ".join(already_assigned_list[:5])  # Show first 5 names
+                if len(already_assigned_list) > 5:
+                    students_str += f" and {len(already_assigned_list) - 5} more"
+                
+                messages.warning(
+                    request, 
+                    f'⚠️ Exam already assigned to {already_assigned_count} student(s): {students_str}'
+                )
         
+        # ============ BATCH ASSIGNMENT ============
         elif assignment_type == 'batch' and Batch is not None:
             selected_batches = request.POST.getlist('selected_batches')
             
@@ -2070,31 +2319,48 @@ def instructor_assign_exam(request):
                     if batch.instructor != request.user:
                         continue
                     
-                    assignment, created = ExamAssignment.objects.get_or_create(
+                    # ✅ CHECK IF ALREADY ASSIGNED
+                    existing = ExamAssignment.objects.filter(
                         exam=exam,
                         assignment_type='batch',
                         batch=batch,
-                        defaults={
-                            'assigned_by': request.user,
-                            'custom_start_datetime': custom_start_datetime,
-                            'custom_end_datetime': custom_end_datetime,
-                        }
-                    )
+                        is_active=True
+                    ).first()
                     
-                    if created:
-                        assigned_count += 1
-                    elif not assignment.is_active:
-                        assignment.is_active = True
-                        assignment.custom_start_datetime = custom_start_datetime
-                        assignment.custom_end_datetime = custom_end_datetime
-                        assignment.save()
-                        assigned_count += 1
+                    if existing:
+                        already_assigned_count += 1
+                        already_assigned_list.append(batch.name)
+                        continue
+                    
+                    # Create new assignment
+                    assignment = ExamAssignment.objects.create(
+                        exam=exam,
+                        assignment_type='batch',
+                        batch=batch,
+                        assigned_by=request.user,
+                        custom_start_datetime=custom_start_datetime,
+                        custom_end_datetime=custom_end_datetime,
+                    )
+                    assigned_count += 1
                         
                 except:
                     continue
             
-            messages.success(request, f'Exam assigned to {assigned_count} batches!')
+            # Success/Warning messages
+            if assigned_count > 0:
+                messages.success(request, f'✅ Exam assigned to {assigned_count} batch(es)!')
+            
+            if already_assigned_count > 0:
+                batches_str = ", ".join(already_assigned_list[:3])
+                if len(already_assigned_list) > 3:
+                    batches_str += f" and {len(already_assigned_list) - 3} more"
+                
+                messages.warning(
+                    request, 
+                    f'⚠️ Exam already assigned to {already_assigned_count} batch(es): {batches_str}'
+                )
         
+        # ============ COURSE ASSIGNMENT ============
         elif assignment_type == 'course' and Course is not None:
             selected_courses = request.POST.getlist('selected_courses')
             
@@ -2106,30 +2372,50 @@ def instructor_assign_exam(request):
                     if course.instructor != request.user:
                         continue
                     
-                    assignment, created = ExamAssignment.objects.get_or_create(
+                    # ✅ CHECK IF ALREADY ASSIGNED
+                    existing = ExamAssignment.objects.filter(
                         exam=exam,
                         assignment_type='course',
                         course=course,
-                        defaults={
-                            'assigned_by': request.user,
-                            'custom_start_datetime': custom_start_datetime,
-                            'custom_end_datetime': custom_end_datetime,
-                        }
-                    )
+                        is_active=True
+                    ).first()
                     
-                    if created:
-                        assigned_count += 1
-                    elif not assignment.is_active:
-                        assignment.is_active = True
-                        assignment.custom_start_datetime = custom_start_datetime
-                        assignment.custom_end_datetime = custom_end_datetime
-                        assignment.save()
-                        assigned_count += 1
+                    if existing:
+                        already_assigned_count += 1
+                        already_assigned_list.append(course.title)
+                        continue
+                    
+                    # Create new assignment
+                    assignment = ExamAssignment.objects.create(
+                        exam=exam,
+                        assignment_type='course',
+                        course=course,
+                        assigned_by=request.user,
+                        custom_start_datetime=custom_start_datetime,
+                        custom_end_datetime=custom_end_datetime,
+                    )
+                    assigned_count += 1
                         
                 except:
                     continue
             
-            messages.success(request, f'Exam assigned to {assigned_count} courses!')
+            # Success/Warning messages
+            if assigned_count > 0:
+                messages.success(request, f'✅ Exam assigned to {assigned_count} course(s)!')
+            
+            if already_assigned_count > 0:
+                courses_str = ", ".join(already_assigned_list[:3])
+                if len(already_assigned_list) > 3:
+                    courses_str += f" and {len(already_assigned_list) - 3} more"
+                
+                messages.warning(
+                    request, 
+                    f'⚠️ Exam already assigned to {already_assigned_count} course(s): {courses_str}'
+                )
+        
+        # ✅ FINAL CHECK - If nothing assigned
+        if assigned_count == 0 and already_assigned_count == 0:
+            messages.error(request, '❌ No valid selections made!')
         
         return redirect('instructor_assign_exam')
     
@@ -2185,7 +2471,6 @@ def instructor_assign_exam(request):
     }
     
     return render(request, 'exam/instructor/assign_exam.html', context)
-
 
 @login_required
 def instructor_exam_submissions(request):

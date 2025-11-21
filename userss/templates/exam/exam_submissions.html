@@ -2,6 +2,50 @@
 
 {% block title %}Exam Submissions - LMS Admin{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Fix dropdown visibility */
+    .table-responsive {
+        overflow: visible !important;
+    }
+    
+    .card-body {
+        overflow: visible !important;
+    }
+    
+    /* Ensure dropdown appears above other elements */
+    .dropdown-menu {
+        z-index: 1050 !important;
+        box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+    }
+    
+    /* Avatar styling */
+    .avatar-sm {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+        font-weight: bold;
+    }
+    
+    /* Progress bar styling */
+    .progress {
+        background-color: #e9ecef;
+    }
+    
+    /* Make table scrollable on mobile while keeping dropdowns visible */
+    @media (max-width: 768px) {
+        .table-wrapper {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        
+        .table-wrapper .table {
+            min-width: 1000px;
+        }
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container-fluid">
     <!-- Header with Statistics -->
@@ -17,7 +61,7 @@
                 </div>
                 <div class="d-flex gap-2">
                     <a href="{% url 'pending_grading' %}" class="btn btn-warning">
-                        <i class="fas fa-clock"></i> 
+                        <i class="fas fa-clock"></i>
                         Pending Grading ({{ pending_grading }})
                     </a>
                     <a href="{% url 'exam_dashboard' %}" class="btn btn-secondary">
@@ -27,7 +71,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Statistics Cards -->
     <div class="row mb-4">
         <div class="col-md-3">
@@ -91,7 +135,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Filters -->
     <div class="row mb-4">
         <div class="col-12">
@@ -155,7 +199,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Submissions Table -->
     <div class="row">
         <div class="col-12">
@@ -165,195 +209,202 @@
                         <i class="fas fa-list"></i> Exam Submissions
                     </h6>
                 </div>
-                <div class="card-body">
+                <div class="card-body" style="overflow: visible;">
                     {% if attempts %}
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>Student</th>
-                                    <th>Exam</th>
-                                    <th>Type</th>
-                                    <th>Attempt</th>
-                                    <th>Status</th>
-                                    <th>Score</th>
-                                    <th>Percentage</th>
-                                    <th>Grading</th>
-                                    <th>Started</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for attempt in attempts %}
-                                <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
-                                                {{ attempt.student.first_name|first|default:attempt.student.username|first }}
+                    <div class="table-wrapper">
+                        <div class="table-responsive" style="overflow: visible;">
+                            <table class="table table-hover">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Student</th>
+                                        <th>Exam</th>
+                                        <th>Type</th>
+                                        <th>Attempt</th>
+                                        <th>Status</th>
+                                        <th>Score</th>
+                                        <th>Percentage</th>
+                                        <th>Grading</th>
+                                        <th>Started</th>
+                                        <th style="width: 120px;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for attempt in attempts %}
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-2">
+                                                    {{ attempt.student.first_name|first|default:attempt.student.username|first }}
+                                                </div>
+                                                <div>
+                                                    <strong>{{ attempt.student.get_full_name|default:attempt.student.username }}</strong>
+                                                    <small class="text-muted d-block">{{ attempt.student.email }}</small>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <strong>{{ attempt.student.get_full_name|default:attempt.student.username }}</strong>
-                                                <small class="text-muted d-block">{{ attempt.student.email }}</small>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <strong>{{ attempt.exam.title }}</strong>
-                                        <small class="text-muted d-block">{{ attempt.exam.total_marks }} marks</small>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-secondary">{{ attempt.exam.get_exam_type_display }}</span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-info">#{{ attempt.attempt_number }}</span>
-                                    </td>
-                                    <td>
-                                        {% if attempt.status == 'submitted' %}
+                                        </td>
+                                        <td>
+                                            <strong>{{ attempt.exam.title }}</strong>
+                                            <small class="text-muted d-block">{{ attempt.exam.total_marks }} marks</small>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ attempt.exam.get_exam_type_display }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info">#{{ attempt.attempt_number }}</span>
+                                        </td>
+                                        <td>
+                                            {% if attempt.status == 'submitted' %}
                                             <span class="badge bg-success">Submitted</span>
-                                        {% elif attempt.status == 'auto_submitted' %}
+                                            {% elif attempt.status == 'auto_submitted' %}
                                             <span class="badge bg-warning">Auto Submitted</span>
-                                        {% elif attempt.status == 'in_progress' %}
+                                            {% elif attempt.status == 'in_progress' %}
                                             <span class="badge bg-primary">In Progress</span>
-                                        {% elif attempt.status == 'started' %}
+                                            {% elif attempt.status == 'started' %}
                                             <span class="badge bg-info">Started</span>
-                                        {% else %}
+                                            {% else %}
                                             <span class="badge bg-secondary">{{ attempt.get_status_display }}</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if attempt.is_graded %}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if attempt.is_graded %}
                                             <strong>{{ attempt.total_marks_obtained|floatformat:1 }}/{{ attempt.exam.total_marks }}</strong>
-                                        {% else %}
+                                            {% else %}
                                             <span class="text-muted">Not graded</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if attempt.is_graded %}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if attempt.is_graded %}
                                             <div class="d-flex align-items-center">
                                                 <div class="progress flex-grow-1 me-2" style="height: 8px;">
                                                     <div class="progress-bar 
-                                                        {% if attempt.percentage >= 60 %}bg-success
-                                                        {% elif attempt.percentage >= 40 %}bg-warning
-                                                        {% else %}bg-danger{% endif %}" 
+                                                            {% if attempt.percentage >= 60 %}bg-success
+                                                            {% elif attempt.percentage >= 40 %}bg-warning
+                                                            {% else %}bg-danger{% endif %}"
                                                         style="width: {{ attempt.percentage }}%">
                                                     </div>
                                                 </div>
                                                 <span class="fw-bold">{{ attempt.percentage|floatformat:1 }}%</span>
                                             </div>
                                             {% if attempt.is_passed %}
-                                                <small class="text-success">✓ Passed</small>
+                                            <small class="text-success">✓ Passed</small>
                                             {% else %}
-                                                <small class="text-danger">✗ Failed</small>
+                                            <small class="text-danger">✗ Failed</small>
                                             {% endif %}
-                                        {% else %}
+                                            {% else %}
                                             <span class="text-muted">-</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if attempt.exam.exam_type == 'mcq' %}
-                                            {% if attempt.is_graded %}
-                                                <span class="badge bg-success">Auto Graded</span>
-                                            {% else %}
-                                                <span class="badge bg-warning">Pending</span>
                                             {% endif %}
-                                        {% else %}
+                                        </td>
+                                        <td>
+                                            {% if attempt.exam.exam_type == 'mcq' %}
                                             {% if attempt.is_graded %}
-                                                <span class="badge bg-success">
-                                                    <i class="fas fa-check"></i> Graded
-                                                </span>
-                                                <small class="text-muted d-block">
-                                                    by {{ attempt.graded_by.get_full_name|default:attempt.graded_by.username }}
-                                                </small>
+                                            <span class="badge bg-success">Auto Graded</span>
+                                            {% else %}
+                                            <span class="badge bg-warning">Pending</span>
+                                            {% endif %}
+                                            {% else %}
+                                            {% if attempt.is_graded %}
+                                            <span class="badge bg-success">
+                                                <i class="fas fa-check"></i> Graded
+                                            </span>
+                                            <small class="text-muted d-block">
+                                                by {{ attempt.graded_by.get_full_name|default:attempt.graded_by.username }}
+                                            </small>
                                             {% elif attempt.status in 'submitted,auto_submitted' %}
-                                                <a href="{% if attempt.exam.exam_type == 'qa' %}{% url 'grade_qa_attempt' attempt.id %}{% else %}{% url 'grade_assignment_attempt' attempt.id %}{% endif %}" 
-                                                   class="badge bg-warning text-decoration-none">
-                                                    <i class="fas fa-clock"></i> Grade Now
-                                                </a>
+                                            <a href="{% if attempt.exam.exam_type == 'qa' %}{% url 'grade_qa_attempt' attempt.id %}{% else %}{% url 'grade_assignment_attempt' attempt.id %}{% endif %}" class="badge bg-warning text-decoration-none">
+                                                <i class="fas fa-clock"></i> Grade Now
+                                            </a>
                                             {% else %}
-                                                <span class="badge bg-secondary">Not Submitted</span>
+                                            <span class="badge bg-secondary">Not Submitted</span>
                                             {% endif %}
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <small class="text-muted">{{ attempt.started_at|date:"M d, Y" }}</small>
-                                        <small class="text-muted d-block">{{ attempt.started_at|time:"H:i" }}</small>
-                                    </td>
-                                    <td>
-                                        <div class="dropdown">
-                                            <button class="btn btn-sm btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                                Actions
-                                            </button>
-                                            <ul class="dropdown-menu">
-                                                <li>
-                                                    <a class="dropdown-item" href="{% url 'view_exam_attempt' attempt.id %}">
-                                                        <i class="fas fa-eye"></i> View Details
-                                                    </a>
-                                                </li>
-                                                {% if attempt.status in 'submitted,auto_submitted' and attempt.exam.exam_type != 'mcq' and not attempt.is_graded %}
-                                                <li>
-                                                    <a class="dropdown-item text-warning" 
-                                                       href="{% if attempt.exam.exam_type == 'qa' %}{% url 'grade_qa_attempt' attempt.id %}{% else %}{% url 'grade_assignment_attempt' attempt.id %}{% endif %}">
-                                                        <i class="fas fa-pen"></i> Grade Now
-                                                    </a>
-                                                </li>
-                                                {% endif %}
-                                                {% if attempt.is_graded and attempt.exam.show_results_immediately %}
-                                                <li>
-                                                    <a class="dropdown-item" href="{% url 'exam_result' attempt.id %}">
-                                                        <i class="fas fa-chart-bar"></i> View Result
-                                                    </a>
-                                                </li>
-                                                {% endif %}
-                                                <li><hr class="dropdown-divider"></li>
-                                                <li>
-                                                    <a class="dropdown-item text-info" href="#" onclick="downloadAttemptReport({{ attempt.id }})">
-                                                        <i class="fas fa-download"></i> Download Report
-                                                    </a>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            <small class="text-muted">{{ attempt.started_at|date:"M d, Y" }}</small>
+                                            <small class="text-muted d-block">{{ attempt.started_at|time:"H:i" }}</small>
+                                        </td>
+                                        <td>
+                                            <div class="dropdown" style="position: relative;">
+                                                <button class="btn btn-sm btn-outline-primary dropdown-toggle" 
+                                                        type="button" 
+                                                        id="dropdownMenuButton{{ attempt.id }}"
+                                                        data-bs-toggle="dropdown" 
+                                                        data-bs-auto-close="true"
+                                                        aria-expanded="false">
+                                                    Actions
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton{{ attempt.id }}">
+                                                    <li>
+                                                        <a class="dropdown-item" href="{% url 'view_exam_attempt' attempt.id %}">
+                                                            <i class="fas fa-eye"></i> View Details
+                                                        </a>
+                                                    </li>
+                                                    {% if attempt.status in 'submitted,auto_submitted' and not attempt.is_graded %}
+                                                    <li>
+                                                        <a class="dropdown-item text-warning" href="{% if attempt.exam.exam_type == 'qa' %}{% url 'grade_qa_attempt' attempt.id %}{% else %}{% url 'grade_assignment_attempt' attempt.id %}{% endif %}">
+                                                            <i class="fas fa-pen"></i> Grade Now
+                                                        </a>
+                                                    </li>
+                                                    {% endif %}
+                                                    {% if attempt.is_graded and attempt.exam.show_results_immediately %}
+                                                    <li>
+                                                        <a class="dropdown-item" href="{% url 'exam_result' attempt.id %}">
+                                                            <i class="fas fa-chart-bar"></i> View Result
+                                                        </a>
+                                                    </li>
+                                                    {% endif %}
+                                                    <li>
+                                                        <hr class="dropdown-divider">
+                                                    </li>
+                                                    <li>
+                                                        <a class="dropdown-item text-info" href="#" onclick="downloadAttemptReport({{ attempt.id }}); return false;">
+                                                            <i class="fas fa-download"></i> Download Report
+                                                        </a>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
-                    
+
                     <!-- Pagination -->
                     {% if attempts.has_other_pages %}
                     <nav aria-label="Pagination" class="mt-4">
                         <ul class="pagination justify-content-center">
                             {% if attempts.has_previous %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?{% if exam_filter %}exam={{ exam_filter }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if grading_filter %}grading={{ grading_filter }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ attempts.previous_page_number }}">
-                                        Previous
-                                    </a>
-                                </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if exam_filter %}exam={{ exam_filter }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if grading_filter %}grading={{ grading_filter }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ attempts.previous_page_number }}">
+                                    Previous
+                                </a>
+                            </li>
                             {% endif %}
-                            
+
                             {% for num in attempts.paginator.page_range %}
-                                {% if num == attempts.number %}
-                                    <li class="page-item active">
-                                        <span class="page-link">{{ num }}</span>
-                                    </li>
-                                {% elif num > attempts.number|add:'-3' and num < attempts.number|add:'3' %}
-                                    <li class="page-item">
-                                        <a class="page-link" href="?{% if exam_filter %}exam={{ exam_filter }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if grading_filter %}grading={{ grading_filter }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ num }}">{{ num }}</a>
-                                    </li>
-                                {% endif %}
+                            {% if num == attempts.number %}
+                            <li class="page-item active">
+                                <span class="page-link">{{ num }}</span>
+                            </li>
+                            {% elif num > attempts.number|add:'-3' and num < attempts.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if exam_filter %}exam={{ exam_filter }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if grading_filter %}grading={{ grading_filter }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ num }}">{{ num }}</a>
+                            </li>
+                            {% endif %}
                             {% endfor %}
-                            
+
                             {% if attempts.has_next %}
-                                <li class="page-item">
-                                    <a class="page-link" href="?{% if exam_filter %}exam={{ exam_filter }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if grading_filter %}grading={{ grading_filter }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ attempts.next_page_number }}">
-                                        Next
-                                    </a>
-                                </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?{% if exam_filter %}exam={{ exam_filter }}&{% endif %}{% if status_filter %}status={{ status_filter }}&{% endif %}{% if grading_filter %}grading={{ grading_filter }}&{% endif %}{% if search_query %}search={{ search_query }}&{% endif %}page={{ attempts.next_page_number }}">
+                                    Next
+                                </a>
+                            </li>
                             {% endif %}
                         </ul>
                     </nav>
                     {% endif %}
-                    
+
                     {% else %}
                     <div class="text-center py-5">
                         <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
@@ -368,7 +419,7 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Quick Actions -->
     <div class="row mt-4">
         <div class="col-12">
@@ -437,68 +488,83 @@
 
 {% block extra_js %}
 <script>
-$(document).ready(function() {
-    // Auto-submit filter form when select values change
-    $('.form-select').change(function() {
-        $('#filterForm').submit();
-    });
-    
-    // Initialize tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-});
+    $(document).ready(function () {
+        // Auto-submit filter form when select values change
+        $('.form-select').change(function () {
+            $('#filterForm').submit();
+        });
 
-// Function to download individual attempt report
-function downloadAttemptReport(attemptId) {
-    // This would make an AJAX call to generate and download a PDF report
-    window.open(`/exams/attempt/${attemptId}/report/`, '_blank');
-}
-
-// Function to export all submissions
-function exportSubmissions() {
-    var filters = new URLSearchParams(window.location.search);
-    var exportUrl = '/exams/submissions/export/?' + filters.toString();
-    window.open(exportUrl, '_blank');
-}
-
-// Function for quick grading (modal)
-function quickGrade(attemptId) {
-    $('#quickGradeModal').modal('show');
-    
-    // Load grading form via AJAX
-    $.get(`/exams/attempt/${attemptId}/quick-grade/`, function(data) {
-        $('#quickGradeContent').html(data);
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+            return new bootstrap.Tooltip(tooltipTriggerEl);
+        });
+        
+        // Ensure dropdowns don't get cut off
+        $('.dropdown-toggle').on('show.bs.dropdown', function () {
+            var dropdown = $(this).parent();
+            var menu = dropdown.find('.dropdown-menu');
+            
+            // Position dropdown menu properly
+            setTimeout(function() {
+                var rect = dropdown[0].getBoundingClientRect();
+                var spaceBelow = window.innerHeight - rect.bottom;
+                var spaceAbove = rect.top;
+                
+                if (spaceBelow < 200 && spaceAbove > spaceBelow) {
+                    menu.addClass('dropup');
+                }
+            }, 0);
+        });
     });
-}
 
-// Bulk actions
-function bulkAction(action) {
-    var selectedAttempts = [];
-    $('input[name="selected_attempts"]:checked').each(function() {
-        selectedAttempts.push($(this).val());
-    });
-    
-    if (selectedAttempts.length === 0) {
-        alert('Please select at least one submission!');
-        return;
+    // Function to download individual attempt report
+    function downloadAttemptReport(attemptId) {
+        window.open(`/exams/attempt/${attemptId}/report/`, '_blank');
     }
-    
-    if (action === 'export') {
-        var ids = selectedAttempts.join(',');
-        window.open(`/exams/submissions/export/?ids=${ids}`, '_blank');
-    } else if (action === 'grade') {
-        // Redirect to bulk grading page
-        var ids = selectedAttempts.join(',');
-        window.location.href = `/exams/bulk-grade/?ids=${ids}`;
-    }
-}
 
-// Select all checkboxes
-function toggleSelectAll() {
-    var selectAll = $('#selectAll').prop('checked');
-    $('input[name="selected_attempts"]').prop('checked', selectAll);
-}
+    // Function to export all submissions
+    function exportSubmissions() {
+        var filters = new URLSearchParams(window.location.search);
+        var exportUrl = '/exams/submissions/export/?' + filters.toString();
+        window.open(exportUrl, '_blank');
+    }
+
+    // Function for quick grading (modal)
+    function quickGrade(attemptId) {
+        $('#quickGradeModal').modal('show');
+
+        // Load grading form via AJAX
+        $.get(`/exams/attempt/${attemptId}/quick-grade/`, function (data) {
+            $('#quickGradeContent').html(data);
+        });
+    }
+
+    // Bulk actions
+    function bulkAction(action) {
+        var selectedAttempts = [];
+        $('input[name="selected_attempts"]:checked').each(function () {
+            selectedAttempts.push($(this).val());
+        });
+
+        if (selectedAttempts.length === 0) {
+            alert('Please select at least one submission!');
+            return;
+        }
+
+        if (action === 'export') {
+            var ids = selectedAttempts.join(',');
+            window.open(`/exams/submissions/export/?ids=${ids}`, '_blank');
+        } else if (action === 'grade') {
+            var ids = selectedAttempts.join(',');
+            window.location.href = `/exams/bulk-grade/?ids=${ids}`;
+        }
+    }
+
+    // Select all checkboxes
+    function toggleSelectAll() {
+        var selectAll = $('#selectAll').prop('checked');
+        $('input[name="selected_attempts"]').prop('checked', selectAll);
+    }
 </script>
 {% endblock %}

@@ -80,12 +80,13 @@ class AttendanceTrackingMiddleware(MiddlewareMixin):
     
 
 
-import hashlib
+# courses/middleware.py
+
 from django.utils import timezone
-from courses.models import StudentSubscription, DeviceSession
+from courses.models import StudentDeviceLimit, DeviceSession
 
 class DeviceTrackingMiddleware:
-    """Track student devices automatically"""
+    """Track student devices using fingerprint"""
     
     def __init__(self, get_response):
         self.get_response = get_response
@@ -99,7 +100,7 @@ class DeviceTrackingMiddleware:
         return response
     
     def track_student_device(self, request):
-        """Track student device sessions"""
+        """Track student device sessions using fingerprint"""
         
         # Skip AJAX/API requests
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -109,44 +110,59 @@ class DeviceTrackingMiddleware:
         if request.path.startswith('/static/') or request.path.startswith('/media/'):
             return
         
+        # Skip login/logout URLs
+        skip_paths = ['/login/', '/logout/', '/admin/']
+        if any(request.path.startswith(path) for path in skip_paths):
+            return
+        
         try:
-            # Generate unique device ID
-            user_agent = request.META.get('HTTP_USER_AGENT', '')
-            ip_address = self.get_client_ip(request)
-            device_id = hashlib.md5(f"{user_agent}{ip_address}".encode()).hexdigest()
+            # Get device fingerprint from session
+            device_fingerprint = request.session.get('device_fingerprint')
             
-            # Get device name
-            device_name = self.parse_device_name(user_agent)
+            if not device_fingerprint:
+                # No fingerprint in session - might be old session
+                # Don't track, let login handle it
+                return
             
-            # Get student's active subscriptions
-            subscriptions = StudentSubscription.objects.filter(
+            # Get or create device limit
+            device_limit, created = StudentDeviceLimit.objects.get_or_create(
                 student=request.user,
-                is_active=True
+                defaults={'max_devices': 2, 'is_active': True}
             )
             
-            for subscription in subscriptions:
-                # Get or create device session
-                device_session, created = DeviceSession.objects.get_or_create(
-                    subscription=subscription,
-                    device_id=device_id,
-                    defaults={
-                        'device_name': device_name,
-                        'is_active': True
-                    }
+            if not device_limit.is_active:
+                # Account disabled - don't track
+                return
+            
+            # Check if device exists
+            try:
+                device_session = DeviceSession.objects.get(
+                    device_id=device_fingerprint,
+                    student_limit=device_limit
                 )
                 
-                if created:
-                    print(f"🆕 New device added for {request.user.username}: {device_name}")
-                    # Update current_devices count
-                    subscription.current_devices = subscription.devices.filter(is_active=True).count()
-                    subscription.save()
-                else:
-                    # Update last login time
-                    device_session.last_login = timezone.now()
-                    device_session.save()
+                # Update last login time (only once per minute to avoid too many writes)
+                now = timezone.now()
+                if (now - device_session.last_login).total_seconds() > 60:
+                    device_session.last_login = now
+                    device_session.is_active = True
+                    device_session.save(update_fields=['last_login', 'is_active'])
+                
+            except DeviceSession.DoesNotExist:
+                # Device not found - this shouldn't happen if login was successful
+                # But if it does, log user out for security
+                print(f"⚠️ Unknown device detected for {request.user.username}")
+                from django.contrib.auth import logout
+                logout(request)
+                from django.shortcuts import redirect
+                from django.contrib import messages
+                messages.error(request, 'Device session expired. Please login again.')
+                return redirect('user_login')
         
         except Exception as e:
             print(f"❌ Device tracking error: {e}")
+            import traceback
+            traceback.print_exc()
     
     def get_client_ip(self, request):
         """Get client IP address"""
@@ -156,27 +172,3 @@ class DeviceTrackingMiddleware:
         else:
             ip = request.META.get('REMOTE_ADDR', 'Unknown')
         return ip
-    
-    def parse_device_name(self, user_agent):
-        """Parse device name from user agent"""
-        user_agent_lower = user_agent.lower()
-        
-        if 'mobile' in user_agent_lower or 'android' in user_agent_lower:
-            if 'android' in user_agent_lower:
-                return 'Android Mobile'
-            elif 'iphone' in user_agent_lower:
-                return 'iPhone'
-            else:
-                return 'Mobile Device'
-        elif 'ipad' in user_agent_lower:
-            return 'iPad'
-        elif 'tablet' in user_agent_lower:
-            return 'Tablet'
-        elif 'windows' in user_agent_lower:
-            return 'Windows PC'
-        elif 'mac' in user_agent_lower:
-            return 'Mac Computer'
-        elif 'linux' in user_agent_lower:
-            return 'Linux Computer'
-        else:
-            return 'Desktop Computer'

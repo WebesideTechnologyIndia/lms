@@ -1,0 +1,111 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Revoke Certificate - Admin Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(220, 53, 69, 0.4);
+}
+
+.warning-card {
+    background: white;
+    border-radius: 15px;
+    padding: 40px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.warning-icon {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    margin: 0 auto 30px;
+}
+
+.cert-info {
+    background: #f8f9fa;
+    border-left: 4px solid #dc3545;
+    padding: 20px;
+    border-radius: 8px;
+    margin: 20px 0;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="text-center">
+            <h1 class="mb-2">
+                <i class="bi bi-exclamation-triangle me-3"></i>Revoke Certificate
+            </h1>
+            <p class="mb-0 opacity-75">Permanently revoke this certificate</p>
+        </div>
+    </div>
+
+    <div class="warning-card">
+        <div class="warning-icon">
+            <i class="bi bi-x-octagon"></i>
+        </div>
+
+        <div class="text-center mb-4">
+            <h3 class="text-danger">Confirm Revocation</h3>
+            <p class="text-muted">Are you sure you want to revoke this certificate?</p>
+        </div>
+
+        <div class="cert-info">
+            <h6 class="mb-3">Certificate Details</h6>
+            <div class="row mb-2">
+                <div class="col-5 fw-bold">Certificate ID:</div>
+                <div class="col-7">{{ certificate.certificate_id }}</div>
+            </div>
+            <div class="row mb-2">
+                <div class="col-5 fw-bold">Student:</div>
+                <div class="col-7">{{ certificate.student_name }}</div>
+            </div>
+            <div class="row mb-2">
+                <div class="col-5 fw-bold">Course:</div>
+                <div class="col-7">{{ certificate.course_name|default:"N/A" }}</div>
+            </div>
+            <div class="row mb-2">
+                <div class="col-5 fw-bold">Issue Date:</div>
+                <div class="col-7">{{ certificate.issue_date|date:"M d, Y" }}</div>
+            </div>
+        </div>
+
+        <div class="alert alert-danger">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <strong>Warning:</strong> This action cannot be undone. The certificate will be marked as revoked and will no longer be valid.
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="d-flex gap-3">
+                <button type="submit" class="btn btn-danger btn-lg flex-fill">
+                    <i class="bi bi-x-circle me-2"></i>Yes, Revoke Certificate
+                </button>
+                <a href="{% url 'certificates:admin_issued' %}" class="btn btn-outline-secondary btn-lg flex-fill">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

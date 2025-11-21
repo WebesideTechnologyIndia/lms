@@ -3,6 +3,7 @@
 {% block title %}Create Exam - LMS Admin{% endblock %}
 
 {% block content %}
+
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
@@ -19,6 +20,13 @@
                     <form method="post" id="examForm">
                         {% csrf_token %}
                         
+                        <!-- Display form errors -->
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+                        
                         <!-- Basic Information -->
                         <div class="row mb-4">
                             <div class="col-12">
@@ -32,10 +40,16 @@
                             <div class="col-md-8">
                                 <label class="form-label">Exam Title *</label>
                                 {{ form.title }}
+                                {% if form.title.errors %}
+                                    <div class="text-danger">{{ form.title.errors }}</div>
+                                {% endif %}
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Exam Type *</label>
                                 {{ form.exam_type }}
+                                {% if form.exam_type.errors %}
+                                    <div class="text-danger">{{ form.exam_type.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
                         
@@ -43,6 +57,9 @@
                             <div class="col-12">
                                 <label class="form-label">Description *</label>
                                 {{ form.description }}
+                                {% if form.description.errors %}
+                                    <div class="text-danger">{{ form.description.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
                         
@@ -66,10 +83,16 @@
                             <div class="col-md-6">
                                 <label class="form-label">Total Marks *</label>
                                 {{ form.total_marks }}
+                                {% if form.total_marks.errors %}
+                                    <div class="text-danger">{{ form.total_marks.errors }}</div>
+                                {% endif %}
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Passing Marks *</label>
                                 {{ form.passing_marks }}
+                                {% if form.passing_marks.errors %}
+                                    <div class="text-danger">{{ form.passing_marks.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
                         
@@ -83,23 +106,34 @@
                         </div>
                         
                         <div class="row mb-3">
-                            <div class="col-md-12">
+                            <div class="col-md-6">
                                 <label class="form-label">Timing Type *</label>
                                 {{ form.timing_type }}
                                 <div class="form-text">Choose how time limits will be applied to this exam</div>
                             </div>
                         </div>
                         
-                        <div class="row mb-3" id="timing-options">
-                            <div class="col-md-6" id="per-question-timing" style="display: none;">
-                                <label class="form-label">Time Per Question (Minutes)</label>
+                        <!-- Time Per Question Dropdown -->
+                        <div class="row mb-3" id="per-question-timing" style="display: none;">
+                            <div class="col-md-6">
+                                <label class="form-label">Time Per Question *</label>
                                 {{ form.time_per_question_minutes }}
                                 <div class="form-text">Time limit for each individual question</div>
+                                {% if form.time_per_question_minutes.errors %}
+                                    <div class="text-danger mt-2">{{ form.time_per_question_minutes.errors }}</div>
+                                {% endif %}
                             </div>
-                            <div class="col-md-6" id="total-exam-timing" style="display: none;">
-                                <label class="form-label">Total Exam Time (Minutes)</label>
+                        </div>
+                        
+                        <!-- Total Exam Time Dropdown -->
+                        <div class="row mb-3" id="total-exam-timing" style="display: none;">
+                            <div class="col-md-6">
+                                <label class="form-label">Total Exam Time *</label>
                                 {{ form.total_exam_time_minutes }}
                                 <div class="form-text">Total time limit for the entire exam</div>
+                                {% if form.total_exam_time_minutes.errors %}
+                                    <div class="text-danger mt-2">{{ form.total_exam_time_minutes.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
                         
@@ -202,108 +236,119 @@
     </div>
 </div>
 
-<!-- Preview Modal -->
-<div class="modal fade" id="previewModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Exam Preview</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="previewContent">
-                <!-- Preview content will be loaded here -->
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-$(document).ready(function() {
-    // Show/hide timing options based on timing type
-    $('#id_timing_type').change(function() {
-        var timingType = $(this).val();
-        
-        $('#per-question-timing').hide();
-        $('#total-exam-timing').hide();
-        
+document.addEventListener('DOMContentLoaded', function () {
+
+    // ELEMENTS
+    const timingTypeSelect = document.getElementById('id_timing_type');
+    const examTypeSelect = document.getElementById('id_exam_type');
+    const perQuestionDiv = document.getElementById('per-question-timing');
+    const totalExamDiv = document.getElementById('total-exam-timing');
+    const mcqOptionsDiv = document.getElementById('mcq-options');
+    const examForm = document.getElementById('examForm');
+
+    const timePerQuestionField = document.getElementById('id_time_per_question_minutes');
+    const totalExamTimeField = document.getElementById('id_total_exam_time_minutes');
+    const totalMarksField = document.getElementById('id_total_marks');
+    const passingMarksField = document.getElementById('id_passing_marks');
+    const startDateField = document.getElementById('id_start_datetime');
+    const endDateField = document.getElementById('id_end_datetime');
+
+    // SAFETY: If form does not exist, stop script
+    if (!examForm) return;
+
+    // ------------------------------
+    // TIMING FIELD VISIBILITY
+    // ------------------------------
+    function updateTimingFields() {
+        const timingType = timingTypeSelect?.value;
+
+        // Hide all timing sections by default
+        perQuestionDiv.style.display = 'none';
+        totalExamDiv.style.display = 'none';
+
+        // Show relevant section based on timing type
         if (timingType === 'per_question') {
-            $('#per-question-timing').show();
-        } else if (timingType === 'total_exam') {
-            $('#total-exam-timing').show();
+            perQuestionDiv.style.display = 'block';
+        } 
+        else if (timingType === 'total_exam') {
+            totalExamDiv.style.display = 'block';
         }
-    });
-    
-    // Show/hide MCQ options based on exam type
-    $('#id_exam_type').change(function() {
-        var examType = $(this).val();
-        
-        if (examType === 'mcq') {
-            $('#mcq-options').show();
-        } else {
-            $('#mcq-options').hide();
-        }
-    });
-    
-    // Initialize timing options on page load
-    $('#id_timing_type').trigger('change');
-    $('#id_exam_type').trigger('change');
-    
-    // Form validation
-    $('#examForm').submit(function(e) {
-        var examType = $('#id_exam_type').val();
-        var timingType = $('#id_timing_type').val();
-        var totalMarks = parseInt($('#id_total_marks').val());
-        var passingMarks = parseInt($('#id_passing_marks').val());
-        
-        // Validate passing marks
+        // 'no_timing' shows nothing - that's what you want!
+    }
+
+    // ------------------------------
+    // EXAM TYPE FIELDS (MCQ)
+    // ------------------------------
+    function updateExamTypeFields() {
+        const examType = examTypeSelect?.value;
+        mcqOptionsDiv.style.display = (examType === 'mcq') ? 'block' : 'none';
+    }
+
+    // ------------------------------
+    // EVENT LISTENERS
+    // ------------------------------
+    if (timingTypeSelect) {
+        timingTypeSelect.addEventListener('change', updateTimingFields);
+    }
+
+    if (examTypeSelect) {
+        examTypeSelect.addEventListener('change', updateExamTypeFields);
+    }
+
+    // ------------------------------
+    // FORM VALIDATION
+    // ------------------------------
+    examForm.addEventListener('submit', function (e) {
+        const timingType = timingTypeSelect.value;
+        const totalMarks = parseInt(totalMarksField.value || 0);
+        const passingMarks = parseInt(passingMarksField.value || 0);
+
+        // --- PASSING MARKS VALIDATION ---
         if (passingMarks > totalMarks) {
+            alert("Passing marks cannot be greater than total marks!");
             e.preventDefault();
-            alert('Passing marks cannot be greater than total marks!');
             return false;
         }
-        
-        // Validate timing settings
-        if (timingType === 'per_question') {
-            var timePerQuestion = parseInt($('#id_time_per_question_minutes').val());
-            if (!timePerQuestion || timePerQuestion < 1) {
+
+        // --- DATE VALIDATION ---
+        const start = new Date(startDateField.value);
+        const end = new Date(endDateField.value);
+
+        if (startDateField.value && endDateField.value && start >= end) {
+            alert("End date must be after start date!");
+            e.preventDefault();
+            return false;
+        }
+
+        // --- TIMING VALIDATION ---
+        if (timingType === "per_question") {
+            if (!timePerQuestionField.value || timePerQuestionField.value === "") {
+                alert("Please select time per question!");
                 e.preventDefault();
-                alert('Please set time per question (minimum 1 minute)!');
-                return false;
-            }
-        } else if (timingType === 'total_exam') {
-            var totalTime = parseInt($('#id_total_exam_time_minutes').val());
-            if (!totalTime || totalTime < 5) {
-                e.preventDefault();
-                alert('Please set total exam time (minimum 5 minutes)!');
                 return false;
             }
         }
-        
+
+        if (timingType === "total_exam") {
+            if (!totalExamTimeField.value || totalExamTimeField.value === "") {
+                alert("Please select total exam time!");
+                e.preventDefault();
+                return false;
+            }
+        }
+
         return true;
     });
-    
-    // Auto-calculate time estimates
-    function updateTimeEstimate() {
-        var timingType = $('#id_timing_type').val();
-        var timePerQuestion = parseInt($('#id_time_per_question_minutes').val()) || 0;
-        var totalTime = parseInt($('#id_total_exam_time_minutes').val()) || 0;
-        
-        var estimate = '';
-        if (timingType === 'per_question' && timePerQuestion > 0) {
-            estimate = 'Estimated total time: ' + (timePerQuestion * 10) + ' minutes (for 10 questions)';
-        } else if (timingType === 'total_exam' && totalTime > 0) {
-            estimate = 'Total exam duration: ' + totalTime + ' minutes';
-        }
-        
-        // You can add estimate display here if needed
-    }
-    
-    $('#id_time_per_question_minutes, #id_total_exam_time_minutes').on('input', updateTimeEstimate);
+
+    // ------------------------------
+    // INIT
+    // ------------------------------
+    updateTimingFields();
+    updateExamTypeFields();
 });
 </script>
 {% endblock %}

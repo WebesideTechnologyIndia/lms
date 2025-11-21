@@ -457,14 +457,50 @@ class PaymentRecord(models.Model):
     
     def update_fee_assignment(self):
         """Update fee assignment with this payment"""
+        from decimal import Decimal
+        
         assignment = self.fee_assignment
-        assignment.amount_paid += self.amount
+        
+        # Update assignment's amount_paid
+        assignment.amount_paid = Decimal(str(assignment.amount_paid or 0)) + self.amount
         assignment.save()
         
         # Mark corresponding EMI as paid if linked
         if self.emi_schedule:
-            self.emi_schedule.mark_as_paid(self.payment_date)
-
+            emi = self.emi_schedule
+            # Update EMI's amount_paid
+            emi.amount_paid = Decimal(str(emi.amount_paid or 0)) + self.amount
+            
+            # If fully paid, mark as paid
+            if emi.amount_paid >= emi.amount:
+                emi.status = 'paid'
+                emi.paid_date = self.payment_date
+            
+            emi.save()
+        else:
+            # If no specific EMI linked, try to auto-assign to pending EMIs
+            pending_emis = assignment.emi_schedules.filter(
+                status__in=['pending', 'overdue']
+            ).order_by('installment_number')
+            
+            remaining_amount = self.amount
+            for emi in pending_emis:
+                if remaining_amount <= 0:
+                    break
+                
+                emi_remaining = emi.amount - (emi.amount_paid or Decimal('0.00'))
+                if emi_remaining <= 0:
+                    continue
+                
+                payment_for_emi = min(remaining_amount, emi_remaining)
+                emi.amount_paid = (emi.amount_paid or Decimal('0.00')) + payment_for_emi
+                
+                if emi.amount_paid >= emi.amount:
+                    emi.status = 'paid'
+                    emi.paid_date = self.payment_date
+                
+                emi.save()
+                remaining_amount -= payment_for_emi
 
 class BatchAccessControl(models.Model):
     """Control access to specific batches for fee defaulters"""

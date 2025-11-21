@@ -7,15 +7,18 @@
 {% block extra_css %}
 <style>
     .exam-container {
-        max-width: 1000px;
+        max-width: 1200px;
         margin: 0 auto;
+        padding: 20px;
     }
     
     .question-card {
+        background: white;
         border: 2px solid #e9ecef;
         border-radius: 12px;
         margin-bottom: 25px;
         transition: all 0.3s ease;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
     
     .question-card.answered {
@@ -30,44 +33,91 @@
         border-radius: 10px 10px 0 0;
     }
     
+    .question-body {
+        padding: 20px;
+    }
+    
+    .question-text {
+        font-size: 1.1rem;
+        margin-bottom: 20px;
+        line-height: 1.6;
+        color: #333;
+    }
+    
+    .options-container {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
     .option-item {
-        padding: 12px 15px;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-        margin-bottom: 10px;
+        padding: 15px 18px;
+        border: 2px solid #dee2e6;
+        border-radius: 10px;
         cursor: pointer;
         transition: all 0.3s ease;
         background-color: white;
+        display: flex;
+        align-items: flex-start;
+        position: relative;
+        user-select: none;
     }
     
     .option-item:hover {
         background-color: #f8f9fa;
         border-color: #4f46e5;
         transform: translateX(5px);
+        box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
     }
     
     .option-item.selected {
         background-color: #e7f3ff;
         border-color: #0066cc;
-        border-width: 2px;
+        border-width: 3px;
+        box-shadow: 0 4px 12px rgba(0, 102, 204, 0.2);
     }
     
     .option-label {
         font-weight: bold;
         color: #4f46e5;
-        width: 30px;
-        height: 30px;
+        min-width: 35px;
+        height: 35px;
         border-radius: 50%;
         background-color: #e9ecef;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        margin-right: 12px;
+        margin-right: 15px;
+        font-size: 1rem;
+        flex-shrink: 0;
     }
     
     .selected .option-label {
         background-color: #0066cc;
         color: white;
+        animation: pulse 0.3s ease-in-out;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+    }
+    
+    .option-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .option-text {
+        font-size: 1rem;
+        line-height: 1.5;
+        color: #333;
+    }
+    
+    .option-radio {
+        display: none !important;
     }
     
     .timer-card {
@@ -78,12 +128,14 @@
         border-radius: 12px;
         padding: 20px;
         text-align: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
     
     .timer-display {
-        font-size: 2rem;
+        font-size: 2.5rem;
         font-weight: bold;
-        margin-bottom: 10px;
+        margin: 15px 0;
+        font-family: 'Courier New', monospace;
     }
     
     .progress-card {
@@ -92,6 +144,7 @@
         border-radius: 12px;
         padding: 20px;
         margin-bottom: 20px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
     
     .question-nav {
@@ -101,15 +154,28 @@
         box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     }
     
+    .question-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 8px;
+        margin-bottom: 15px;
+    }
+    
     .question-btn {
-        width: 40px;
-        height: 40px;
+        width: 100%;
+        height: 45px;
         border-radius: 8px;
         border: 2px solid #dee2e6;
         background-color: white;
-        margin: 3px;
         font-weight: bold;
         transition: all 0.3s ease;
+        cursor: pointer;
+        font-size: 1rem;
+    }
+    
+    .question-btn:hover {
+        background-color: #f8f9fa;
+        border-color: #4f46e5;
     }
     
     .question-btn.answered {
@@ -122,6 +188,7 @@
         background-color: #4f46e5;
         border-color: #4f46e5;
         color: white;
+        transform: scale(1.05);
     }
     
     .submit-section {
@@ -130,6 +197,44 @@
         border-radius: 12px;
         padding: 25px;
         text-align: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .submit-section button {
+        font-size: 1.1rem;
+        padding: 12px 40px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
+    
+    .submit-section button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    
+    .exam-header-card {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        margin-bottom: 25px;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+    }
+    
+    .legend-box {
+        width: 25px;
+        height: 25px;
+        border-radius: 6px;
+        margin-right: 10px;
     }
 </style>
 {% endblock %}
@@ -137,23 +242,17 @@
 {% block content %}
 <div class="exam-container">
     <!-- Exam Header -->
-    <div class="row mb-4">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-body bg-primary text-white" style="border-radius: 12px;">
-                    <div class="row align-items-center">
-                        <div class="col-md-8">
-                            <h4 class="mb-1">{{ exam.title }}</h4>
-                            <p class="mb-0">{{ exam.description }}</p>
-                        </div>
-                        <div class="col-md-4 text-md-end">
-                            <div class="exam-info">
-                                <small class="d-block">Total Questions: {{ total_questions }}</small>
-                                <small class="d-block">Total Marks: {{ exam.total_marks }}</small>
-                                <small class="d-block">Attempt: {{ attempt.attempt_number }}</small>
-                            </div>
-                        </div>
-                    </div>
+    <div class="exam-header-card">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h3 class="mb-2">{{ exam.title }}</h3>
+                <p class="mb-0">{{ exam.description }}</p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="exam-info">
+                    <div><strong>Questions:</strong> {{ total_questions }}</div>
+                    <div><strong>Total Marks:</strong> {{ exam.total_marks }}</div>
+                    <div><strong>Attempt:</strong> #{{ attempt.attempt_number }}</div>
                 </div>
             </div>
         </div>
@@ -164,7 +263,7 @@
         <div class="col-lg-8">
             <!-- Instructions -->
             {% if exam.instructions %}
-            <div class="alert alert-info border-0" style="border-radius: 12px;">
+            <div class="alert alert-info mb-4" style="border-radius: 12px; border-left: 4px solid #17a2b8;">
                 <h6><i class="fas fa-info-circle"></i> Instructions:</h6>
                 <p class="mb-0">{{ exam.instructions }}</p>
             </div>
@@ -177,49 +276,55 @@
                 <div class="question-card" id="question-{{ question.id }}" data-question-id="{{ question.id }}">
                     <div class="question-header">
                         <div class="d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0">Question {{ question.order }}</h6>
-                            <span class="badge bg-light text-dark">{{ question.marks }} mark{{ question.marks|pluralize }}</span>
+                            <h6 class="mb-0"><i class="fas fa-question-circle"></i> Question {{ question.order }}</h6>
+                            <span class="badge bg-light text-dark px-3 py-2">{{ question.marks }} mark{{ question.marks|pluralize }}</span>
                         </div>
                     </div>
                     
-                    <div class="card-body">
-                        <div class="question-text mb-4">
-                            <p class="fs-6">{{ question.question_text|linebreaks }}</p>
-                            {% if question.question_image %}
-                                <div class="text-center my-3">
-                                    <img src="{{ question.question_image.url }}" 
-                                         alt="Question Image" 
-                                         class="img-fluid" 
-                                         style="max-height: 300px; border-radius: 8px;">
-                                </div>
-                            {% endif %}
+                    <div class="question-body">
+                        <div class="question-text">
+                            {{ question.question_text|linebreaks }}
                         </div>
                         
-                        <div class="options">
-{% for option in question.shuffled_options %}
+                        {% if question.question_image %}
+                        <div class="text-center mb-4">
+                            <img src="{{ question.question_image.url }}" 
+                                 alt="Question Image" 
+                                 class="img-fluid" 
+                                 style="max-height: 400px; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                        </div>
+                        {% endif %}
+                        
+                        <div class="options-container">
+                            {% for option in question.shuffled_options %}
                             <div class="option-item" 
                                  data-option-id="{{ option.id }}"
-                                 data-question-id="{{ question.id }}">
-                                <div class="d-flex align-items-center">
-                                    <span class="option-label">
-                                        {% if forloop.counter == 1 %}A{% elif forloop.counter == 2 %}B{% elif forloop.counter == 3 %}C{% elif forloop.counter == 4 %}D{% elif forloop.counter == 5 %}E{% elif forloop.counter == 6 %}F{% endif %}
-                                    </span>
-                                    <div class="option-content">
-                                        <span>{{ option.option_text }}</span>
-                                        {% if option.option_image %}
-                                            <div class="mt-2">
-                                                <img src="{{ option.option_image.url }}" 
-                                                     alt="Option Image" 
-                                                     class="img-fluid" 
-                                                     style="max-height: 150px; border-radius: 4px;">
-                                            </div>
-                                        {% endif %}
+                                 data-question-id="{{ question.id }}"
+                                 onclick="selectOption(this)">
+                                <span class="option-label">
+                                    {% if forloop.counter == 1 %}A
+                                    {% elif forloop.counter == 2 %}B
+                                    {% elif forloop.counter == 3 %}C
+                                    {% elif forloop.counter == 4 %}D
+                                    {% elif forloop.counter == 5 %}E
+                                    {% elif forloop.counter == 6 %}F
+                                    {% endif %}
+                                </span>
+                                <div class="option-content">
+                                    <div class="option-text">{{ option.option_text }}</div>
+                                    {% if option.option_image %}
+                                    <div>
+                                        <img src="{{ option.option_image.url }}" 
+                                             alt="Option Image" 
+                                             class="img-fluid" 
+                                             style="max-height: 200px; border-radius: 6px;">
                                     </div>
+                                    {% endif %}
                                 </div>
                                 <input type="radio" 
                                        name="question_{{ question.id }}" 
                                        value="{{ option.id }}" 
-                                       class="d-none option-radio"
+                                       class="option-radio"
                                        data-question-id="{{ question.id }}"
                                        data-option-id="{{ option.id }}"
                                        {% if responses|lookup:question.id == option.id %}checked{% endif %}>
@@ -241,18 +346,18 @@
                 <div class="timer-display" id="timer">
                     <span id="hours">00</span>:<span id="minutes">00</span>:<span id="seconds">00</span>
                 </div>
-                <small>Auto-submit when time expires</small>
+                <small>Exam will auto-submit when time expires</small>
             </div>
             {% endif %}
 
             <!-- Progress -->
             <div class="progress-card">
-                <h6><i class="fas fa-chart-line"></i> Progress</h6>
+                <h6><i class="fas fa-chart-line"></i> Your Progress</h6>
                 <div class="d-flex justify-content-between mb-2">
                     <span>Answered</span>
-                    <span id="progress-text">0 / {{ total_questions }}</span>
+                    <span id="progress-text"><strong>0 / {{ total_questions }}</strong></span>
                 </div>
-                <div class="progress" style="height: 8px;">
+                <div class="progress" style="height: 10px; background-color: rgba(255,255,255,0.3);">
                     <div class="progress-bar bg-light" 
                          role="progressbar" 
                          id="progress-bar"
@@ -262,40 +367,41 @@
 
             <!-- Question Navigation -->
             <div class="question-nav">
-                <h6 class="mb-3"><i class="fas fa-list"></i> Question Navigator</h6>
+                <h6 class="mb-3"><i class="fas fa-th"></i> Question Navigator</h6>
                 <div class="question-grid">
                     {% for question in questions %}
                     <button type="button" 
                             class="question-btn" 
                             data-question="{{ question.id }}"
-                            data-order="{{ question.order }}">
+                            data-order="{{ question.order }}"
+                            onclick="navigateToQuestion({{ question.id }}, {{ question.order }})">
                         {{ question.order }}
                     </button>
                     {% endfor %}
                 </div>
                 
-                <div class="mt-3">
-                    <div class="d-flex align-items-center mb-2">
-                        <div class="question-btn answered" style="width: 20px; height: 20px; margin-right: 8px;"></div>
-                        <small>Answered</small>
-                    </div>
-                    <div class="d-flex align-items-center mb-2">
-                        <div class="question-btn current" style="width: 20px; height: 20px; margin-right: 8px;"></div>
-                        <small>Current</small>
-                    </div>
-                    <div class="d-flex align-items-center">
-                        <div class="question-btn" style="width: 20px; height: 20px; margin-right: 8px;"></div>
-                        <small>Not Attempted</small>
-                    </div>
+                <hr>
+                
+                <div class="legend-item">
+                    <div class="legend-box" style="background-color: #28a745;"></div>
+                    <span>Answered</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box" style="background-color: #4f46e5;"></div>
+                    <span>Current</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-box" style="background-color: white; border: 2px solid #dee2e6;"></div>
+                    <span>Not Attempted</span>
                 </div>
             </div>
 
             <!-- Submit Section -->
             <div class="submit-section mt-4">
-                <h6><i class="fas fa-check-circle"></i> Submit Exam</h6>
-                <p class="small mb-3">Make sure you have reviewed all your answers before submitting.</p>
-                <button type="button" class="btn btn-light btn-lg" id="submitExamBtn">
-                    <i class="fas fa-paper-plane"></i> Submit Exam
+                <h6><i class="fas fa-paper-plane"></i> Ready to Submit?</h6>
+                <p class="small mb-3">Review all answers before submitting</p>
+                <button type="button" class="btn btn-light btn-lg" onclick="confirmSubmit()">
+                    <i class="fas fa-check-circle"></i> Submit Exam
                 </button>
             </div>
         </div>
@@ -304,29 +410,31 @@
 
 <!-- Submit Confirmation Modal -->
 <div class="modal fade" id="submitModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Confirm Submission</h5>
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Confirm Submission</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <div class="text-center mb-3">
-                    <i class="fas fa-exclamation-triangle fa-3x text-warning"></i>
+            <div class="modal-body text-center py-4">
+                <div class="mb-3">
+                    <i class="fas fa-question-circle fa-4x text-warning"></i>
                 </div>
-                <h6 class="text-center">Are you sure you want to submit this exam?</h6>
-                <p class="text-center text-muted">
-                    You have answered <span id="modal-answered">0</span> out of {{ total_questions }} questions.
-                    Once submitted, you cannot modify your answers.
+                <h5>Are you sure you want to submit?</h5>
+                <p class="text-muted mt-3">
+                    You have answered <strong><span id="modal-answered">0</span></strong> out of <strong>{{ total_questions }}</strong> questions.
                 </p>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> Once submitted, you cannot modify your answers.
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times"></i> Cancel
                 </button>
-                <a href="{% url 'submit_exam' attempt.id %}" class="btn btn-primary">
-                    <i class="fas fa-check"></i> Yes, Submit
-                </a>
+                <a href="{% url 'submit_exam' attempt.id %}" class="btn btn-success" onclick="isSubmitting = true;">
+    <i class="fas fa-check"></i> Yes, Submit Now
+</a>
             </div>
         </div>
     </div>
@@ -335,207 +443,248 @@
 
 {% block extra_js %}
 <script>
-$(document).ready(function() {
-    let totalQuestions = {{ total_questions }};
-    let answeredQuestions = 0;
-    let currentQuestion = 1;
-    
-    // Convert responses to JavaScript object for easier lookup
-    let responses = {{ responses|json_script_safe }};
-    
-    // Initialize exam state
+// Global variables
+let totalQuestions = {{ total_questions }};
+let answeredQuestions = 0;
+let currentQuestion = 1;
+let responses = {};
+let isSubmitting = false; // ✅ NEW: Flag to prevent warning on submit
+
+// Initialize responses from server
+{% if responses %}
+responses = {{ responses|safe }};
+{% endif %}
+
+// Initialize exam on page load
+document.addEventListener('DOMContentLoaded', function() {
     initializeExam();
+    setupAutoSave();
     
-    // Option selection handling
-    $('.option-item').click(function() {
-        let questionId = $(this).data('question-id');
-        let optionId = $(this).data('option-id');
-        
-        // Remove selection from other options in same question
-        $(`[data-question-id="${questionId}"]`).removeClass('selected');
-        
-        // Mark this option as selected
-        $(this).addClass('selected');
-        
-        // Check the radio button
-        $(this).find('.option-radio').prop('checked', true);
-        
-        // Mark question as answered
-        markQuestionAnswered(questionId);
-        
-        // Save response
-        saveResponse(questionId, optionId);
-        
-        // Update progress
-        updateProgress();
-    });
-    
-    // Question navigation
-    $('.question-btn').click(function() {
-        let questionId = $(this).data('question');
-        scrollToQuestion(questionId);
-        updateCurrentQuestion($(this).data('order'));
-    });
-    
-    // Submit button
-    $('#submitExamBtn').click(function() {
-        $('#modal-answered').text(answeredQuestions);
-        $('#submitModal').modal('show');
-    });
-    
-    // Timer functionality
     {% if exam.timing_type != 'no_timing' %}
-    let timeRemaining = calculateTimeRemaining();
-    if (timeRemaining > 0) {
-        startTimer(timeRemaining);
-    }
+    startTimer();
     {% endif %}
     
-    // Auto-save responses periodically
-    setInterval(autoSave, 30000); // Every 30 seconds
+    preventAccidentalExit();
+});
+
+function selectOption(element) {
+    let questionId = element.getAttribute('data-question-id');
+    let optionId = element.getAttribute('data-option-id');
     
-    function initializeExam() {
-        // Mark already answered questions
-        for (let questionId in responses) {
-            if (responses[questionId]) {
-                markQuestionAnswered(questionId);
-                $(`[data-question-id="${questionId}"][data-option-id="${responses[questionId]}"]`).addClass('selected');
-                $(`[data-question-id="${questionId}"][data-option-id="${responses[questionId]}"] .option-radio`).prop('checked', true);
+    // Remove selection from all options in this question
+    document.querySelectorAll(`[data-question-id="${questionId}"]`).forEach(opt => {
+        opt.classList.remove('selected');
+    });
+    
+    // Add selection to clicked option
+    element.classList.add('selected');
+    
+    // Check the radio button
+    let radio = element.querySelector('.option-radio');
+    if (radio) {
+        radio.checked = true;
+    }
+    
+    // Mark question as answered
+    markQuestionAnswered(questionId);
+    
+    // Save response
+    saveResponse(questionId, optionId);
+    
+    // Update progress
+    updateProgress();
+}
+
+function initializeExam() {
+    // Mark already answered questions
+    for (let questionId in responses) {
+        if (responses[questionId]) {
+            markQuestionAnswered(questionId);
+            
+            // Select the option
+            let optionElement = document.querySelector(`[data-question-id="${questionId}"][data-option-id="${responses[questionId]}"]`);
+            if (optionElement) {
+                optionElement.classList.add('selected');
+                let radio = optionElement.querySelector('.option-radio');
+                if (radio) radio.checked = true;
             }
         }
-        
-        updateProgress();
-        updateCurrentQuestion(1);
     }
     
-    function markQuestionAnswered(questionId) {
-        $(`.question-btn[data-question="${questionId}"]`).addClass('answered');
-        $(`#question-${questionId}`).addClass('answered');
+    updateProgress();
+    updateCurrentQuestion(1);
+}
+
+function markQuestionAnswered(questionId) {
+    let btn = document.querySelector(`.question-btn[data-question="${questionId}"]`);
+    if (btn) {
+        btn.classList.add('answered');
     }
     
-    function updateProgress() {
-        answeredQuestions = $('.question-btn.answered').length;
-        let percentage = (answeredQuestions / totalQuestions) * 100;
-        
-        $('#progress-text').text(`${answeredQuestions} / ${totalQuestions}`);
-        $('#progress-bar').css('width', `${percentage}%`);
+    let card = document.querySelector(`#question-${questionId}`);
+    if (card) {
+        card.classList.add('answered');
     }
+}
+
+function updateProgress() {
+    answeredQuestions = document.querySelectorAll('.question-btn.answered').length;
+    let percentage = (answeredQuestions / totalQuestions) * 100;
     
-    function updateCurrentQuestion(order) {
-        $('.question-btn').removeClass('current');
-        $(`.question-btn[data-order="${order}"]`).addClass('current');
-        currentQuestion = order;
+    document.getElementById('progress-text').innerHTML = `<strong>${answeredQuestions} / ${totalQuestions}</strong>`;
+    document.getElementById('progress-bar').style.width = `${percentage}%`;
+}
+
+function updateCurrentQuestion(order) {
+    document.querySelectorAll('.question-btn').forEach(btn => {
+        btn.classList.remove('current');
+    });
+    
+    let currentBtn = document.querySelector(`.question-btn[data-order="${order}"]`);
+    if (currentBtn) {
+        currentBtn.classList.add('current');
     }
-    
-    function scrollToQuestion(questionId) {
-        $('html, body').animate({
-            scrollTop: $(`#question-${questionId}`).offset().top - 100
-        }, 500);
+    currentQuestion = order;
+}
+
+function navigateToQuestion(questionId, order) {
+    let questionCard = document.getElementById(`question-${questionId}`);
+    if (questionCard) {
+        questionCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        updateCurrentQuestion(order);
     }
+}
+
+function saveResponse(questionId, optionId) {
+    responses[questionId] = optionId;
     
-    function saveResponse(questionId, optionId) {
-        $.ajax({
-            url: '{% url "save_mcq_response" attempt.id %}',
-            type: 'POST',
-            headers: {
-                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
-            },
-            data: JSON.stringify({
-                'question_id': questionId,
-                'option_id': optionId
-            }),
-            contentType: 'application/json',
-            success: function(response) {
-                if (!response.success) {
-                    console.error('Failed to save response:', response.message);
-                }
-            },
-            error: function() {
-                console.error('Error saving response');
-            }
-        });
-    }
-    
-    function autoSave() {
-        // Auto-save all current selections
-        $('.option-radio:checked').each(function() {
-            let questionId = $(this).data('question-id');
-            let optionId = $(this).data('option-id');
+    fetch('{% url "save_mcq_response" attempt.id %}', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify({
+            'question_id': questionId,
+            'option_id': optionId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (!data.success) {
+            console.error('Failed to save response:', data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error saving response:', error);
+    });
+}
+
+function setupAutoSave() {
+    setInterval(() => {
+        document.querySelectorAll('.option-radio:checked').forEach(radio => {
+            let questionId = radio.getAttribute('data-question-id');
+            let optionId = radio.getAttribute('data-option-id');
             saveResponse(questionId, optionId);
         });
-    }
+    }, 30000); // Auto-save every 30 seconds
+}
+
+function confirmSubmit() {
+    document.getElementById('modal-answered').textContent = answeredQuestions;
+    let submitModal = new bootstrap.Modal(document.getElementById('submitModal'));
+    submitModal.show();
+}
+
+{% if exam.timing_type != 'no_timing' %}
+function startTimer() {
+    let startTime = new Date('{{ attempt.started_at|date:"c" }}');
+    let currentTime = new Date();
     
-    {% if exam.timing_type != 'no_timing' %}
-    function calculateTimeRemaining() {
-        // Calculate based on exam timing type
-        {% if exam.timing_type == 'total_exam' %}
-            let totalMinutes = {{ exam.total_exam_time_minutes }};
-        {% else %}
-            let totalMinutes = {{ total_questions }} * {{ exam.time_per_question_minutes }};
-        {% endif %}
-        
-        let startTime = new Date('{{ attempt.started_at|date:"c" }}');
-        let currentTime = new Date();
-        let elapsedMinutes = (currentTime - startTime) / (1000 * 60);
-        let remainingMinutes = totalMinutes - elapsedMinutes;
-        
-        return Math.max(0, remainingMinutes * 60); // Return seconds
-    }
-    
-    function startTimer(seconds) {
-        let timer = seconds;
-        
-        let interval = setInterval(function() {
-            let hours = Math.floor(timer / 3600);
-            let minutes = Math.floor((timer % 3600) / 60);
-            let secs = Math.floor(timer % 60);
-            
-            $('#hours').text(hours.toString().padStart(2, '0'));
-            $('#minutes').text(minutes.toString().padStart(2, '0'));
-            $('#seconds').text(secs.toString().padStart(2, '0'));
-            
-            if (timer <= 300) { // Last 5 minutes
-                $('.timer-card').css('background', 'linear-gradient(135deg, #f39c12, #e67e22)');
-            }
-            if (timer <= 60) { // Last 1 minute
-                $('.timer-card').css('background', 'linear-gradient(135deg, #e74c3c, #c0392b)');
-            }
-            
-            if (timer <= 0) {
-                clearInterval(interval);
-                autoSubmitExam();
-            }
-            
-            timer--;
-        }, 1000);
-    }
-    
-    function autoSubmitExam() {
-        alert('Time is up! The exam will be submitted automatically.');
-        window.location.href = '{% url "submit_exam" attempt.id %}';
-    }
+    {% if exam.timing_type == 'total_exam' %}
+    let totalMinutes = {{ exam.total_exam_time_minutes|default:0 }};
+    {% else %}
+    let totalMinutes = {{ total_questions }} * {{ exam.time_per_question_minutes|default:2 }};
     {% endif %}
     
-    // Keyboard navigation
-    $(document).keydown(function(e) {
-        if (e.key === 'ArrowUp' && currentQuestion > 1) {
-            let prevQuestion = currentQuestion - 1;
-            let questionId = $(`.question-btn[data-order="${prevQuestion}"]`).data('question');
-            scrollToQuestion(questionId);
-            updateCurrentQuestion(prevQuestion);
-        } else if (e.key === 'ArrowDown' && currentQuestion < totalQuestions) {
-            let nextQuestion = currentQuestion + 1;
-            let questionId = $(`.question-btn[data-order="${nextQuestion}"]`).data('question');
-            scrollToQuestion(questionId);
-            updateCurrentQuestion(nextQuestion);
-        }
-    });
+    let elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
+    let totalSeconds = totalMinutes * 60;
+    let remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
     
-    // Prevent accidental page refresh
+    let timerInterval = setInterval(() => {
+        if (remainingSeconds <= 0) {
+            clearInterval(timerInterval);
+            autoSubmit();
+            return;
+        }
+        
+        let hours = Math.floor(remainingSeconds / 3600);
+        let minutes = Math.floor((remainingSeconds % 3600) / 60);
+        let seconds = remainingSeconds % 60;
+        
+        document.getElementById('hours').textContent = hours.toString().padStart(2, '0');
+        document.getElementById('minutes').textContent = minutes.toString().padStart(2, '0');
+        document.getElementById('seconds').textContent = seconds.toString().padStart(2, '0');
+        
+        // Change timer color based on remaining time
+        let timerCard = document.querySelector('.timer-card');
+        if (remainingSeconds <= 60) {
+            timerCard.style.background = 'linear-gradient(135deg, #e74c3c, #c0392b)';
+        } else if (remainingSeconds <= 300) {
+            timerCard.style.background = 'linear-gradient(135deg, #f39c12, #e67e22)';
+        }
+        
+        remainingSeconds--;
+    }, 1000);
+}
+
+function autoSubmit() {
+    // ✅ Set flag before auto-submit
+    isSubmitting = true;
+    alert('⏰ Time is up! The exam will be submitted automatically.');
+    window.location.href = '{% url "submit_exam" attempt.id %}';
+}
+{% endif %}
+
+// ✅ FIXED: Check if submitting before showing warning
+function preventAccidentalExit() {
     window.addEventListener('beforeunload', function(e) {
+        // Don't show warning if user is submitting the exam
+        if (isSubmitting) {
+            return undefined;
+        }
         e.preventDefault();
-        e.returnValue = 'Are you sure you want to leave? Your progress will be saved.';
+        e.returnValue = 'Are you sure you want to leave? Your progress has been saved.';
+        return e.returnValue;
     });
+}
+
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Keyboard navigation
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowUp' && currentQuestion > 1) {
+        let prevQuestion = currentQuestion - 1;
+        let questionId = document.querySelector(`.question-btn[data-order="${prevQuestion}"]`).getAttribute('data-question');
+        navigateToQuestion(questionId, prevQuestion);
+    } else if (e.key === 'ArrowDown' && currentQuestion < totalQuestions) {
+        let nextQuestion = currentQuestion + 1;
+        let questionId = document.querySelector(`.question-btn[data-order="${nextQuestion}"]`).getAttribute('data-question');
+        navigateToQuestion(questionId, nextQuestion);
+    }
 });
 </script>
 {% endblock %}

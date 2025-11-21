@@ -1,0 +1,95 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Certificate Type - Admin Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.form-card {
+    background: white;
+    border-radius: 15px;
+    padding: 40px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    max-width: 800px;
+    margin: 0 auto;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-2">
+                    <i class="bi bi-plus-circle me-3"></i>Create Certificate Type
+                </h1>
+                <p class="mb-0 opacity-75">Define a new certificate type</p>
+            </div>
+            <div>
+                <a href="{% url 'certificates:admin_types' %}" class="btn btn-light btn-lg">
+                    <i class="bi bi-arrow-left me-2"></i>Back
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Form -->
+    <div class="form-card">
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="mb-4">
+                <label class="form-label fw-bold">
+                    <i class="bi bi-card-heading me-2"></i>Type Name *
+                </label>
+                <input type="text" name="name" class="form-control form-control-lg" 
+                       placeholder="e.g., Course Completion Certificate" required>
+                <small class="text-muted">Display name for this certificate type</small>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label fw-bold">
+                    <i class="bi bi-tag me-2"></i>Type Code *
+                </label>
+                <select name="type_code" class="form-select form-select-lg" required>
+                    <option value="">Select type code</option>
+                    {% for code, label in type_choices %}
+                    <option value="{{ code }}">{{ label }}</option>
+                    {% endfor %}
+                </select>
+                <small class="text-muted">Category of this certificate</small>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label fw-bold">
+                    <i class="bi bi-text-paragraph me-2"></i>Description
+                </label>
+                <textarea name="description" class="form-control" rows="4" 
+                          placeholder="Brief description of this certificate type..."></textarea>
+            </div>
+
+            <div class="d-flex gap-3">
+                <button type="submit" class="btn btn-primary btn-lg flex-fill">
+                    <i class="bi bi-check-circle me-2"></i>Create Type
+                </button>
+                <a href="{% url 'certificates:admin_types' %}" class="btn btn-outline-secondary btn-lg">
+                    Cancel
+                </a>
+            </div>
+        </form>
+    </div>
+
+</div>
+{% endblock %}

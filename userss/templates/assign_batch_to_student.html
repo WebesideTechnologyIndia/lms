@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+
+{% block title %}Assign Batch to {{ student.get_full_name }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .batch-card {
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 15px;
+        transition: all 0.3s ease;
+        background: white;
+    }
+    
+    .batch-card:hover {
+        border-color: var(--primary-color);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        transform: translateY(-2px);
+    }
+    
+    .student-info {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 30px;
+    }
+    
+    .batch-info {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .badge-custom {
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="student-info">
+    <div class="d-flex align-items-center justify-content-between">
+        <div>
+            <h4 class="mb-1">
+                <i class="fas fa-user-graduate me-2"></i>
+                {{ student.get_full_name }}
+            </h4>
+            <p class="mb-0 opacity-75">
+                <i class="fas fa-envelope me-1"></i>{{ student.email }} • 
+                <i class="fas fa-at me-1"></i>{{ student.username }}
+            </p>
+        </div>
+        <a href="{% url 'user_details' student.id %}" class="btn btn-light">
+            <i class="fas fa-arrow-left me-2"></i>Back to Profile
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-white py-3">
+        <h5 class="mb-0">
+            <i class="fas fa-users me-2 text-primary"></i>
+            Available Batches for Assignment
+        </h5>
+    </div>
+    <div class="card-body">
+        {% if available_batches %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Select a batch below to enroll {{ student.first_name }} in it.
+            </div>
+            
+            {% for batch in available_batches %}
+            <div class="batch-card">
+                <form method="post" style="margin: 0;">
+                    {% csrf_token %}
+                    <input type="hidden" name="batch_id" value="{{ batch.id }}">
+                    
+                    <div class="batch-info">
+                        <div class="flex-grow-1">
+                            <h6 class="mb-2">
+                                <i class="fas fa-users-class me-2 text-primary"></i>
+                                {{ batch.name }}
+                                <span class="badge-custom ms-2" style="background: #e0e7ff; color: #3730a3;">
+                                    {{ batch.code }}
+                                </span>
+                            </h6>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <small class="text-muted">
+                                        <i class="fas fa-book me-1"></i>
+                                        <strong>Course:</strong> {{ batch.course.title }}
+                                    </small>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted">
+                                        <i class="fas fa-chalkboard-teacher me-1"></i>
+                                        <strong>Instructor:</strong> {{ batch.instructor.get_full_name }}
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <div class="row mt-2">
+                                <div class="col-md-6">
+                                    <small class="text-muted">
+                                        <i class="fas fa-calendar me-1"></i>
+                                        <strong>Duration:</strong> {{ batch.start_date|date:"M d, Y" }} - {{ batch.end_date|date:"M d, Y" }}
+                                    </small>
+                                </div>
+                                <div class="col-md-6">
+                                    <small class="text-muted">
+                                        <i class="fas fa-users me-1"></i>
+                                        <strong>Enrollment:</strong> {{ batch.get_enrolled_count }}/{{ batch.max_students }}
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            {% if batch.description %}
+                            <div class="mt-2">
+                                <small class="text-muted">
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    {{ batch.description|truncatechars:100 }}
+                                </small>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="ms-3">
+                            {% if batch.get_enrolled_count < batch.max_students %}
+                                <button type="submit" class="btn btn-primary" 
+                                        onclick="return confirm('Enroll {{ student.first_name }} in {{ batch.name }}?')">
+                                    <i class="fas fa-user-plus me-2"></i>
+                                    Enroll
+                                </button>
+                            {% else %}
+                                <button type="button" class="btn btn-secondary" disabled>
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    Full
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </form>
+            </div>
+            {% endfor %}
+            
+        {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                <h5 class="text-muted">No Available Batches</h5>
+                <p class="text-muted mb-4">
+                    Either {{ student.first_name }} is already enrolled in all batches, or no active batches exist.
+                </p>
+                <div>
+                   
+                    <a href="{% url 'user_details' student.id %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Profile
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Already Enrolled Batches -->
+{% if student.batchenrollment_set.exists %}
+<div class="card shadow-sm mt-4">
+    <div class="card-header bg-white py-3">
+        <h5 class="mb-0">
+            <i class="fas fa-check-circle me-2 text-success"></i>
+            Currently Enrolled Batches
+        </h5>
+    </div>
+    <div class="card-body">
+        {% for enrollment in student.batchenrollment_set.all %}
+        <div class="batch-card" style="border-color: #dcfce7;">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="mb-2">
+                        <i class="fas fa-users-class me-2 text-success"></i>
+                        {{ enrollment.batch.name }}
+                    </h6>
+                    <small class="text-muted">
+                        <i class="fas fa-book me-1"></i>{{ enrollment.batch.course.title }} • 
+                        <i class="fas fa-calendar me-1"></i>Enrolled on {{ enrollment.enrolled_at|date:"M d, Y" }}
+                    </small>
+                </div>
+                <span class="badge-custom" style="background: #dcfce7; color: #166534;">
+                    <i class="fas fa-check-circle me-1"></i>{{ enrollment.status }}
+                </span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}

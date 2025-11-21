@@ -293,6 +293,8 @@ def instructor_sessions(request):
 
 
 
+
+    
 @login_required
 def session_detail(request, session_id):
     """View session details and attendance list"""
@@ -319,15 +321,15 @@ def session_detail(request, session_id):
         session=session,
         status='pending'
     ).select_related('student')
-     # Get sessions based on role and set base template
+    
+    # Determine base template
     if request.user.role == 'superadmin':
-        # sessions = AttendanceSession.objects.all()
-        base_template = 'base.html'  # ✅ ADD THIS
+        base_template = 'base.html'
         page_title = 'All Attendance Sessions'
     else:
-        # sessions = AttendanceSession.objects.filter(instructor=request.user)
-        base_template = 'instructor_base.html'  # ✅ ADD THIS
+        base_template = 'instructor_base.html'
         page_title = 'My Attendance Sessions'
+    
     # Prepare student list with attendance status
     student_list = []
     for enrollment in enrolled_students:
@@ -345,21 +347,41 @@ def session_detail(request, session_id):
             'method': attendance.get_marking_method_display() if attendance else None
         })
     
-    stats = session.get_stats()
+    # ✅ CALCULATE STATS MANUALLY
+    total_students = enrolled_students.count()
+    present_count = sum(1 for s in student_list if s['has_attendance'] and s['attendance'].is_present)
+    absent_count = total_students - present_count
+    attendance_percentage = round((present_count / total_students * 100), 1) if total_students > 0 else 0
+    
+    # ✅ CREATE STATS DICT
+    stats = {
+        'total': total_students,
+        'present': present_count,
+        'absent': absent_count,
+        'percentage': attendance_percentage,
+        'late': sum(1 for s in student_list if s['is_late']),
+    }
+    
+    # ✅ DEBUG PRINT
+    print(f"\n=== SESSION STATS DEBUG ===")
+    print(f"Session: {session.batch.name}")
+    print(f"Total Students: {stats['total']}")
+    print(f"Present: {stats['present']}")
+    print(f"Absent: {stats['absent']}")
+    print(f"Percentage: {stats['percentage']}%")
+    print(f"=== END DEBUG ===\n")
     
     context = {
         'session': session,
         'student_list': student_list,
         'pending_requests': pending_requests,
-        'stats': stats,
+        'stats': stats,  # ✅ Stats ready hai
         'page_title': f'Session - {session.batch.name}',
         'is_instructor': request.user == session.instructor or request.user.role == 'superadmin',
         'base_template': base_template
     }
     
     return render(request, 'attendance/session_detail.html', context)
-
-
 # ==================== STUDENT - QR SCANNER ====================
 
 @login_required
@@ -1137,7 +1159,7 @@ def bulk_mark_attendance(request, session_id):
     unmarked_student_ids = set(enrolled_students) - set(marked_students)
     
     marked_count = 0
-    from users.models import User
+    from userss.models import AbstractUser
     for student_id in unmarked_student_ids:
         student = User.objects.get(id=student_id)
         Attendance.objects.create(
@@ -1375,35 +1397,47 @@ def student_attendance_history(request):
 # ==================== COMMON VIEWS ====================
 @login_required
 def session_list(request):
-    """List all attendance sessions"""
+    """
+    View all attendance sessions with complete stats
+    - Superadmin: ALL sessions
+    - Instructor: Only their sessions
+    """
     
     # Check if user is instructor or superadmin
     if request.user.role not in ['instructor', 'superadmin']:
         messages.error(request, 'Only instructors/admins can view sessions!')
         return redirect('home')
     
-    # Get sessions based on role
+    # ✅ Get sessions based on role
     if request.user.role == 'superadmin':
         sessions = AttendanceSession.objects.all()
         base_template = 'base.html'
         page_title = 'All Attendance Sessions'
+        is_superadmin = True
     else:
-        # Get batches where user is instructor
-        instructor_batches = Batch.objects.filter(instructor=request.user)
-        sessions = AttendanceSession.objects.filter(batch__in=instructor_batches)
+        # Get sessions where user is instructor
+        sessions = AttendanceSession.objects.filter(
+            batch__instructor=request.user
+        )
         base_template = 'instructor_base.html'
         page_title = 'My Attendance Sessions'
+        is_superadmin = False
     
-    # ✅ FIXED - Use start_time instead of date
-    # ✅ FIXED - Don't select_related 'instructor' (doesn't exist)
-    sessions = sessions.select_related('batch').order_by('-start_time')
+    # ✅ Optimize query
+    sessions = sessions.select_related(
+        'batch', 
+        'batch__instructor',
+        'batch__course'
+    ).prefetch_related(
+        'attendances'
+    ).order_by('-start_time')
     
-    # Filter by batch if provided
+    # ✅ Filter by batch if provided
     batch_id = request.GET.get('batch')
     if batch_id:
         sessions = sessions.filter(batch_id=batch_id)
     
-    # Filter by date range if provided
+    # ✅ Filter by date range if provided
     from_date = request.GET.get('from_date')
     to_date = request.GET.get('to_date')
     
@@ -1414,7 +1448,6 @@ def session_list(request):
             from_datetime = timezone.make_aware(
                 datetime.strptime(from_date, '%Y-%m-%d').replace(hour=0, minute=0, second=0)
             )
-            # ✅ Use __gte with start_time
             sessions = sessions.filter(start_time__gte=from_datetime)
         except ValueError:
             messages.warning(request, 'Invalid from_date format')
@@ -1426,39 +1459,80 @@ def session_list(request):
             to_datetime = timezone.make_aware(
                 datetime.strptime(to_date, '%Y-%m-%d').replace(hour=23, minute=59, second=59)
             )
-            # ✅ Use __lte with start_time
             sessions = sessions.filter(start_time__lte=to_datetime)
         except ValueError:
             messages.warning(request, 'Invalid to_date format')
     
-    # Pagination
+    # ✅ Search filter
+    search = request.GET.get('search')
+    if search:
+        from django.db.models import Q
+        sessions = sessions.filter(
+            Q(batch__name__icontains=search) |
+            Q(batch__course__title__icontains=search) |
+            Q(classroom_location__icontains=search)
+        )
+    
+    # ✅ PAGINATION FIRST
     from django.core.paginator import Paginator
     paginator = Paginator(sessions, 10)
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Get batches for filter dropdown
+    # ✅ Calculate stats for CURRENT PAGE sessions only
+    sessions_data = []
+    for session in page_obj.object_list:
+        # Get total students from BatchEnrollment
+        total_students = BatchEnrollment.objects.filter(
+            batch=session.batch,
+            is_active=True
+        ).count()
+        
+        # Count present, absent, late
+        present_count = session.attendances.filter(is_present=True).count()
+        late_count = session.attendances.filter(is_late=True).count()
+        absent_count = total_students - present_count
+        
+        # Calculate percentage
+        percentage = round((present_count / total_students) * 100, 2) if total_students > 0 else 0
+        
+        sessions_data.append({
+            'session': session,
+            'total_students': total_students,
+            'present_count': present_count,
+            'absent_count': absent_count,
+            'late_count': late_count,
+            'percentage': percentage,
+            'is_ongoing': session.is_open_now(),
+        })
+    
+    # ✅ Get batches for filter dropdown
     if request.user.role == 'superadmin':
-        available_batches = Batch.objects.filter(is_active=True)
+        available_batches = Batch.objects.filter(is_active=True).select_related('instructor', 'course')
+        all_instructors = User.objects.filter(role='instructor').order_by('first_name')
     else:
         available_batches = Batch.objects.filter(
             instructor=request.user,
             is_active=True
-        )
+        ).select_related('course')
+        all_instructors = None
     
     context = {
         'page_obj': page_obj,
-        'sessions': page_obj.object_list,
+        'sessions_data': sessions_data,  # ✅ Sessions with complete stats
         'available_batches': available_batches,
+        'all_instructors': all_instructors,
         'selected_batch': batch_id,
         'from_date': from_date,
         'to_date': to_date,
+        'search': search,
         'page_title': page_title,
         'base_template': base_template,
+        'is_superadmin': is_superadmin,
     }
     
     return render(request, 'attendance/session_list.html', context)
-    
+
 # ==================== REPORTS & ANALYTICS ====================
 @login_required
 def attendance_reports(request):

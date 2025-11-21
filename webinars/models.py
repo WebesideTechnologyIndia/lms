@@ -269,66 +269,99 @@ class WebinarRegistration(models.Model):
 
 
     @classmethod
-    def create_registration(cls, webinar, email, first_name, last_name, **kwargs):
-        """Create registration with automatic user creation"""
-        
-        # Check if user already exists
-        try:
-            user = User.objects.get(email=email)
-            # Update user info if needed
-            if not user.first_name:
-                user.first_name = first_name
-            if not user.last_name:
-                user.last_name = last_name
-            user.save()
-            
-        except User.DoesNotExist:
-            # Create new user with 'student' role initially
+    def create_registration(cls, webinar, email, first_name, last_name, 
+                          phone_number='', company='', designation=''):
+        """Create a registration and auto-create user if needed"""
+        from django.contrib.auth import get_user_model
+        import random
+        import string
+
+        User = get_user_model()
+
+        # Check if user exists
+        user = User.objects.filter(email=email.lower()).first()
+        generated_password = None
+
+        if not user:
+            print(f"Creating new user for: {email}")
+
+            # Generate username from email
             username = email.split('@')[0]
-            # Make username unique
+            base_username = username
             counter = 1
-            original_username = username
             while User.objects.filter(username=username).exists():
-                username = f"{original_username}{counter}"
+                username = f"{base_username}{counter}"
                 counter += 1
-            
+
             # Generate random password
-            password = ''.join(random.choices(string.ascii_letters + string.digits, k=8))
-            
-            # Create user as 'student' initially (everyone starts as student)
-            user = User.objects.create(
+            generated_password = ''.join(random.choices(string.ascii_letters + string.digits, k=12))
+
+            # Create user with webinar_user role
+            user = User.objects.create_user(
                 username=username,
-                email=email,
+                email=email.lower(),
+                password=generated_password,
                 first_name=first_name,
                 last_name=last_name,
-                role='student',  # Always start as student
+                role='webinar_user',  # ✅ Set correct role
                 is_active=True
             )
-            user.set_password(password)
-            user.save()
-            
-            # Send password email
-            cls.send_welcome_email(user, password, webinar)
-        
+
+            print(f"✅ User created: {username} with role: {user.role}")
+
+            # Send welcome email with password
+            if generated_password:
+                try:
+                    from django.core.mail import send_mail
+                    from django.conf import settings
+
+                    subject = "Your LMS Account Has Been Created"
+                    message = f"""
+    Dear {first_name},
+
+    Your account has been created successfully!
+
+    Login Credentials:
+    Username: {username}
+    Email: {email}
+    Password: {generated_password}
+
+    Login URL: {settings.SITE_URL if hasattr(settings, 'SITE_URL') else 'http://localhost:8000'}/login/
+
+    You can change your password after logging in.
+
+    Best regards,
+    Team
+                    """
+
+                    send_mail(
+                        subject,
+                        message,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [email],
+                        fail_silently=False,
+                    )
+                    print(f"✅ Welcome email sent to: {email}")
+                except Exception as e:
+                    print(f"❌ User creation email error: {e}")
+        else:
+            print(f"User already exists: {user.username} with role: {user.role}")
+
         # Create registration
         registration = cls.objects.create(
             webinar=webinar,
             user=user,
-            email=email,
+            email=email.lower(),
             first_name=first_name,
             last_name=last_name,
-            amount_paid=0,  # Will be updated when payment is confirmed
-            **kwargs
+            phone_number=phone_number,
+            company=company,
+            designation=designation,
+            # registration_source='website'
         )
-        
-        # Handle FREE webinars immediately (but keep user as student)
-        if webinar.webinar_type == 'free':
-            registration.confirm_payment()
-            # Note: User stays as 'student' for free webinars
-        
+
+        print(f"✅ Registration created: {registration.id}")
         return registration
-    
-    
     
     @staticmethod
     def send_welcome_email(user, password, webinar):

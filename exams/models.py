@@ -12,6 +12,7 @@ import json
 
 User = get_user_model()
 
+
 class Exam(models.Model):
     """Main Exam Model"""
     
@@ -46,11 +47,13 @@ class Exam(models.Model):
     # Timing Configuration
     timing_type = models.CharField(max_length=20, choices=TIMING_TYPE_CHOICES, default='no_timing')
     time_per_question_minutes = models.PositiveIntegerField(
-        default=2, 
+        null=True,  # ✅ Allow NULL
+        blank=True,  # ✅ Allow blank
         help_text="Minutes per question (only for per_question timing)"
     )
     total_exam_time_minutes = models.PositiveIntegerField(
-        default=60,
+        null=True,  # ✅ Allow NULL
+        blank=True,  # ✅ Allow blank
         help_text="Total exam duration in minutes"
     )
     
@@ -98,11 +101,13 @@ class Exam(models.Model):
     def calculate_exam_duration(self):
         """Calculate total exam duration based on timing type"""
         if self.timing_type == 'no_timing':
-            return None
+            return None  # ✅ No time limit
         elif self.timing_type == 'per_question':
-            return self.get_total_questions() * self.time_per_question_minutes
+            if self.time_per_question_minutes:
+                return self.get_total_questions() * self.time_per_question_minutes
+            return None
         else:  # total_exam
-            return self.total_exam_time_minutes
+            return self.total_exam_time_minutes  # ✅ Can be None
     
     def is_available_now(self):
         """Check if exam is currently available"""
@@ -167,8 +172,21 @@ class Exam(models.Model):
         
         # Default fallback
         return False, 'Cannot attempt exam'
-
-
+    
+    def get_time_limit_display(self):
+        """Get human-readable time limit"""
+        if self.timing_type == 'no_timing':
+            return 'No Time Limit'
+        elif self.timing_type == 'per_question':
+            if self.time_per_question_minutes:
+                return f'{self.time_per_question_minutes} min per question'
+            return 'Not set'
+        else:  # total_exam
+            if self.total_exam_time_minutes:
+                return f'{self.total_exam_time_minutes} minutes total'
+            return 'Not set'
+        
+        
 class MCQQuestion(models.Model):
     """Multiple Choice Questions"""
     

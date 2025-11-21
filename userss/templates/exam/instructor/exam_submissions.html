@@ -1,0 +1,518 @@
+{% extends 'instructor_base.html' %}
+{% load static %}
+
+{% block title %}Exam Submissions - Instructor Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.stat-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: none;
+    height: 100%;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    margin-bottom: 15px;
+}
+
+.stat-icon.primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+.stat-icon.warning { background: linear-gradient(135deg, #fa709a 0%, #fee140 100%); color: white; }
+.stat-icon.success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; }
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    color: #718096;
+    font-size: 0.95rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.filter-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    margin-bottom: 30px;
+}
+
+.submission-table {
+    background: white;
+    border-radius: 15px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.submission-table table {
+    margin-bottom: 0;
+}
+
+.submission-table thead {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.submission-table thead th {
+    border: none;
+    padding: 15px;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.5px;
+}
+
+.submission-table tbody tr {
+    transition: background-color 0.2s ease;
+}
+
+.submission-table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.submission-table tbody td {
+    padding: 15px;
+    vertical-align: middle;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.grade-badge {
+    padding: 8px 16px;
+    border-radius: 25px;
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+.student-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.student-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+}
+
+.action-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    border: none;
+}
+
+.action-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.empty-state i {
+    font-size: 5rem;
+    color: #cbd5e0;
+    margin-bottom: 20px;
+}
+
+.empty-state h4 {
+    color: #4a5568;
+    margin-bottom: 10px;
+}
+
+.empty-state p {
+    color: #718096;
+}
+
+.pagination {
+    margin-top: 30px;
+}
+
+.pagination .page-link {
+    border-radius: 8px;
+    margin: 0 5px;
+    border: none;
+    color: #667eea;
+    font-weight: 600;
+}
+
+.pagination .page-link:hover {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.pagination .page-item.active .page-link {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-2">
+                    <i class="bi bi-clipboard-check me-3"></i>Exam Submissions
+                </h1>
+                <p class="mb-0 opacity-75">Review and grade student exam submissions</p>
+            </div>
+            <div>
+                <a href="{% url 'instructor_my_exams' %}" class="btn btn-light btn-lg">
+                    <i class="bi bi-arrow-left me-2"></i>Back to Exams
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon primary">
+                    <i class="bi bi-clipboard-check"></i>
+                </div>
+                <div class="stat-value">{{ total_attempts }}</div>
+                <div class="stat-label">Total Submissions</div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon warning">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+                <div class="stat-value">{{ pending_grading }}</div>
+                <div class="stat-label">Pending Grading</div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon success">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+                <div class="stat-value">{{ total_attempts|add:"-"|add:pending_grading }}</div>
+                <div class="stat-label">Graded</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-card">
+        <form method="get" class="row g-3">
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label fw-bold">
+                    <i class="bi bi-file-text me-2"></i>Exam
+                </label>
+                <select name="exam" class="form-select">
+                    <option value="">All Exams</option>
+                    {% for exam in exams %}
+                    <option value="{{ exam.id }}" {% if exam_filter == exam.id|stringformat:"s" %}selected{% endif %}>
+                        {{ exam.title }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-lg-2 col-md-6">
+                <label class="form-label fw-bold">
+                    <i class="bi bi-flag me-2"></i>Status
+                </label>
+                <select name="status" class="form-select">
+                    <option value="">All Status</option>
+                    <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>In Progress</option>
+                    <option value="submitted" {% if status_filter == 'submitted' %}selected{% endif %}>Submitted</option>
+                    <option value="auto_submitted" {% if status_filter == 'auto_submitted' %}selected{% endif %}>Auto Submitted</option>
+                </select>
+            </div>
+
+            <div class="col-lg-2 col-md-6">
+                <label class="form-label fw-bold">
+                    <i class="bi bi-award me-2"></i>Grading
+                </label>
+                <select name="grading" class="form-select">
+                    <option value="">All</option>
+                    <option value="graded" {% if grading_filter == 'graded' %}selected{% endif %}>Graded</option>
+                    <option value="ungraded" {% if grading_filter == 'ungraded' %}selected{% endif %}>Ungraded</option>
+                </select>
+            </div>
+
+            <div class="col-lg-3 col-md-6">
+                <label class="form-label fw-bold">
+                    <i class="bi bi-search me-2"></i>Search
+                </label>
+                <input type="text" name="search" class="form-control" 
+                       placeholder="Student name or exam..." value="{{ search_query }}">
+            </div>
+
+            <div class="col-lg-2 col-md-6 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-funnel me-2"></i>Apply Filters
+                </button>
+            </div>
+        </form>
+
+        {% if exam_filter or status_filter or grading_filter or search_query %}
+        <div class="mt-3">
+            <a href="{% url 'instructor_exam_submissions' %}" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-x-circle me-2"></i>Clear Filters
+            </a>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Submissions Table -->
+    {% if attempts %}
+    <div class="submission-table">
+        <table class="table mb-0">
+            <thead>
+                <tr>
+                    <th>Student</th>
+                    <th>Exam</th>
+                    <th>Submitted</th>
+                    <th>Duration</th>
+                    <th>Status</th>
+                    <th>Score</th>
+                    <th>Grading</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for attempt in attempts %}
+                <tr>
+                    <!-- Student -->
+                    <td>
+                        <div class="student-info">
+                            <div class="student-avatar">
+                                {{ attempt.student.first_name|slice:":1"|upper }}{{ attempt.student.last_name|slice:":1"|upper }}
+                            </div>
+                            <div>
+                                <div class="fw-bold">{{ attempt.student.get_full_name|default:attempt.student.username }}</div>
+                                <small class="text-muted">{{ attempt.student.email }}</small>
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- Exam -->
+                    <td>
+                        <div class="fw-bold">{{ attempt.exam.title }}</div>
+                        <small class="text-muted">{{ attempt.exam.exam_type|title }}</small>
+                    </td>
+
+                    <!-- Submitted Time -->
+                    <td>
+                        {% if attempt.submitted_at %}
+                            <div>{{ attempt.submitted_at|date:"M d, Y" }}</div>
+                            <small class="text-muted">{{ attempt.submitted_at|time:"h:i A" }}</small>
+                        {% else %}
+                            <span class="text-muted">Not submitted</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Duration -->
+                    <td>
+                        {% if attempt.time_taken %}
+                            <span class="badge bg-info">{{ attempt.time_taken }} mins</span>
+                        {% else %}
+                            <span class="text-muted">--</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Status -->
+                    <td>
+                        {% if attempt.status == 'submitted' %}
+                            <span class="status-badge bg-success">Submitted</span>
+                        {% elif attempt.status == 'auto_submitted' %}
+                            <span class="status-badge bg-warning text-dark">Auto Submitted</span>
+                        {% elif attempt.status == 'in_progress' %}
+                            <span class="status-badge bg-primary">In Progress</span>
+                        {% else %}
+                            <span class="status-badge bg-secondary">{{ attempt.status|title }}</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Score -->
+                    <td>
+                        {% if attempt.is_graded %}
+                            <div class="grade-badge bg-primary text-white">
+                                {{ attempt.total_marks_obtained|floatformat:1 }}/{{ attempt.exam.total_marks }}
+                            </div>
+                            <small class="text-muted d-block mt-1">{{ attempt.percentage|floatformat:1 }}%</small>
+                        {% else %}
+                            <span class="text-muted">Not graded</span>
+                        {% endif %}
+                    </td>
+
+                    <!-- Grading Status -->
+                    <td>
+                        {% if attempt.is_graded %}
+                            <div>
+                                <i class="bi bi-check-circle-fill text-success me-1"></i>
+                                <small class="text-success fw-bold">Graded</small>
+                            </div>
+                            {% if attempt.graded_by %}
+                            <small class="text-muted">by {{ attempt.graded_by.username }}</small>
+                            {% endif %}
+                        {% else %}
+                            <div>
+                                <i class="bi bi-hourglass-split text-warning me-1"></i>
+                                <small class="text-warning fw-bold">Pending</small>
+                            </div>
+                        {% endif %}
+                    </td>
+
+                    <!-- Actions -->
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'instructor_grade_submission' attempt.id %}" 
+                               class="btn btn-primary action-btn">
+                                <i class="bi bi-pencil-square"></i> 
+                                {% if attempt.is_graded %}Review{% else %}Grade{% endif %}
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if attempts.has_other_pages %}
+    <nav aria-label="Submission pagination">
+        <ul class="pagination justify-content-center">
+            {% if attempts.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if exam_filter %}&exam={{ exam_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if grading_filter %}&grading={{ grading_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">
+                        <i class="bi bi-chevron-double-left"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ attempts.previous_page_number }}{% if exam_filter %}&exam={{ exam_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if grading_filter %}&grading={{ grading_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">
+                        <i class="bi bi-chevron-left"></i>
+                    </a>
+                </li>
+            {% endif %}
+            
+            <li class="page-item active">
+                <span class="page-link">{{ attempts.number }} of {{ attempts.paginator.num_pages }}</span>
+            </li>
+            
+            {% if attempts.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ attempts.next_page_number }}{% if exam_filter %}&exam={{ exam_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if grading_filter %}&grading={{ grading_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">
+                        <i class="bi bi-chevron-right"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ attempts.paginator.num_pages }}{% if exam_filter %}&exam={{ exam_filter }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if grading_filter %}&grading={{ grading_filter }}{% endif %}{% if search_query %}&search={{ search_query }}{% endif %}">
+                        <i class="bi bi-chevron-double-right"></i>
+                    </a>
+                </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+
+    {% else %}
+    
+    <!-- Empty State -->
+    <div class="submission-table">
+        <div class="empty-state">
+            <i class="bi bi-clipboard-x"></i>
+            <h4>No Submissions Found</h4>
+            {% if exam_filter or status_filter or grading_filter or search_query %}
+                <p>No submissions match your current filters.</p>
+                <a href="{% url 'instructor_exam_submissions' %}" class="btn btn-primary">
+                    <i class="bi bi-x-circle me-2"></i>Clear Filters
+                </a>
+            {% else %}
+                <p>No student has submitted any exam yet.</p>
+                <a href="{% url 'instructor_assign_exam' %}" class="btn btn-primary">
+                    <i class="bi bi-plus-lg me-2"></i>Assign Exams
+                </a>
+            {% endif %}
+        </div>
+    </div>
+    
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Auto-submit form on filter change
+    const filterSelects = document.querySelectorAll('.filter-card select');
+    
+    filterSelects.forEach(select => {
+        select.addEventListener('change', function() {
+            this.form.submit();
+        });
+    });
+
+    // Highlight pending grading
+    const pendingRows = document.querySelectorAll('tbody tr');
+    pendingRows.forEach(row => {
+        const gradingCell = row.querySelector('td:nth-child(7)');
+        if (gradingCell && gradingCell.textContent.includes('Pending')) {
+            row.style.backgroundColor = '#fff9e6';
+        }
+    });
+});
+</script>
+{% endblock %}

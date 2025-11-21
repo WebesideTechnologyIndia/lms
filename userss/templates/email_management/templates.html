@@ -3,6 +3,54 @@
 
 {% block title %}Email Templates - LMS{% endblock %}
 
+{% block extra_css %}
+<style>
+    /* Fix modal flashing and scrollbar jump */
+    .modal {
+        overflow-y: auto !important;
+    }
+    
+    .modal-open {
+        overflow: auto !important;
+        padding-right: 0 !important;
+    }
+    
+    .modal-backdrop {
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+    
+    /* Smooth modal transitions */
+    .modal.fade .modal-dialog {
+        transition: transform 0.15s ease-out;
+        transform: translate(0, -25px);
+    }
+    
+    .modal.show .modal-dialog {
+        transform: translate(0, 0);
+    }
+    
+    /* Prevent content shift */
+    body {
+        overflow-y: scroll;
+    }
+    
+    /* Table row hover effect */
+    .template-row {
+        transition: background-color 0.2s ease;
+    }
+    
+    .template-row:hover {
+        background-color: rgba(0, 123, 255, 0.05);
+    }
+    
+    /* Prevent layout shift on modal open */
+    .modal-open .navbar,
+    .modal-open .main-content {
+        padding-right: 0 !important;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
@@ -38,9 +86,9 @@
             </div>
             <div class="col-md-6 text-end">
                 <div class="btn-group btn-group-sm">
-                    <button type="button" class="btn btn-outline-secondary" onclick="filterTemplates('all')">All</button>
-                    <button type="button" class="btn btn-outline-success" onclick="filterTemplates('active')">Active</button>
-                    <button type="button" class="btn btn-outline-warning" onclick="filterTemplates('inactive')">Inactive</button>
+                    <button type="button" class="btn btn-secondary" onclick="filterTemplates('all', this)">All</button>
+                    <button type="button" class="btn btn-outline-success" onclick="filterTemplates('active', this)">Active</button>
+                    <button type="button" class="btn btn-outline-warning" onclick="filterTemplates('inactive', this)">Inactive</button>
                 </div>
             </div>
         </div>
@@ -110,8 +158,7 @@
                                 </td>
                                 <td>
                                     <div class="btn-group btn-group-sm">
-                                        <button class="btn btn-outline-info" data-bs-toggle="modal" 
-                                                data-bs-target="#previewModal{{ template.id }}">
+                                        <button class="btn btn-outline-info" onclick="openPreviewModal({{ template.id }})">
                                             <i class="fas fa-eye"></i>
                                         </button>
                                         <button class="btn btn-outline-success" onclick="testTemplate({{ template.id }})">
@@ -126,60 +173,6 @@
                                     </div>
                                 </td>
                             </tr>
-
-                            <!-- Preview Modal -->
-                            <div class="modal fade" id="previewModal{{ template.id }}" tabindex="-1">
-                                <div class="modal-dialog modal-lg">
-                                    <div class="modal-content">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">
-                                                <i class="fas fa-eye me-2"></i>{{ template.name }}
-                                            </h5>
-                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <div class="row mb-3">
-                                                <div class="col-md-6">
-                                                    <strong>Type:</strong> {{ template.get_template_type_display }}
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <strong>Status:</strong> 
-                                                    {% if template.is_active %}
-                                                        <span class="badge bg-success">Active</span>
-                                                    {% else %}
-                                                        <span class="badge bg-secondary">Inactive</span>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="border-start border-4 border-primary ps-3 mb-3">
-                                                <h6 class="text-primary">Subject:</h6>
-                                                <p class="mb-0">{{ template.subject }}</p>
-                                            </div>
-                                            
-                                            <div class="border-start border-4 border-info ps-3">
-                                                <h6 class="text-info">Message Body:</h6>
-                                                <div class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;">
-                                                    {{ template.email_body|linebreaks }}
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="mt-3">
-                                                <small class="text-muted">
-                                                    <i class="fas fa-info-circle me-1"></i>
-                                                    Variables like {{username}}, {{first_name}}, etc. will be replaced with actual values when sent.
-                                                </small>
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                            <button type="button" class="btn btn-success" onclick="testTemplate({{ template.id }})">
-                                                <i class="fas fa-paper-plane me-1"></i>Send Test Email
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -197,8 +190,64 @@
     </div>
 </div>
 
+<!-- Preview Modals - Outside the table -->
+{% for template in templates %}
+<div class="modal fade" id="previewModal{{ template.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-eye me-2"></i>{{ template.name }}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <strong>Type:</strong> {{ template.get_template_type_display }}
+                    </div>
+                    <div class="col-md-6">
+                        <strong>Status:</strong> 
+                        {% if template.is_active %}
+                            <span class="badge bg-success">Active</span>
+                        {% else %}
+                            <span class="badge bg-secondary">Inactive</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="border-start border-4 border-primary ps-3 mb-3">
+                    <h6 class="text-primary">Subject:</h6>
+                    <p class="mb-0">{{ template.subject }}</p>
+                </div>
+                
+                <div class="border-start border-4 border-info ps-3">
+                    <h6 class="text-info">Message Body:</h6>
+                    <div class="bg-light p-3 rounded" style="max-height: 300px; overflow-y: auto;">
+                        {{ template.email_body|linebreaks }}
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Variables like {{username}}, {{first_name}}, etc. will be replaced with actual values when sent.
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" onclick="testTemplateFromModal({{ template.id }})">
+                    <i class="fas fa-paper-plane me-1"></i>Send Test Email
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
+
 <!-- Success Modal -->
-<div class="modal fade" id="successModal" tabindex="-1">
+<div class="modal fade" id="successModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header bg-success text-white">
@@ -220,13 +269,69 @@
 
 {% block extra_js %}
 <script>
-    function filterTemplates(status) {
+    // Store modal instances
+    let modalInstances = {};
+    
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', function() {
+        // Pre-initialize all modals to prevent flashing
+        document.querySelectorAll('.modal').forEach(function(modalEl) {
+            modalInstances[modalEl.id] = new bootstrap.Modal(modalEl, {
+                backdrop: true,
+                keyboard: true,
+                focus: true
+            });
+        });
+        
+        // Prevent body padding changes
+        document.querySelectorAll('.modal').forEach(function(modalEl) {
+            modalEl.addEventListener('show.bs.modal', function() {
+                document.body.style.paddingRight = '0px';
+            });
+            
+            modalEl.addEventListener('shown.bs.modal', function() {
+                document.body.style.paddingRight = '0px';
+            });
+            
+            modalEl.addEventListener('hidden.bs.modal', function() {
+                document.body.style.paddingRight = '0px';
+            });
+        });
+    });
+    
+    // Open preview modal without flashing
+    function openPreviewModal(templateId) {
+        const modalId = 'previewModal' + templateId;
+        if (modalInstances[modalId]) {
+            modalInstances[modalId].show();
+        } else {
+            const modalEl = document.getElementById(modalId);
+            if (modalEl) {
+                const modal = new bootstrap.Modal(modalEl);
+                modalInstances[modalId] = modal;
+                modal.show();
+            }
+        }
+    }
+
+    function filterTemplates(status, button) {
         const rows = document.querySelectorAll('.template-row');
-        const buttons = document.querySelectorAll('.btn-group button');
+        const buttons = button.parentElement.querySelectorAll('button');
         
         // Reset button states
-        buttons.forEach(btn => btn.classList.remove('btn-outline-secondary', 'btn-secondary'));
+        buttons.forEach(btn => {
+            btn.classList.remove('btn-secondary', 'btn-success', 'btn-warning');
+            const text = btn.textContent.trim();
+            if (text === 'All') {
+                btn.classList.add('btn-outline-secondary');
+            } else if (text === 'Active') {
+                btn.classList.add('btn-outline-success');
+            } else if (text === 'Inactive') {
+                btn.classList.add('btn-outline-warning');
+            }
+        });
         
+        // Filter rows
         rows.forEach(row => {
             if (status === 'all' || row.dataset.status === status) {
                 row.style.display = '';
@@ -236,25 +341,64 @@
         });
         
         // Update active button
-        event.target.classList.add('btn-secondary');
-        event.target.classList.remove('btn-outline-secondary');
+        const text = button.textContent.trim();
+        if (text === 'All') {
+            button.classList.remove('btn-outline-secondary');
+            button.classList.add('btn-secondary');
+        } else if (text === 'Active') {
+            button.classList.remove('btn-outline-success');
+            button.classList.add('btn-success');
+        } else if (text === 'Inactive') {
+            button.classList.remove('btn-outline-warning');
+            button.classList.add('btn-warning');
+        }
     }
 
     function testTemplate(templateId) {
+        sendTestEmail(templateId);
+    }
+    
+    function testTemplateFromModal(templateId) {
+        // Close preview modal first
+        const previewModalId = 'previewModal' + templateId;
+        if (modalInstances[previewModalId]) {
+            modalInstances[previewModalId].hide();
+        }
+        
+        // Send test email after a short delay
+        setTimeout(() => {
+            sendTestEmail(templateId);
+        }, 300);
+    }
+    
+    function sendTestEmail(templateId) {
+        // Get CSRF token
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+                         document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                         '{{ csrf_token }}';
+        
         fetch(`/email-templates/${templateId}/test/`, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'X-CSRFToken': csrfToken,
                 'Content-Type': 'application/json',
             },
         })
         .then(response => response.json())
         .then(data => {
-            const modal = new bootstrap.Modal(document.getElementById('successModal'));
-            document.getElementById('success-message').textContent = data.message;
-            modal.show();
+            // Show success modal
+            if (modalInstances['successModal']) {
+                document.getElementById('success-message').textContent = data.message;
+                modalInstances['successModal'].show();
+            } else {
+                const successModal = new bootstrap.Modal(document.getElementById('successModal'));
+                modalInstances['successModal'] = successModal;
+                document.getElementById('success-message').textContent = data.message;
+                successModal.show();
+            }
         })
         .catch(error => {
+            console.error('Error:', error);
             alert('Error sending test email: ' + error);
         });
     }

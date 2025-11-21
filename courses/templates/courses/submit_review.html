@@ -1,124 +1,187 @@
 {% extends 'students/student_base.html' %}
 {% load static %}
 
-{% block title %}Submit Review - {{ course.title }}{% endblock %}
+{% block title %}Write Review - {{ course.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .star-rating {
+        font-size: 2rem;
+        color: #ddd;
+        cursor: pointer;
+    }
+    
+    .star-rating .star {
+        display: inline-block;
+        transition: color 0.2s;
+    }
+    
+    .star-rating .star:hover,
+    .star-rating .star.active {
+        color: #ffc107;
+    }
+    
+    .review-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container py-5">
-    <div class="row">
-        <div class="col-md-8 mx-auto">
-            <div class="card">
+<div class="container-fluid px-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            
+            <!-- Course Info Card -->
+            <div class="card review-card shadow mb-4">
+                <div class="card-body">
+                    <h4 class="text-white mb-0">{{ course.title }}</h4>
+                    <p class="text-white-50 mb-0">{{ course.course_code }}</p>
+                    <small class="text-white-50">Instructor: {{ course.instructor.get_full_name }}</small>
+                </div>
+            </div>
+
+            <!-- Review Form -->
+            <div class="card shadow">
                 <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">
-                        <i class="fas fa-star me-2"></i>
-                        {% if existing_review %}Edit Your Review{% else %}Write a Review{% endif %}
-                    </h4>
+                    <h5 class="mb-0">
+                        <i class="fas fa-star"></i>
+                        {% if existing_review %}
+                            Edit Your Review
+                        {% else %}
+                            Write a Review
+                        {% endif %}
+                    </h5>
                 </div>
                 <div class="card-body">
-                    <!-- Course Info -->
-                    <div class="alert alert-info mb-4">
-                        <div class="d-flex align-items-center">
-                            {% if course.thumbnail %}
-                            <img src="{{ course.thumbnail.url }}" alt="{{ course.title }}" 
-                                 class="rounded me-3" style="width: 80px; height: 60px; object-fit: cover;">
-                            {% endif %}
-                            <div>
-                                <h5 class="mb-1">{{ course.title }}</h5>
-                                <small class="text-muted">{{ course.course_code }} • Instructor: {{ course.instructor.get_full_name }}</small>
-                            </div>
+                    
+                    {% if messages %}
+                        {% for message in messages %}
+                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show">
+                            {{ message }}
+                            <button type="button" class="close" data-dismiss="alert">&times;</button>
                         </div>
-                    </div>
+                        {% endfor %}
+                    {% endif %}
 
-                    <form method="post">
+                    <form method="POST" id="reviewForm">
                         {% csrf_token %}
                         
-                        <!-- Rating -->
-                        <div class="mb-4">
-                            <label class="form-label">
-                                Your Rating <span class="text-danger">*</span>
-                            </label>
-                            <div class="rating-input">
-                                <div class="star-rating">
-                                    {% for i in "12345" %}
-                                    <input type="radio" id="star{{ i }}" name="rating" value="{{ forloop.counter }}" 
-                                           {% if existing_review and existing_review.rating == forloop.counter %}checked{% endif %}
-                                           required>
-                                    <label for="star{{ i }}" class="star">
-                                        <i class="fas fa-star"></i>
-                                    </label>
-                                    {% endfor %}
-                                </div>
-                                <small class="form-text text-muted d-block mt-2">
-                                    Click on stars to rate (5 stars = Excellent, 1 star = Poor)
-                                </small>
+                        <!-- Star Rating -->
+                        <div class="form-group">
+                            <label><strong>Rating *</strong></label>
+                            <div class="star-rating" id="starRating">
+                                <span class="star {% if existing_review and existing_review.rating >= 1 %}active{% endif %}" data-value="1">★</span>
+                                <span class="star {% if existing_review and existing_review.rating >= 2 %}active{% endif %}" data-value="2">★</span>
+                                <span class="star {% if existing_review and existing_review.rating >= 3 %}active{% endif %}" data-value="3">★</span>
+                                <span class="star {% if existing_review and existing_review.rating >= 4 %}active{% endif %}" data-value="4">★</span>
+                                <span class="star {% if existing_review and existing_review.rating >= 5 %}active{% endif %}" data-value="5">★</span>
                             </div>
+                            <input type="hidden" name="rating" id="ratingValue" 
+                                   value="{% if existing_review %}{{ existing_review.rating }}{% endif %}" required>
+                            <small class="form-text text-muted">Click on stars to rate (1-5)</small>
                         </div>
 
                         <!-- Review Text -->
-                        <div class="mb-4">
-                            <label class="form-label">Your Review (Optional)</label>
-                            <textarea name="review_text" class="form-control" rows="6" 
-                                      placeholder="Share your experience with this course...">{% if existing_review %}{{ existing_review.review_text }}{% endif %}</textarea>
+                        <div class="form-group">
+                            <label for="reviewText"><strong>Your Review *</strong></label>
+                            <textarea name="review" id="reviewText" class="form-control" rows="6" 
+                                      placeholder="Share your experience with this course..." required>{% if existing_review %}{{ existing_review.review_text }}{% endif %}</textarea>
                             <small class="form-text text-muted">
-                                Help other students by sharing your honest feedback about the course content, 
-                                instructor, and overall learning experience.
+                                Share your honest feedback about the course content, instructor, and learning experience.
                             </small>
                         </div>
 
-                        <!-- Guidelines -->
-                        <div class="alert alert-warning">
-                            <h6><i class="fas fa-info-circle"></i> Review Guidelines:</h6>
-                            <ul class="mb-0 small">
-                                <li>Be honest and constructive</li>
-                                <li>Focus on course content and teaching quality</li>
-                                <li>Avoid offensive language or personal attacks</li>
-                                <li>Your review will help improve the course</li>
-                            </ul>
-                        </div>
-
-                        <!-- Submit Buttons -->
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary flex-fill">
-                                <i class="fas fa-paper-plane"></i> 
-                                {% if existing_review %}Update Review{% else %}Submit Review{% endif %}
+                        <!-- Action Buttons -->
+                        <div class="form-group mb-0">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-paper-plane"></i>
+                                {% if existing_review %}
+                                    Update Review
+                                {% else %}
+                                    Submit Review
+                                {% endif %}
                             </button>
-                            <a href="{% url 'courses:my_courses' %}" class="btn btn-secondary">
+                            <a href="{% url 'student_courses' %}" class="btn btn-secondary btn-lg ml-2">
                                 <i class="fas fa-times"></i> Cancel
                             </a>
                         </div>
+
                     </form>
                 </div>
             </div>
+
+            <!-- Existing Review Info -->
+            {% if existing_review %}
+            <div class="alert alert-info mt-3">
+                <i class="fas fa-info-circle"></i>
+                <strong>Note:</strong> You have already reviewed this course. You can update your review using this form.
+            </div>
+            {% endif %}
+
         </div>
     </div>
 </div>
+{% endblock %}
 
-<style>
-.star-rating {
-    display: flex;
-    flex-direction: row-reverse;
-    justify-content: flex-end;
-    font-size: 2rem;
-}
-
-.star-rating input[type="radio"] {
-    display: none;
-}
-
-.star-rating label {
-    color: #ddd;
-    cursor: pointer;
-    transition: color 0.2s;
-}
-
-.star-rating label:hover,
-.star-rating label:hover ~ label,
-.star-rating input[type="radio"]:checked ~ label {
-    color: #ffc107;
-}
-
-.star {
-    margin: 0 5px;
-}
-</style>
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const stars = document.querySelectorAll('.star');
+    const ratingInput = document.getElementById('ratingValue');
+    
+    // Star click handler
+    stars.forEach(star => {
+        star.addEventListener('click', function() {
+            const value = this.getAttribute('data-value');
+            ratingInput.value = value;
+            
+            // Update visual state
+            stars.forEach(s => {
+                const starValue = parseInt(s.getAttribute('data-value'));
+                if (starValue <= value) {
+                    s.classList.add('active');
+                } else {
+                    s.classList.remove('active');
+                }
+            });
+        });
+        
+        // Hover effect
+        star.addEventListener('mouseenter', function() {
+            const value = this.getAttribute('data-value');
+            stars.forEach(s => {
+                const starValue = parseInt(s.getAttribute('data-value'));
+                if (starValue <= value) {
+                    s.style.color = '#ffc107';
+                } else {
+                    s.style.color = '#ddd';
+                }
+            });
+        });
+    });
+    
+    // Reset on mouse leave
+    document.querySelector('.star-rating').addEventListener('mouseleave', function() {
+        const currentValue = ratingInput.value;
+        stars.forEach(s => {
+            const starValue = parseInt(s.getAttribute('data-value'));
+            if (starValue <= currentValue) {
+                s.style.color = '#ffc107';
+            } else {
+                s.style.color = '#ddd';
+            }
+        });
+    });
+    
+    // Form validation
+    document.getElementById('reviewForm').addEventListener('submit', function(e) {
+        if (!ratingInput.value) {
+            e.preventDefault();
+            alert('Please select a rating!');
+        }
+    });
+});
+</script>
 {% endblock %}

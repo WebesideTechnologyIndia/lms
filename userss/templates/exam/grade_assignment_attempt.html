@@ -1,0 +1,472 @@
+{% extends 'base.html' %}
+
+{% block title %}Grade Exam - {{ exam.title }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    .submission-card {
+        border-left: 4px solid #0d6efd;
+    }
+    
+    .student-info {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-radius: 10px;
+        padding: 20px;
+    }
+    
+    .file-item {
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        margin-bottom: 10px;
+        transition: all 0.3s;
+    }
+    
+    .file-item:hover {
+        border-color: #0d6efd;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .grading-section {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 25px;
+    }
+    
+    .marks-input {
+        font-size: 1.5rem;
+        font-weight: bold;
+        text-align: center;
+    }
+    
+    .question-card {
+        border-left: 3px solid #0d6efd;
+        margin-bottom: 15px;
+    }
+    
+    .correct-answer {
+        background: #d4edda;
+        border-left: 3px solid #28a745;
+    }
+    
+    .wrong-answer {
+        background: #f8d7da;
+        border-left: 3px solid #dc3545;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h4 class="mb-0">
+                        <i class="fas fa-clipboard-check text-primary"></i>
+                        Grade {{ exam.get_exam_type_display }}
+                    </h4>
+                    <p class="text-muted mb-0">Review and grade student's submission</p>
+                </div>
+                <div>
+                    {% if request.user.role == 'superadmin' %}
+                    <a href="{% url 'pending_grading' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Pending Grading
+                    </a>
+                    {% else %}
+                    <a href="{% url 'instructor_exam_submissions' %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Back to Submissions
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Left Column - Submission Details -->
+        <div class="col-lg-8">
+            <!-- Student Info Card -->
+            <div class="card mb-4 student-info">
+                <div class="d-flex align-items-center">
+                    <div class="avatar-lg bg-white text-primary rounded-circle d-flex align-items-center justify-content-center me-3" style="width: 60px; height: 60px; font-size: 24px; font-weight: bold;">
+                        {{ student.first_name|first|default:student.username|first }}
+                    </div>
+                    <div class="flex-grow-1">
+                        <h5 class="mb-1">{{ student.get_full_name|default:student.username }}</h5>
+                        <p class="mb-0 opacity-75">
+                            <i class="fas fa-envelope me-2"></i>{{ student.email }}
+                        </p>
+                    </div>
+                    <div class="text-end">
+                        <h6 class="mb-0">Attempt #{{ attempt.attempt_number }}</h6>
+                        <small class="opacity-75">{{ attempt.submitted_at|date:"M d, Y H:i" }}</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Exam Details Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-alt"></i> {{ exam.title }}
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <p class="mb-2">
+                                <strong><i class="fas fa-tag"></i> Type:</strong> 
+                                <span class="badge bg-info">{{ exam.get_exam_type_display }}</span>
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <p class="mb-2">
+                                <strong><i class="fas fa-star text-warning"></i> Total Marks:</strong> 
+                                <span class="badge bg-primary">{{ exam.total_marks }}</span>
+                            </p>
+                        </div>
+                        <div class="col-md-4">
+                            <p class="mb-2">
+                                <strong><i class="fas fa-check-circle text-success"></i> Passing:</strong> 
+                                <span class="badge bg-success">{{ exam.passing_marks }}</span>
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="mb-2">
+                        <strong><i class="fas fa-info-circle text-primary"></i> Description:</strong>
+                        <p class="text-muted mb-0">{{ exam.description }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Submission Content Based on Exam Type -->
+            {% if exam.exam_type == 'assignment' %}
+            <!-- Assignment Submission -->
+            <div class="card mb-4 submission-card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-file-lines text-primary"></i> Assignment Submission
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% if submission %}
+                        {% if submission.submission_text %}
+                        <div class="mb-4">
+                            <h6 class="text-muted mb-3">Written Submission:</h6>
+                            <div class="border rounded p-3 bg-white">
+                                {{ submission.submission_text|linebreaks }}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        {% if uploaded_files %}
+                        <div>
+                            <h6 class="text-muted mb-3">
+                                <i class="fas fa-paperclip"></i> Uploaded Files ({{ uploaded_files.count }}):
+                            </h6>
+                            {% for file in uploaded_files %}
+                            <div class="file-item">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-file-pdf fa-2x text-danger me-3"></i>
+                                        <div>
+                                            <strong>{{ file.original_filename }}</strong>
+                                            <br>
+                                            <small class="text-muted">
+                                                <i class="fas fa-hdd"></i> {{ file.get_file_size_mb }} MB
+                                            </small>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <a href="{{ file.file.url }}" target="_blank" class="btn btn-primary btn-sm">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                        <a href="{{ file.file.url }}" download class="btn btn-success btn-sm">
+                                            <i class="fas fa-download"></i> Download
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i> No submission data found
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% elif exam.exam_type == 'qa' %}
+            <!-- Q&A Responses -->
+            <div class="card mb-4 submission-card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-question-circle text-primary"></i> Question & Answer Responses
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for response in qa_responses %}
+                    <div class="question-card card mb-3">
+                        <div class="card-body">
+                            <h6 class="text-primary">
+                                Question {{ forloop.counter }}: 
+                                <span class="badge bg-warning float-end">{{ response.question.marks }} marks</span>
+                            </h6>
+                            <p class="mb-3"><strong>{{ response.question.question_text }}</strong></p>
+                            
+                            <div class="border-start border-3 border-info ps-3 mb-3">
+                                <small class="text-muted d-block mb-1">Student's Answer:</small>
+                                <p class="mb-0">{{ response.answer_text|linebreaks }}</p>
+                            </div>
+                            
+                            {% if response.question.model_answer %}
+                            <div class="alert alert-info mb-0">
+                                <small><strong>Model Answer:</strong></small>
+                                <p class="mb-0 small">{{ response.question.model_answer|linebreaks }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> No Q&A responses found
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            {% elif exam.exam_type == 'mcq' %}
+            <!-- MCQ Responses -->
+            <div class="card mb-4 submission-card">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list-check text-primary"></i> MCQ Responses
+                    </h5>
+                </div>
+                <div class="card-body">
+                    {% for response in mcq_responses %}
+                    <div class="question-card card mb-3 {% if response.is_correct %}correct-answer{% else %}wrong-answer{% endif %}">
+                        <div class="card-body">
+                            <h6 class="{% if response.is_correct %}text-success{% else %}text-danger{% endif %}">
+                                Question {{ forloop.counter }}
+                                {% if response.is_correct %}
+                                    <i class="fas fa-check-circle"></i>
+                                {% else %}
+                                    <i class="fas fa-times-circle"></i>
+                                {% endif %}
+                                <span class="badge bg-warning float-end">{{ response.question.marks }} marks</span>
+                            </h6>
+                            <p class="mb-3"><strong>{{ response.question.question_text }}</strong></p>
+                            
+                            <div class="ps-3">
+                                <p class="mb-1">
+                                    <strong>Student's Answer:</strong> 
+                                    <span class="{% if response.is_correct %}text-success{% else %}text-danger{% endif %}">
+                                        {{ response.selected_option.option_text|default:"Not Answered" }}
+                                    </span>
+                                </p>
+                                {% if not response.is_correct %}
+                                <p class="mb-0">
+                                    <strong>Correct Answer:</strong> 
+                                    <span class="text-success">{{ response.question.get_correct_answer.option_text }}</span>
+                                </p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> No MCQ responses found
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Right Column - Grading Form -->
+        <div class="col-lg-4">
+            <div class="card grading-section sticky-top" style="top: 20px;">
+                <div class="card-body">
+                    <h5 class="mb-4">
+                        <i class="fas fa-pen-to-square text-primary"></i> Grade This Submission
+                    </h5>
+
+                    {% if attempt.is_graded %}
+                    <div class="alert alert-success mb-3">
+                        <i class="fas fa-check-circle"></i> Already Graded
+                        <br>
+                        <small>by {{ attempt.graded_by.get_full_name|default:attempt.graded_by.username }}</small>
+                        <br>
+                        <small>on {{ attempt.graded_at|date:"M d, Y H:i" }}</small>
+                    </div>
+                    {% endif %}
+
+                    <form method="POST">
+                        {% csrf_token %}
+                        
+                        <!-- Marks Input -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-star text-warning"></i> Marks Obtained
+                            </label>
+                            <div class="input-group input-group-lg">
+                                <input 
+                                    type="number" 
+                                    name="marks_obtained" 
+                                    class="form-control marks-input" 
+                                    min="0" 
+                                    max="{{ exam.total_marks }}" 
+                                    step="0.5"
+                                    value="{{ attempt.total_marks_obtained|default:0 }}"
+                                    required
+                                    placeholder="0"
+                                >
+                                <span class="input-group-text bg-primary text-white">
+                                    / {{ exam.total_marks }}
+                                </span>
+                            </div>
+                            <small class="text-muted">Enter marks between 0 and {{ exam.total_marks }}</small>
+                        </div>
+
+                        <!-- Feedback Textarea -->
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">
+                                <i class="fas fa-comment-dots text-info"></i> Feedback (Optional)
+                            </label>
+                            <textarea 
+                                name="feedback" 
+                                class="form-control" 
+                                rows="6" 
+                                placeholder="Provide feedback to the student..."
+                            >{% if submission %}{{ submission.feedback }}{% endif %}</textarea>
+                            <small class="text-muted">This feedback will be visible to the student</small>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fas fa-check"></i> 
+                                {% if attempt.is_graded %}
+                                    Update Grade
+                                {% else %}
+                                    Submit Grade
+                                {% endif %}
+                            </button>
+                            {% if request.user.role == 'superadmin' %}
+                            <a href="{% url 'pending_grading' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            {% else %}
+                            <a href="{% url 'instructor_exam_submissions' %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times"></i> Cancel
+                            </a>
+                            {% endif %}
+                        </div>
+                    </form>
+
+                    {% if attempt.is_graded %}
+                    <hr class="my-4">
+                    <div class="text-center">
+                        <h6 class="text-muted">Current Grade</h6>
+                        <div class="display-6 text-primary fw-bold">
+                            {{ attempt.total_marks_obtained }} / {{ exam.total_marks }}
+                        </div>
+                        <div class="mt-2">
+                            {% with percentage=attempt.percentage %}
+                            {% if percentage >= 60 %}
+                                <span class="badge bg-success fs-6">
+                            {% elif percentage >= 40 %}
+                                <span class="badge bg-warning fs-6">
+                            {% else %}
+                                <span class="badge bg-danger fs-6">
+                            {% endif %}
+                                {{ percentage|floatformat:1 }}%
+                            </span>
+                            {% if attempt.is_passed %}
+                                <div class="text-success mt-2">
+                                    <i class="fas fa-check-circle"></i> Passed
+                                </div>
+                            {% else %}
+                                <div class="text-danger mt-2">
+                                    <i class="fas fa-times-circle"></i> Failed
+                                </div>
+                            {% endif %}
+                            {% endwith %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Quick Stats Card -->
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h6 class="mb-3">
+                        <i class="fas fa-chart-simple"></i> Quick Stats
+                    </h6>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Exam Type:</span>
+                        <strong>{{ exam.get_exam_type_display }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Time Spent:</span>
+                        <strong>{{ attempt.time_spent_minutes }} min</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Attempt:</span>
+                        <strong>#{{ attempt.attempt_number }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Submitted:</span>
+                        <strong>{{ attempt.submitted_at|date:"M d, Y" }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    $(document).ready(function() {
+        // Auto-calculate percentage as marks are entered
+        $('input[name="marks_obtained"]').on('input', function() {
+            var marks = parseFloat($(this).val()) || 0;
+            var total = {{ exam.total_marks }};
+            var percentage = (marks / total * 100).toFixed(1);
+            
+            console.log('Marks: ' + marks + '/' + total + ' = ' + percentage + '%');
+        });
+
+        // Form validation
+        $('form').on('submit', function(e) {
+            var marks = parseFloat($('input[name="marks_obtained"]').val());
+            var total = {{ exam.total_marks }};
+            
+            if (isNaN(marks)) {
+                e.preventDefault();
+                alert('Please enter valid marks');
+                return false;
+            }
+            
+            if (marks < 0 || marks > total) {
+                e.preventDefault();
+                alert('Marks must be between 0 and ' + total);
+                return false;
+            }
+            
+            return confirm('Are you sure you want to submit this grade?');
+        });
+    });
+</script>
+{% endblock %}

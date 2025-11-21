@@ -1,0 +1,195 @@
+{% extends 'instructor_base.html' %}
+{% load static %}
+
+{% block title %}Certificate Dashboard - Instructor Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.stat-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    transition: transform 0.3s ease;
+    height: 100%;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+}
+
+.stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    margin-bottom: 15px;
+}
+
+.stat-icon.primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+.stat-icon.success { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; }
+.stat-icon.info { background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; }
+
+.stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #2d3748;
+}
+
+.stat-label {
+    color: #718096;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.recent-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.cert-item {
+    padding: 15px;
+    border-bottom: 1px solid #e9ecef;
+    transition: background 0.2s;
+}
+
+.cert-item:hover {
+    background: #f8f9fa;
+}
+
+.cert-item:last-child {
+    border-bottom: none;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-2">
+                    <i class="bi bi-award me-3"></i>My Certificates
+                </h1>
+                <p class="mb-0 opacity-75">Manage certificates for your students</p>
+            </div>
+            <div>
+                <a href="{% url 'certificates:instructor_issue' %}" class="btn btn-light btn-lg">
+                    <i class="bi bi-plus-lg me-2"></i>Issue Certificate
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistics -->
+    <div class="row mb-4">
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon primary">
+                    <i class="bi bi-award-fill"></i>
+                </div>
+                <div class="stat-value">{{ total_issued }}</div>
+                <div class="stat-label">Certificates Issued</div>
+                <a href="{% url 'certificates:instructor_issued' %}" class="btn btn-sm btn-outline-primary mt-3">
+                    View All
+                </a>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon success">
+                    <i class="bi bi-book"></i>
+                </div>
+                <div class="stat-value">{{ my_courses }}</div>
+                <div class="stat-label">My Courses</div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="stat-card">
+                <div class="stat-icon info">
+                    <i class="bi bi-people"></i>
+                </div>
+                <div class="stat-value">{{ my_batches }}</div>
+                <div class="stat-label">My Batches</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Issued Certificates -->
+    <div class="row">
+        <div class="col-12">
+            <div class="recent-card">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="mb-0">
+                        <i class="bi bi-clock-history me-2"></i>Recently Issued Certificates
+                    </h5>
+                    <a href="{% url 'certificates:instructor_issued' %}" class="btn btn-sm btn-outline-primary">
+                        View All <i class="bi bi-arrow-right ms-1"></i>
+                    </a>
+                </div>
+
+                {% if recent_issued %}
+                    {% for cert in recent_issued %}
+                    <div class="cert-item">
+                        <div class="row align-items-center">
+                            <div class="col-md-5">
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                         style="width: 40px; height: 40px;">
+                                        {{ cert.student.first_name|slice:":1" }}{{ cert.student.last_name|slice:":1" }}
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">{{ cert.student_name }}</div>
+                                        <small class="text-muted">{{ cert.student.email }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="fw-bold">{{ cert.course_name|default:"N/A" }}</div>
+                                <small class="text-muted">{{ cert.batch_name|default:"Direct Course" }}</small>
+                            </div>
+                            <div class="col-md-2">
+                                <small class="text-muted">{{ cert.issued_at|date:"M d, Y" }}</small>
+                            </div>
+                            <div class="col-md-1 text-end">
+                                <a href="{% url 'certificates:view' cert.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="bi bi-eye"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox" style="font-size: 3rem;"></i>
+                        <p class="mt-3">No certificates issued yet</p>
+                        <a href="{% url 'certificates:instructor_issue' %}" class="btn btn-primary">
+                            Issue Your First Certificate
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

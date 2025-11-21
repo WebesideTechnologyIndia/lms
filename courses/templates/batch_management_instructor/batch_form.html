@@ -6,81 +6,81 @@
 
 {% block extra_css %}
 <style>
-.course-selection-card {
-    border: 2px solid #e9ecef;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 15px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    background: #fff;
-}
+    .course-selection-card {
+        border: 2px solid #e9ecef;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: #fff;
+    }
 
-.course-selection-card:hover {
-    border-color: #007bff;
-    background-color: #f8f9ff;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 15px rgba(0,123,255,0.1);
-}
+    .course-selection-card:hover {
+        border-color: #007bff;
+        background-color: #f8f9ff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(0, 123, 255, 0.1);
+    }
 
-.course-selection-card.selected {
-    border-color: #007bff;
-    background-color: #e7f3ff;
-    box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
-}
+    .course-selection-card.selected {
+        border-color: #007bff;
+        background-color: #e7f3ff;
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+    }
 
-.course-selection-card input[type="radio"] {
-    transform: scale(1.3);
-}
+    .course-selection-card input[type="radio"] {
+        transform: scale(1.3);
+    }
 
-.content-type-option {
-    border: 2px solid #e9ecef;
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 15px;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    background: #fff;
-}
+    .content-type-option {
+        border: 2px solid #e9ecef;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 15px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: #fff;
+    }
 
-.content-type-option:hover {
-    border-color: #28a745;
-    background-color: #f8fff9;
-}
+    .content-type-option:hover {
+        border-color: #28a745;
+        background-color: #f8fff9;
+    }
 
-.content-type-option.selected {
-    border-color: #28a745;
-    background-color: #e8f5e8;
-}
+    .content-type-option.selected {
+        border-color: #28a745;
+        background-color: #e8f5e8;
+    }
 
-.step-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 15px 20px;
-    border-radius: 10px;
-    margin-bottom: 25px;
-}
+    .step-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 10px;
+        margin-bottom: 25px;
+    }
 
-.form-floating .form-control:focus {
-    border-color: #007bff;
-    box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
-}
+    .form-floating .form-control:focus {
+        border-color: #007bff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
 
-.btn-create {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border: none;
-    padding: 12px 30px;
-    border-radius: 8px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
+    .btn-create {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        padding: 12px 30px;
+        border-radius: 8px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
 
-.btn-create:hover {
-    background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-}
+    .btn-create:hover {
+        background: linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
 </style>
 {% endblock %}
 
@@ -88,7 +88,7 @@
 <div class="container-fluid">
     <div class="row justify-content-center">
         <div class="col-lg-8 col-xl-7">
-            
+
             <!-- Page Header -->
             <div class="step-header text-center">
                 <h2 class="mb-2">
@@ -99,7 +99,7 @@
 
             <form method="post" id="quickBatchForm">
                 {% csrf_token %}
-                
+
                 <!-- Step 1: Course Selection -->
                 <div class="card shadow-sm mb-4">
                     <div class="card-header bg-primary text-white">
@@ -109,39 +109,41 @@
                     </div>
                     <div class="card-body">
                         {% if courses %}
-                            <div class="row">
-                                {% for course in courses %}
-                                <div class="col-md-6 mb-3">
-                                    <div class="course-selection-card" data-course-id="{{ course.id }}">
-                                        <div class="d-flex align-items-start">
-                                            <input type="radio" name="course" value="{{ course.id }}" 
-                                                   class="form-check-input me-3 mt-1" id="course_{{ course.id }}">
-                                            <div class="flex-grow-1">
-                                                <h6 class="mb-2">{{ course.title }}</h6>
-                                                <p class="text-muted small mb-2">{{ course.course_code }}</p>
-                                                <div class="d-flex gap-2">
-                                                    <span class="badge bg-light text-dark">
-                                                        <i class="bi bi-people me-1"></i>{{ course.get_enrolled_count }} students
-                                                    </span>
-                                                    <span class="badge bg-light text-dark">
-                                                        <i class="bi bi-collection me-1"></i>{{ course.batches.count }} batches
-                                                    </span>
-                                                </div>
+                        <div class="row">
+                            {% for course in courses %}
+                            <div class="col-md-6 mb-3">
+                                <div class="course-selection-card" data-course-id="{{ course.id }}">
+                                    <div class="d-flex align-items-start">
+                                        <input type="radio" name="course" value="{{ course.id }}"
+                                            class="form-check-input me-3 mt-1" id="course_{{ course.id }}">
+                                        <div class="flex-grow-1">
+                                            <h6 class="mb-2">{{ course.title }}</h6>
+                                            <p class="text-muted small mb-2">{{ course.course_code }}</p>
+                                            <div class="d-flex gap-2">
+                                                <span class="badge bg-light text-dark">
+                                                    <i class="bi bi-people me-1"></i>{{ course.get_enrolled_count }}
+                                                    students
+                                                </span>
+                                                <span class="badge bg-light text-dark">
+                                                    <i class="bi bi-collection me-1"></i>{{ course.batches.count }}
+                                                    batches
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                {% endfor %}
                             </div>
+                            {% endfor %}
+                        </div>
                         {% else %}
-                            <div class="text-center py-4">
-                                <i class="bi bi-exclamation-circle text-warning fs-1"></i>
-                                <h5 class="text-muted mt-2">No Courses Available</h5>
-                                <p class="text-muted">You need to create a course first before creating batches.</p>
-                                <a href="{% url 'courses:instructor_create_course' %}" class="btn btn-primary">
-                                    <i class="bi bi-plus-lg me-2"></i>Create Course First
-                                </a>
-                            </div>
+                        <div class="text-center py-4">
+                            <i class="bi bi-exclamation-circle text-warning fs-1"></i>
+                            <h5 class="text-muted mt-2">No Courses Available</h5>
+                            <p class="text-muted">You need to create a course first before creating batches.</p>
+                            <a href="{% url 'courses:instructor_create_course' %}" class="btn btn-primary">
+                                <i class="bi bi-plus-lg me-2"></i>Create Course First
+                            </a>
+                        </div>
                         {% endif %}
                     </div>
                 </div>
@@ -155,6 +157,7 @@
                         </h5>
                     </div>
                     <div class="card-body">
+                        <!-- Step 2: Batch Details ke andar add karo -->
                         <div class="row">
                             <div class="col-md-8 mb-3">
                                 <div class="form-floating">
@@ -162,20 +165,36 @@
                                     <label for="{{ form.name.id_for_label }}">Batch Name *</label>
                                 </div>
                                 {% if form.name.errors %}
-                                    <div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>
+                                <div class="text-danger small mt-1">{{ form.name.errors.0 }}</div>
                                 {% endif %}
                                 <div class="form-text">Example: "Spring 2025 Batch", "Weekend Evening Group"</div>
                             </div>
-                            
+
                             <div class="col-md-4 mb-3">
                                 <div class="form-floating">
                                     {{ form.max_students }}
                                     <label for="{{ form.max_students.id_for_label }}">Max Students *</label>
                                 </div>
                                 {% if form.max_students.errors %}
-                                    <div class="text-danger small mt-1">{{ form.max_students.errors.0 }}</div>
+                                <div class="text-danger small mt-1">{{ form.max_students.errors.0 }}</div>
                                 {% endif %}
                             </div>
+                        </div>
+
+                        <!-- Add Status Field -->
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <div class="form-floating">
+                                    {{ form.status }}
+                                    <label for="{{ form.status.id_for_label }}">Status *</label>
+                                </div>
+                                {% if form.status.errors %}
+                                <div class="text-danger small mt-1">{{ form.status.errors.0 }}</div>
+                                {% endif %}
+                                <div class="form-text">Select the initial status for this batch</div>
+                            </div>
+
+
                         </div>
 
                         <div class="row">
@@ -185,17 +204,17 @@
                                     <label for="{{ form.start_date.id_for_label }}">Start Date *</label>
                                 </div>
                                 {% if form.start_date.errors %}
-                                    <div class="text-danger small mt-1">{{ form.start_date.errors.0 }}</div>
+                                <div class="text-danger small mt-1">{{ form.start_date.errors.0 }}</div>
                                 {% endif %}
                             </div>
-                            
+
                             <div class="col-md-6 mb-3">
                                 <div class="form-floating">
                                     {{ form.end_date }}
                                     <label for="{{ form.end_date.id_for_label }}">End Date *</label>
                                 </div>
                                 {% if form.end_date.errors %}
-                                    <div class="text-danger small mt-1">{{ form.end_date.errors.0 }}</div>
+                                <div class="text-danger small mt-1">{{ form.end_date.errors.0 }}</div>
                                 {% endif %}
                             </div>
                         </div>
@@ -211,17 +230,17 @@
                     </div>
                     <div class="card-body">
                         <p class="text-muted mb-3">Choose how to set up the curriculum for this batch:</p>
-                        
+
                         <div class="content-type-option" data-value="copy">
                             <div class="d-flex align-items-start">
-                                <input type="radio" name="content_type" value="copy" 
-                                       class="form-check-input me-3 mt-1" checked>
+                                <input type="radio" name="content_type" value="copy" class="form-check-input me-3 mt-1"
+                                    checked>
                                 <div>
                                     <h6 class="text-success mb-2">
                                         <i class="bi bi-files me-2"></i>Copy Course Content
                                     </h6>
                                     <p class="text-muted mb-2">
-                                        Automatically copy all modules and lessons from the selected course. 
+                                        Automatically copy all modules and lessons from the selected course.
                                         Perfect for running the same curriculum with different student groups.
                                     </p>
                                     <span class="badge bg-success">
@@ -233,14 +252,14 @@
 
                         <div class="content-type-option" data-value="fresh">
                             <div class="d-flex align-items-start">
-                                <input type="radio" name="content_type" value="fresh" 
-                                       class="form-check-input me-3 mt-1">
+                                <input type="radio" name="content_type" value="fresh"
+                                    class="form-check-input me-3 mt-1">
                                 <div>
                                     <h6 class="text-primary mb-2">
                                         <i class="bi bi-plus-circle me-2"></i>Start Fresh
                                     </h6>
                                     <p class="text-muted mb-2">
-                                        Begin with an empty syllabus. You'll create modules and lessons from scratch. 
+                                        Begin with an empty syllabus. You'll create modules and lessons from scratch.
                                         Good for customized or experimental courses.
                                     </p>
                                     <span class="badge bg-info">
@@ -264,12 +283,14 @@
                             <div class="d-flex align-items-center">
                                 <i class="bi bi-info-circle me-2 fs-5"></i>
                                 <div>
-                                    <strong>Assigned Instructor:</strong> {{ request.user.get_full_name|default:request.user.username }}
-                                    <br><small class="text-muted">You will be automatically assigned as the instructor for this batch.</small>
+                                    <strong>Assigned Instructor:</strong> {{
+                                    request.user.get_full_name|default:request.user.username }}
+                                    <br><small class="text-muted">You will be automatically assigned as the instructor
+                                        for this batch.</small>
                                 </div>
                             </div>
                         </div>
-                        
+
                         <!-- Hidden instructor field -->
                         <input type="hidden" name="instructor" value="{{ request.user.id }}">
                     </div>
@@ -279,10 +300,11 @@
                 <div class="card shadow-sm mb-4">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center">
-                            <a href="{% url 'courses:instructor_batch_list' course.id %}" class="btn btn-outline-secondary">
+                            <a href="{% url 'courses:instructor_batch_list' course.id %}"
+                                class="btn btn-outline-secondary">
                                 <i class="bi bi-arrow-left me-2"></i>Back to Course Batches
                             </a>
-                            
+
                             <div>
                                 <button type="button" class="btn btn-outline-primary me-2" onclick="previewBatch()">
                                     <i class="bi bi-eye me-2"></i>Preview
@@ -320,121 +342,121 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Course selection handling
-    const courseCards = document.querySelectorAll('.course-selection-card');
-    const courseRadios = document.querySelectorAll('input[name="course"]');
-    
-    courseCards.forEach(card => {
-        card.addEventListener('click', function() {
-            const courseId = this.dataset.courseId;
-            const radio = document.getElementById(`course_${courseId}`);
-            
-            // Clear all selections
-            courseCards.forEach(c => c.classList.remove('selected'));
-            
-            // Select current
-            radio.checked = true;
-            this.classList.add('selected');
+    document.addEventListener('DOMContentLoaded', function () {
+        // Course selection handling
+        const courseCards = document.querySelectorAll('.course-selection-card');
+        const courseRadios = document.querySelectorAll('input[name="course"]');
+
+        courseCards.forEach(card => {
+            card.addEventListener('click', function () {
+                const courseId = this.dataset.courseId;
+                const radio = document.getElementById(`course_${courseId}`);
+
+                // Clear all selections
+                courseCards.forEach(c => c.classList.remove('selected'));
+
+                // Select current
+                radio.checked = true;
+                this.classList.add('selected');
+            });
         });
-    });
-    
-    // Content type selection
-    const contentOptions = document.querySelectorAll('.content-type-option');
-    const contentRadios = document.querySelectorAll('input[name="content_type"]');
-    
-    // Set initial selected state
-    contentRadios.forEach(radio => {
-        if (radio.checked) {
-            radio.closest('.content-type-option').classList.add('selected');
-        }
-    });
-    
-    contentOptions.forEach(option => {
-        option.addEventListener('click', function() {
-            const radio = this.querySelector('input[type="radio"]');
-            
-            // Clear all selections
-            contentOptions.forEach(opt => opt.classList.remove('selected'));
-            
-            // Select current option
-            radio.checked = true;
-            this.classList.add('selected');
-        });
-    });
-    
-    // Auto-set today's date as minimum for start date
-    const today = new Date().toISOString().split('T')[0];
-    const startDateInput = document.getElementById('id_start_date');
-    const endDateInput = document.getElementById('id_end_date');
-    
-    if (startDateInput) {
-        startDateInput.min = today;
-        startDateInput.addEventListener('change', function() {
-            if (endDateInput) {
-                endDateInput.min = this.value;
+
+        // Content type selection
+        const contentOptions = document.querySelectorAll('.content-type-option');
+        const contentRadios = document.querySelectorAll('input[name="content_type"]');
+
+        // Set initial selected state
+        contentRadios.forEach(radio => {
+            if (radio.checked) {
+                radio.closest('.content-type-option').classList.add('selected');
             }
         });
-    }
-    
-    // Form validation
-    document.getElementById('quickBatchForm').addEventListener('submit', function(e) {
-        if (!validateForm()) {
-            e.preventDefault();
+
+        contentOptions.forEach(option => {
+            option.addEventListener('click', function () {
+                const radio = this.querySelector('input[type="radio"]');
+
+                // Clear all selections
+                contentOptions.forEach(opt => opt.classList.remove('selected'));
+
+                // Select current option
+                radio.checked = true;
+                this.classList.add('selected');
+            });
+        });
+
+        // Auto-set today's date as minimum for start date
+        const today = new Date().toISOString().split('T')[0];
+        const startDateInput = document.getElementById('id_start_date');
+        const endDateInput = document.getElementById('id_end_date');
+
+        if (startDateInput) {
+            startDateInput.min = today;
+            startDateInput.addEventListener('change', function () {
+                if (endDateInput) {
+                    endDateInput.min = this.value;
+                }
+            });
         }
+
+        // Form validation
+        document.getElementById('quickBatchForm').addEventListener('submit', function (e) {
+            if (!validateForm()) {
+                e.preventDefault();
+            }
+        });
     });
-});
 
-function validateForm() {
-    const course = document.querySelector('input[name="course"]:checked');
-    const batchName = document.getElementById('id_name').value.trim();
-    const startDate = document.getElementById('id_start_date').value;
-    const endDate = document.getElementById('id_end_date').value;
-    const maxStudents = document.getElementById('id_max_students').value;
-    
-    if (!course) {
-        alert('Please select a course for this batch');
-        return false;
-    }
-    
-    if (!batchName) {
-        alert('Please enter a batch name');
-        return false;
-    }
-    
-    if (!startDate || !endDate) {
-        alert('Please select both start and end dates');
-        return false;
-    }
-    
-    if (new Date(startDate) >= new Date(endDate)) {
-        alert('End date must be after start date');
-        return false;
-    }
-    
-    if (!maxStudents || maxStudents < 1) {
-        alert('Please enter a valid number of maximum students');
-        return false;
-    }
-    
-    return true;
-}
+    function validateForm() {
+        const course = document.querySelector('input[name="course"]:checked');
+        const batchName = document.getElementById('id_name').value.trim();
+        const startDate = document.getElementById('id_start_date').value;
+        const endDate = document.getElementById('id_end_date').value;
+        const maxStudents = document.getElementById('id_max_students').value;
 
-function previewBatch() {
-    if (!validateForm()) {
-        return;
+        if (!course) {
+            alert('Please select a course for this batch');
+            return false;
+        }
+
+        if (!batchName) {
+            alert('Please enter a batch name');
+            return false;
+        }
+
+        if (!startDate || !endDate) {
+            alert('Please select both start and end dates');
+            return false;
+        }
+
+        if (new Date(startDate) >= new Date(endDate)) {
+            alert('End date must be after start date');
+            return false;
+        }
+
+        if (!maxStudents || maxStudents < 1) {
+            alert('Please enter a valid number of maximum students');
+            return false;
+        }
+
+        return true;
     }
-    
-    const course = document.querySelector('input[name="course"]:checked');
-    const courseCard = document.querySelector(`[data-course-id="${course.value}"]`);
-    const courseTitle = courseCard.querySelector('h6').textContent;
-    const batchName = document.getElementById('id_name').value;
-    const startDate = document.getElementById('id_start_date').value;
-    const endDate = document.getElementById('id_end_date').value;
-    const maxStudents = document.getElementById('id_max_students').value;
-    const contentType = document.querySelector('input[name="content_type"]:checked').value;
-    
-    const previewContent = `
+
+    function previewBatch() {
+        if (!validateForm()) {
+            return;
+        }
+
+        const course = document.querySelector('input[name="course"]:checked');
+        const courseCard = document.querySelector(`[data-course-id="${course.value}"]`);
+        const courseTitle = courseCard.querySelector('h6').textContent;
+        const batchName = document.getElementById('id_name').value;
+        const startDate = document.getElementById('id_start_date').value;
+        const endDate = document.getElementById('id_end_date').value;
+        const maxStudents = document.getElementById('id_max_students').value;
+        const contentType = document.querySelector('input[name="content_type"]:checked').value;
+
+        const previewContent = `
         <div class="row">
             <div class="col-md-6">
                 <h6 class="text-primary">Batch Information</h6>
@@ -448,10 +470,10 @@ function previewBatch() {
             <div class="col-md-6">
                 <h6 class="text-success">Content Setup</h6>
                 <div class="alert alert-${contentType === 'copy' ? 'info' : 'success'} mb-0">
-                    ${contentType === 'copy' ? 
-                        '<i class="bi bi-files me-2"></i>Course content will be copied automatically' : 
-                        '<i class="bi bi-plus-circle me-2"></i>You will create content from scratch'
-                    }
+                    ${contentType === 'copy' ?
+                '<i class="bi bi-files me-2"></i>Course content will be copied automatically' :
+                '<i class="bi bi-plus-circle me-2"></i>You will create content from scratch'
+            }
                 </div>
             </div>
         </div>
@@ -460,22 +482,22 @@ function previewBatch() {
             <p class="text-muted mb-0">Ready to create this batch?</p>
         </div>
     `;
-    
-    document.getElementById('previewContent').innerHTML = previewContent;
-    new bootstrap.Modal(document.getElementById('previewModal')).show();
-}
 
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'short', 
-        day: 'numeric' 
-    });
-}
+        document.getElementById('previewContent').innerHTML = previewContent;
+        new bootstrap.Modal(document.getElementById('previewModal')).show();
+    }
 
-function submitForm() {
-    document.getElementById('quickBatchForm').submit();
-}
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+    }
+
+    function submitForm() {
+        document.getElementById('quickBatchForm').submit();
+    }
 </script>
 {% endblock %}

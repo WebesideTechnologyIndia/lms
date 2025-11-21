@@ -37,6 +37,36 @@
             min-height: 100vh;
             color: white;
             transition: all 0.3s ease;
+            border: 1px solid #000;
+            overflow-y: auto;
+            overflow-x: hidden;
+            position: sticky;
+            top: 0;
+            max-height: 100vh;
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.5);
+        }
+
+        /* Firefox scrollbar */
+        .sidebar {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1);
         }
 
         .sidebar .nav-link {
@@ -45,6 +75,8 @@
             margin: 5px 10px;
             border-radius: 8px;
             transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
         }
 
         .sidebar .nav-link:hover,
@@ -154,7 +186,6 @@
             }
         }
 
-        /* Custom filter for template lookups */
         .d-none-custom {
             display: none !important;
         }
@@ -231,57 +262,82 @@
                             My Courses
                             <span class="badge bg-primary ms-2">{{ enrolled_courses_count|default:0 }}</span>
                         </a>
-                        <!-- YEH ADD KARO -->
+
                         <a class="nav-link {% if 'my_reviews' in request.resolver_match.url_name %}active{% endif %}"
                             href="{% url 'courses:my_reviews' %}">
                             <i class="fas fa-star"></i>
                             My Reviews
                         </a>
+
                         <a class="nav-link {% if 'batches' in request.resolver_match.url_name %}active{% endif %}"
                             href="{% url 'student_batches' %}">
                             <i class="fas fa-users"></i>
                             My Batches
                         </a>
-                        <!-- ADD THIS FEES SECTION -->
+
+                        <!-- Student Panel Webinar Section - Add this in sidebar after "My Batches" -->
+
+                        <hr class="border-light border-opacity-25 mx-3">
+                        <small class="px-3 text-white-50 fw-bold">WEBINARS</small>
+
+                        <a class="nav-link {% if 'my_webinars' in request.resolver_match.url_name %}active{% endif %}"
+                            href="{% url 'webinars:student_my_webinars' %}">
+                            <i class="fas fa-video"></i>
+                            My Webinars
+                            {% if upcoming_webinars_count > 0 %}
+                            <span class="badge bg-success ms-2">{{ upcoming_webinars_count }}</span>
+                            {% endif %}
+                        </a>
+
+                        <a class="nav-link {% if 'browse_webinars' in request.resolver_match.url_name %}active{% endif %}"
+                            href="{% url 'webinars:student_browse_webinars' %}">
+                            <i class="fas fa-search"></i>
+                            Browse Webinars
+                        </a>
+
+                        <a class="nav-link {% if 'webinar_history' in request.resolver_match.url_name %}active{% endif %}"
+                            href="{% url 'webinars:student_webinar_history' %}">
+                            <i class="fas fa-history"></i>
+                            Webinar History
+                        </a>
+
+                        <!-- Fees Section -->
                         <a class="nav-link {% if 'fees' in request.resolver_match.url_name %}active{% endif %}"
                             href="{% url 'fees:student_fee_dashboard' %}">
                             <i class="fas fa-credit-card"></i>
                             My Fees
                         </a>
-                        <!-- END FEES SECTION -->
+
                         <a class="nav-link {% if 'browse' in request.resolver_match.url_name %}active{% endif %}"
                             href="{% url 'browse_courses' %}">
                             <i class="fas fa-search"></i>
                             Browse Courses
                         </a>
 
+                        <!-- Zoom Sessions Section -->
+                        <a class="nav-link {% if 'sessions_browse' in request.resolver_match.url_name %}active{% endif %}"
+                            href="{% url 'zoom:student_sessions_browse' %}">
+                            <i class="fas fa-video"></i>
+                            Live Sessions
+                        </a>
 
-                        <!-- Sidebar mein Zoom section add karo -->
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'zoom:student_sessions_browse' %}">
-                                <i class="fas fa-video"></i> Live Sessions
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'zoom:student_recordings' %}">
-                                <i class="fas fa-play-circle"></i> Recordings
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'zoom:student_attendance' %}">
-                                <i class="fas fa-check-square"></i> Attendance
-                            </a>
-                        </li>
+                        <a class="nav-link {% if 'recordings' in request.resolver_match.url_name %}active{% endif %}"
+                            href="{% url 'zoom:student_recordings' %}">
+                            <i class="fas fa-play-circle"></i>
+                            Recordings
+                        </a>
 
-                        <!-- EXAMS SECTION - NEW -->
+                        <a class="nav-link {% if 'zoom' in request.resolver_match.url_name and 'attendance' in request.resolver_match.url_name %}active{% endif %}"
+                            href="{% url 'zoom:student_attendance' %}">
+                            <i class="fas fa-check-square"></i>
+                            Session Attendance
+                        </a>
+
+                        <!-- Exams Section -->
                         <a class="nav-link {% if 'exam' in request.resolver_match.url_name or 'student_exams' in request.resolver_match.url_name %}active{% endif %}"
                             href="{% url 'student_exams' %}">
                             <i class="fas fa-clipboard-list"></i>
                             My Exams
-                            {% comment %}
-                            <!-- Optional: Add exam notification badges -->
-                            <span class="badge bg-success ms-2" id="available-exams-count">0</span>
-                            {% endcomment %}
                         </a>
 
                         <a class="nav-link {% if 'progress' in request.resolver_match.url_name %}active{% endif %}"
@@ -296,41 +352,36 @@
                             Assignments
                         </a>
 
+                        <!-- Certificates -->
                         <a class="nav-link {% if 'certificates' in request.resolver_match.url_name %}active{% endif %}"
-                            href="{% url 'student_certificates' %}">
+                            href="{% url 'certificates:student_certificates' %}">
                             <i class="fas fa-certificate"></i>
-                            Certificates
+                            My Certificates
                         </a>
 
                         <hr class="border-light border-opacity-25 mx-3">
 
-                        <!-- Attendance Section (Add after "My Batches" section) -->
-                        <a class="nav-link {% if 'attendance' in request.resolver_match.url_name %}active{% endif %}"
+                        <!-- QR Attendance Section -->
+                        <a class="nav-link {% if request.resolver_match.url_name == 'student_my_attendance' %}active{% endif %}"
                             href="{% url 'attendance:student_my_attendance' %}">
                             <i class="fas fa-user-check"></i>
                             My Attendance
-                            {% comment %}
-                            <!-- Optional: Add attendance stats badge -->
-                            <span class="badge bg-success ms-2">{{ attendance_percentage|default:"0" }}%</span>
-                            {% endcomment %}
                         </a>
 
-                        <!-- QR Scanner -->
                         <a class="nav-link {% if request.resolver_match.url_name == 'student_scanner' %}active{% endif %}"
                             href="{% url 'attendance:student_scanner' %}">
                             <i class="fas fa-qrcode"></i>
                             Scan QR Code
-                            <span class="badge bg-primary ms-2">Mark</span>
+                            <span class="badge bg-success ms-2">Mark</span>
                         </a>
 
-                        <!-- Attendance History -->
                         <a class="nav-link {% if request.resolver_match.url_name == 'student_attendance_history' %}active{% endif %}"
                             href="{% url 'attendance:student_attendance_history' %}">
                             <i class="fas fa-history"></i>
                             Attendance History
                         </a>
 
-
+                        <hr class="border-light border-opacity-25 mx-3">
 
                         <a class="nav-link" href="{% url 'student_settings' %}">
                             <i class="fas fa-cog"></i>
@@ -355,28 +406,6 @@
                         </span>
 
                         <div class="d-flex align-items-center">
-                            <!-- Notifications -->
-                            <!-- <div class="dropdown me-3">
-                                <button class="btn btn-outline-secondary position-relative" type="button"
-                                    data-bs-toggle="dropdown">
-                                    <i class="fas fa-bell"></i>
-                                    <span class="notification-badge">3</span>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end">
-                                    <li>
-                                        <h6 class="dropdown-header">Notifications</h6>
-                                    </li>
-                                    <li><a class="dropdown-item" href="{% url 'student_exams' %}">New exam assigned</a>
-                                    </li>
-                                    <li><a class="dropdown-item" href="#">Batch lecture scheduled</a></li>
-                                    <li><a class="dropdown-item" href="#">Course completion certificate ready</a></li>
-                                    <li>
-                                        <hr class="dropdown-divider">
-                                    </li>
-                                    <li><a class="dropdown-item text-center" href="#">View All</a></li>
-                                </ul>
-                            </div> -->
-
                             <!-- User Menu -->
                             <div class="dropdown">
                                 <button class="btn btn-outline-secondary dropdown-toggle" type="button"
@@ -393,7 +422,7 @@
                                     <li>
                                         <hr class="dropdown-divider">
                                     </li>
-                                    <li><a class="dropdown-item" href="{% url 'user_login' %}">
+                                    <li><a class="dropdown-item" href="{% url 'user_logout' %}">
                                             <i class="fas fa-sign-out-alt me-2"></i>Logout
                                         </a></li>
                                 </ul>
@@ -459,24 +488,6 @@
                 bsAlert.close();
             });
         }, 5000);
-
-        // Custom template filter function for dictionary lookups
-        jQuery.extend({
-            lookup: function (obj, key) {
-                if (obj && typeof obj === 'object') {
-                    return obj[key];
-                }
-                return null;
-            }
-        });
-
-        // Global template filter for use in templates
-        window.lookup = function (obj, key) {
-            if (obj && typeof obj === 'object') {
-                return obj[key];
-            }
-            return null;
-        };
     </script>
 
     {% block extra_js %}

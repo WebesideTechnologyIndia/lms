@@ -15,6 +15,7 @@
         border-radius: 0.375rem;
         padding: 1rem;
         min-height: 200px;
+        white-space: pre-wrap;
     }
     
     .variable-tag {
@@ -124,10 +125,7 @@
                                 <select class="form-select" id="template_type" name="template_type" required>
                                     <option value="">Select Template Type</option>
                                     {% for type_id, type_name in template_types %}
-                                        <option value="{{ type_id }}" 
-                                            {% if selected_template_type and selected_template_type == type_id|stringformat:"s" %}selected{% endif %}>
-                                            {{ type_name }}
-                                        </option>
+                                    <option value="{{ type_id }}" {% if selected_template_type and selected_template_type == type_id|stringformat:"s" %}selected{% endif %}>{{ type_name }}</option>
                                     {% endfor %}
                                 </select>
                                 <label for="template_type"><i class="fas fa-category"></i> Template Type</label>
@@ -171,13 +169,13 @@
                         <div class="border rounded p-3 bg-light">
                             <p class="small text-muted mb-2">Click on any variable to insert it into your template:</p>
                             <div class="d-flex flex-wrap gap-2">
-                                <span class="variable-tag" onclick="insertVariable('{{username}}')">{username}</span>
-                                <span class="variable-tag" onclick="insertVariable('{{email}}')">{email}</span>
-                                <span class="variable-tag" onclick="insertVariable('{{first_name}}')">{first_name}</span>
-                                <span class="variable-tag" onclick="insertVariable('{{last_name}}')">{last_name}</span>
-                                <span class="variable-tag" onclick="insertVariable('{{full_name}}')">{full_name}</span>
-                                <span class="variable-tag" onclick="insertVariable('{{date}}')">{date}</span>
-                                <span class="variable-tag" onclick="insertVariable('{{time}}')">{time}</span>
+                                <span class="variable-tag" onclick="insertVariable('{% templatetag openvariable %}username{% templatetag closevariable %}')">{% templatetag openvariable %}username{% templatetag closevariable %}</span>
+                                <span class="variable-tag" onclick="insertVariable('{% templatetag openvariable %}email{% templatetag closevariable %}')">{% templatetag openvariable %}email{% templatetag closevariable %}</span>
+                                <span class="variable-tag" onclick="insertVariable('{% templatetag openvariable %}first_name{% templatetag closevariable %}')">{% templatetag openvariable %}first_name{% templatetag closevariable %}</span>
+                                <span class="variable-tag" onclick="insertVariable('{% templatetag openvariable %}last_name{% templatetag closevariable %}')">{% templatetag openvariable %}last_name{% templatetag closevariable %}</span>
+                                <span class="variable-tag" onclick="insertVariable('{% templatetag openvariable %}full_name{% templatetag closevariable %}')">{% templatetag openvariable %}full_name{% templatetag closevariable %}</span>
+                                <span class="variable-tag" onclick="insertVariable('{% templatetag openvariable %}date{% templatetag closevariable %}')">{% templatetag openvariable %}date{% templatetag closevariable %}</span>
+                                <span class="variable-tag" onclick="insertVariable('{% templatetag openvariable %}time{% templatetag closevariable %}')">{% templatetag openvariable %}time{% templatetag closevariable %}</span>
                             </div>
                         </div>
                     </div>
@@ -230,13 +228,13 @@
                     
                     <h6>Available Variables:</h6>
                     <ul class="list-unstyled small">
-                        <li><code>{username}</code> - User's username</li>
-                        <li><code>{email}</code> - User's email address</li>
-                        <li><code>{first_name}</code> - User's first name</li>
-                        <li><code>{last_name}</code> - User's last name</li>
-                        <li><code>{full_name}</code> - Full name</li>
-                        <li><code>{date}</code> - Current date</li>
-                        <li><code>{time}</code> - Current time</li>
+                        <li><code>{% templatetag openvariable %}username{% templatetag closevariable %}</code> - User's username</li>
+                        <li><code>{% templatetag openvariable %}email{% templatetag closevariable %}</code> - User's email address</li>
+                        <li><code>{% templatetag openvariable %}first_name{% templatetag closevariable %}</code> - User's first name</li>
+                        <li><code>{% templatetag openvariable %}last_name{% templatetag closevariable %}</code> - User's last name</li>
+                        <li><code>{% templatetag openvariable %}full_name{% templatetag closevariable %}</code> - Full name</li>
+                        <li><code>{% templatetag openvariable %}date{% templatetag closevariable %}</code> - Current date</li>
+                        <li><code>{% templatetag openvariable %}time{% templatetag closevariable %}</code> - Current time</li>
                     </ul>
 
                     <hr>
@@ -379,20 +377,24 @@
         const subject = document.getElementById('subject').value || 'Subject will appear here...';
         const body = document.getElementById('email_body').value || 'Email content will appear here...';
         
-        // Replace variables with sample data for preview
+        // Sample data for preview
+        const currentDate = new Date().toLocaleDateString();
+        const currentTime = new Date().toLocaleTimeString();
+        
         const sampleData = {
             '{{username}}': 'john_doe',
             '{{email}}': 'john.doe@example.com',
             '{{first_name}}': 'John',
             '{{last_name}}': 'Doe',
             '{{full_name}}': 'John Doe',
-            '{{date}}': new Date().toLocaleDateString(),
-            '{{time}}': new Date().toLocaleTimeString()
+            '{{date}}': currentDate,
+            '{{time}}': currentTime
         };
         
         let previewSubject = subject;
         let previewBody = body;
         
+        // Replace all variables
         Object.keys(sampleData).forEach(variable => {
             const regex = new RegExp(variable.replace(/[{}]/g, '\\$&'), 'g');
             previewSubject = previewSubject.replace(regex, sampleData[variable]);
@@ -414,7 +416,8 @@
         textarea.focus();
         textarea.setSelectionRange(start + variable.length, start + variable.length);
         
-        updatePreview();
+        // Trigger input event to update preview and character count
+        textarea.dispatchEvent(new Event('input'));
     }
 
     // Load sample templates
@@ -422,15 +425,15 @@
         const samples = {
             welcome: {
                 name: 'Welcome Email Template',
-                subject: 'Welcome to Our LMS Platform, {{first_name}}!',
-                body: `Dear {{first_name}},
+                subject: 'Welcome to Our LMS Platform, {% templatetag openvariable %}first_name{% templatetag closevariable %}!',
+                body: `Dear {% templatetag openvariable %}first_name{% templatetag closevariable %},
 
 Welcome to our Learning Management System! We're excited to have you join our educational community.
 
 Your account details:
-- Username: {{username}}
-- Email: {{email}}
-- Registration Date: {{date}}
+- Username: {% templatetag openvariable %}username{% templatetag closevariable %}
+- Email: {% templatetag openvariable %}email{% templatetag closevariable %}
+- Registration Date: {% templatetag openvariable %}date{% templatetag closevariable %}
 
 To get started:
 1. Log in to your account using your credentials
@@ -445,15 +448,15 @@ LMS Team`
             },
             announcement: {
                 name: 'Announcement Email Template',
-                subject: 'Important Announcement - {{date}}',
-                body: `Dear {{first_name}},
+                subject: 'Important Announcement - {% templatetag openvariable %}date{% templatetag closevariable %}',
+                body: `Dear {% templatetag openvariable %}first_name{% templatetag closevariable %},
 
 We have an important announcement to share with you.
 
 [Your announcement content goes here]
 
-This message was sent to: {{email}}
-Date: {{date}} at {{time}}
+This message was sent to: {% templatetag openvariable %}email{% templatetag closevariable %}
+Date: {% templatetag openvariable %}date{% templatetag closevariable %} at {% templatetag openvariable %}time{% templatetag closevariable %}
 
 If you have any questions, please don't hesitate to contact us.
 
@@ -467,9 +470,8 @@ LMS Administration Team`
             document.getElementById('name').value = sample.name;
             document.getElementById('subject').value = sample.subject;
             document.getElementById('email_body').value = sample.body;
-            updatePreview();
             
-            // Update character counts
+            // Update character counts and preview
             document.getElementById('subject').dispatchEvent(new Event('input'));
             document.getElementById('email_body').dispatchEvent(new Event('input'));
         }
@@ -486,14 +488,17 @@ LMS Administration Team`
         }
         
         // Sample data for preview
+        const currentDate = new Date().toLocaleDateString();
+        const currentTime = new Date().toLocaleTimeString();
+        
         const sampleData = {
             '{{username}}': 'john_doe',
             '{{email}}': 'john.doe@example.com',
             '{{first_name}}': 'John',
             '{{last_name}}': 'Doe',
             '{{full_name}}': 'John Doe',
-            '{{date}}': new Date().toLocaleDateString(),
-            '{{time}}': new Date().toLocaleTimeString()
+            '{{date}}': currentDate,
+            '{{time}}': currentTime
         };
         
         // Set raw content

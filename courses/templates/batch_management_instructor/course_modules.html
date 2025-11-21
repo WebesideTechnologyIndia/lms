@@ -5,7 +5,6 @@
 {% block title %}Course Modules - {{ course.title }}{% endblock %}
 
 {% block extra_css %}
-
 <style>
     .course-header {
         background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
@@ -32,6 +31,8 @@
         transition: all 0.3s ease;
         text-align: center;
         white-space: nowrap;
+        text-decoration: none;
+        display: inline-block;
     }
 
     .header-btn:hover {
@@ -40,6 +41,7 @@
         color: white;
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        text-decoration: none;
     }
 
     .header-btn-primary {
@@ -53,12 +55,18 @@
         color: var(--primary-color);
     }
 
+    .batch-dropdown {
+        position: relative;
+    }
+
     .batch-dropdown .dropdown-menu {
         border-radius: 10px;
         border: none;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
         padding: 10px;
         min-width: 280px;
+        max-height: 400px;
+        overflow-y: auto;
     }
 
     .batch-dropdown .dropdown-item {
@@ -66,11 +74,16 @@
         padding: 12px 15px;
         margin-bottom: 5px;
         transition: all 0.2s ease;
+        color: #333;
     }
 
     .batch-dropdown .dropdown-item:hover {
         background: #e3f2fd;
         transform: translateX(5px);
+    }
+
+    .batch-dropdown .dropdown-item:active {
+        background: #bbdefb;
     }
 
     .module-card {
@@ -173,7 +186,6 @@
         border: 1px solid rgba(255, 255, 255, 0.3);
     }
 </style>
-
 {% endblock %}
 
 {% block content %}
@@ -215,11 +227,11 @@
 
                     <!-- Add Module to Batch Dropdown -->
                     {% if batches %}
-                    <div class="batch-dropdown">
-                        <button class="header-btn w-100 dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <div class="batch-dropdown dropdown">
+                        <button class="header-btn w-100 dropdown-toggle" type="button" id="batchDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="bi bi-collection me-2"></i>Add Module to Batch
                         </button>
-                        <ul class="dropdown-menu w-100">
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="batchDropdown">
                             <li>
                                 <h6 class="dropdown-header text-primary fw-bold">
                                     <i class="bi bi-collection me-2"></i>Select Batch
@@ -343,13 +355,13 @@
                                 <div class="d-flex align-items-center">
                                     <div class="lesson-type-icon lesson-type-{{ lesson.lesson_type }} me-3">
                                         {% if lesson.lesson_type == 'video' %}
-                                        <i class="bi bi-play-circle">▶</i>
+                                        <i class="bi bi-play-circle"></i>
                                         {% elif lesson.lesson_type == 'pdf' %}
-                                        <i class="bi bi-file-earmark-pdf">📄</i>
+                                        <i class="bi bi-file-earmark-pdf"></i>
                                         {% elif lesson.lesson_type == 'mixed' %}
-                                        <i class="bi bi-collection">📚</i>
+                                        <i class="bi bi-collection"></i>
                                         {% else %}
-                                        <i class="bi bi-file-text">📝</i>
+                                        <i class="bi bi-file-text"></i>
                                         {% endif %}
                                     </div>
 
@@ -382,8 +394,8 @@
                     </div>
                     {% else %}
                     <div class="text-center py-4">
-                        <i class="bi bi-book-open text-muted fa-2x mb-2"></i>
-                        <p class="text-muted mb-2">No lessons in this module yet.</p>
+                        <i class="bi bi-book text-muted" style="font-size: 2rem;"></i>
+                        <p class="text-muted mb-2 mt-2">No lessons in this module yet.</p>
                         <a href="{% url 'courses:create_lesson_instructor' course.id module.id %}"
                             class="btn btn-outline-primary btn-sm">
                             <i class="bi bi-plus me-1"></i>Add First Lesson
@@ -405,7 +417,7 @@
             Start building your course curriculum by creating your first module.
             Modules help organize your lessons into logical sections.
         </p>
-        <a href="{% url 'courses:create_module' course.id %}" class="btn btn-primary btn-lg">
+        <a href="{% url 'courses:create_module_instructor' course.id %}" class="btn btn-primary btn-lg">
             <i class="bi bi-plus-circle me-2"></i>Create First Module
         </a>
 

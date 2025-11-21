@@ -85,6 +85,8 @@
         min-height: 50px;
         max-height: 200px;
         overflow-y: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
     }
 </style>
 {% endblock %}
@@ -131,7 +133,7 @@
                         <option value="">Create Custom Email</option>
                         {% for template in templates %}
                         <option value="{{ template.id }}" data-subject="{{ template.subject }}"
-                            data-body="{{ template.email_body|escape }}">
+                            data-body="{{ template.email_body|escapejs }}">
                             {{ template.name }} ({{ template.get_template_type_display }})
                         </option>
                         {% endfor %}
@@ -161,10 +163,9 @@
                 <div class="template-variables">
                     <label class="form-label"><i class="fas fa-code"></i> Available Variables</label>
                     <div>
-                        <span class="variable-chip" data-var="{{username}}">{{username}}</span>
+                        <span class="variable-chip" data-var="{{name}}">{{name}}</span>
                         <span class="variable-chip" data-var="{{email}}">{{email}}</span>
-                        <span class="variable-chip" data-var="{{first_name}}">{{first_name}}</span>
-                        <span class="variable-chip" data-var="{{last_name}}">{{last_name}}</span>
+                        <span class="variable-chip" data-var="{{username}}">{{username}}</span>
                     </div>
                 </div>
 
@@ -177,7 +178,7 @@
                     <textarea name="custom_message" id="custom_message" class="form-control" rows="12"
                         placeholder="Write your email content here..." required></textarea>
                     <div class="form-text">
-                        <strong>Available variables:</strong> {{username}}, {{first_name}}, {{last_name}}, {{email}}
+                        <strong>Available variables:</strong> {{name}}, {{username}}, {{email}}
                     </div>
                 </div>
             </div>
@@ -412,12 +413,10 @@
     const instructorsCount = {{ instructors_count }};
     const adminsCount = {{ admins_count }};
 
-    // Initialize on page load
     document.addEventListener('DOMContentLoaded', function () {
         updateRecipientsSummary();
         updatePreview();
 
-        // Character counters
         document.getElementById('custom_subject').addEventListener('input', function () {
             document.getElementById('subject-counter').textContent = `${this.value.length}/200`;
             updatePreview();
@@ -428,7 +427,6 @@
             updatePreview();
         });
 
-        // Variable chip click handlers
         document.querySelectorAll('.variable-chip').forEach(chip => {
             chip.addEventListener('click', function() {
                 const variable = this.getAttribute('data-var');
@@ -437,24 +435,19 @@
                 if (activeField.id === 'custom_subject' || activeField.id === 'custom_message') {
                     insertVariable(activeField, variable);
                 } else {
-                    // Default to message field
                     insertVariable(document.getElementById('custom_message'), variable);
                 }
             });
         });
     });
 
-    // Handle recipient type changes
     document.querySelectorAll('input[name="recipient_type"]').forEach(radio => {
         radio.addEventListener('change', function () {
             const value = this.value;
-
-            // Hide all selection divs
             document.getElementById('role_selection').style.display = 'none';
             document.getElementById('user_selection').style.display = 'none';
             document.getElementById('all_users_display').style.display = 'none';
 
-            // Show relevant div
             if (value === 'all') {
                 document.getElementById('all_users_display').style.display = 'block';
             } else if (value === 'role') {
@@ -462,12 +455,10 @@
             } else if (value === 'selected') {
                 document.getElementById('user_selection').style.display = 'block';
             }
-
             updateRecipientsSummary();
         });
     });
 
-    // Handle template selection
     document.getElementById('template_id').addEventListener('change', function () {
         const selectedOption = this.options[this.selectedIndex];
         const subject = selectedOption.getAttribute('data-subject');
@@ -477,8 +468,6 @@
             document.getElementById('custom_subject').value = subject;
             document.getElementById('custom_message').value = body;
             updatePreview();
-
-            // Update character counters
             document.getElementById('custom_subject').dispatchEvent(new Event('input'));
             document.getElementById('custom_message').dispatchEvent(new Event('input'));
         } else if (this.value === '') {
@@ -488,25 +477,20 @@
         }
     });
 
-    // Insert variable function
     function insertVariable(field, variable) {
         const start = field.selectionStart;
         const end = field.selectionEnd;
         const text = field.value;
-
         field.value = text.substring(0, start) + variable + text.substring(end);
         field.focus();
         field.setSelectionRange(start + variable.length, start + variable.length);
-
         updatePreview();
         field.dispatchEvent(new Event('input'));
     }
 
-    // User selection functions
     function toggleUserSelection(userId) {
         const checkbox = document.getElementById(`user_${userId}`);
         const card = checkbox.closest('.user-card');
-
         checkbox.checked = !checkbox.checked;
 
         if (checkbox.checked) {
@@ -516,7 +500,6 @@
             selectedUsers.delete(userId);
             card.classList.remove('selected');
         }
-
         updateSelectedCount();
         updateRecipientsSummary();
     }
@@ -543,7 +526,6 @@
         updateRecipientsSummary();
     }
 
-    // Search users
     document.getElementById('user_search').addEventListener('input', function () {
         const searchTerm = this.value.toLowerCase();
         const userItems = document.querySelectorAll('.user-item');
@@ -590,8 +572,6 @@
 
         document.getElementById('summary_text').textContent = text;
         document.getElementById('btn-count').textContent = count;
-
-        // Enable/disable submit button
         const submitBtn = document.getElementById('send_btn');
         submitBtn.disabled = count === 0;
     }
@@ -600,28 +580,20 @@
         const subject = document.getElementById('custom_subject').value || 'Enter subject to preview...';
         const content = document.getElementById('custom_message').value || 'Enter message content to preview...';
 
-        // Replace variables with sample data for preview
-        const sampleData = {
-            '{{username}}': 'john_doe',
-            '{{email}}': 'john@example.com',
-            '{{first_name}}': 'John',
-            '{{last_name}}': 'Doe'
-        };
+        let previewSubject = subject
+            .replace(/\{\{name\}\}/g, 'Sahil Kumar')
+            .replace(/\{\{email\}\}/g, 'sahil@example.com')
+            .replace(/\{\{username\}\}/g, 'sahil_123');
 
-        let previewSubject = subject;
-        let previewContent = content;
-
-        Object.keys(sampleData).forEach(variable => {
-            const regex = new RegExp(variable.replace(/[{}]/g, '\\$&'), 'g');
-            previewSubject = previewSubject.replace(regex, sampleData[variable]);
-            previewContent = previewContent.replace(regex, sampleData[variable]);
-        });
+        let previewContent = content
+            .replace(/\{\{name\}\}/g, 'Sahil Kumar')
+            .replace(/\{\{email\}\}/g, 'sahil@example.com')
+            .replace(/\{\{username\}\}/g, 'sahil_123');
 
         document.getElementById('preview_subject').textContent = previewSubject;
         document.getElementById('preview_content').textContent = previewContent;
     }
 
-    // Form validation and submission
     document.getElementById('bulkEmailForm').addEventListener('submit', function (e) {
         const recipientType = document.querySelector('input[name="recipient_type"]:checked').value;
         const subject = document.getElementById('custom_subject').value.trim();
@@ -648,7 +620,6 @@
             }
         }
 
-        // Get recipient count for confirmation
         let count = 0;
         if (recipientType === 'all') count = totalUsers;
         else if (recipientType === 'selected') count = selectedUsers.size;
@@ -664,17 +635,12 @@
             return false;
         }
 
-        // Show loading state
         const submitBtn = document.getElementById('send_btn');
-        const originalText = submitBtn.innerHTML;
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
         submitBtn.disabled = true;
-
-        // Let the form submit naturally to Django
         return true;
     });
 
-    // Role selection change handler
     document.querySelector('select[name="role"]').addEventListener('change', function () {
         updateRecipientsSummary();
     });

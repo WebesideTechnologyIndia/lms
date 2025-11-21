@@ -17,96 +17,143 @@ def get_client_ip(request):
     else:
         ip = request.META.get('REMOTE_ADDR')
     return ip
+
 from django.contrib.auth import authenticate, login
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from courses.models import StudentSubscription, DeviceSession
+from courses.models import  DeviceSession
 import hashlib
+
+# userss/views.py
+
+from django.shortcuts import render, redirect
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from courses.models import StudentDeviceLimit, DeviceSession, StudentLoginLog
+import json
+
+def get_client_ip(request):
+    """Get real IP address"""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+
+
 
 def user_login(request):
     if request.method == "POST":
         username = request.POST.get("username")
         password = request.POST.get("password")
-        print(username)
-        print(password)
+        device_fingerprint_id = request.POST.get("device_fingerprint")  # From JS
+        device_name = request.POST.get("device_name", "Unknown Device")
+        device_info_raw = request.POST.get("device_info", "{}")
+        
+        print(f"🔐 Login attempt: {username}")
+        print(f"📱 Device ID: {device_fingerprint_id[:20] if device_fingerprint_id else 'MISSING'}...")
         
         user = authenticate(request, username=username, password=password)
         
         if user is not None:
             
-            # ========== DEVICE LIMIT CHECK FOR STUDENTS ==========
+            # ========== DEVICE FINGERPRINT CHECK FOR STUDENTS ==========
             if user.role == "student":
-                # Generate device ID for this login attempt
-                user_agent = request.META.get('HTTP_USER_AGENT', '')
-                ip_address = get_client_ip(request)
-                device_id = hashlib.md5(f"{user_agent}{ip_address}".encode()).hexdigest()
                 
-                print(f"🔍 Checking device limit for {username}")
-                print(f"   Device ID: {device_id[:16]}...")
+                if not device_fingerprint_id:
+                    return render(request, "login.html", {
+                        "error": "Device fingerprint missing. Please enable JavaScript and try again.",
+                        "username": username
+                    })
                 
-                # Check all active subscriptions
-                subscriptions = StudentSubscription.objects.filter(
+                # Get or create device limit
+                device_limit, created = StudentDeviceLimit.objects.get_or_create(
                     student=user,
-                    is_active=True
+                    defaults={'max_devices': 2, 'is_active': True}
                 )
                 
-                if subscriptions.exists():
-                    device_blocked = False
-                    blocked_course = None
-                    max_allowed = 0
+                if not device_limit.is_active:
+                    return render(request, "login.html", {
+                        "error": "Your account is disabled. Contact admin.",
+                        "username": username
+                    })
+                
+                # Parse device info
+                try:
+                    device_info = json.loads(device_info_raw)
+                except:
+                    device_info = {}
+                
+                # Check if device already registered
+                existing_device = DeviceSession.objects.filter(
+                    device_id=device_fingerprint_id,
+                    student_limit=device_limit
+                ).first()
+                
+                if existing_device:
+                    # Device exists - allow login
+                    print(f"✅ Known device: {existing_device.device_name}")
+                    existing_device.is_active = True
+                    existing_device.last_login = timezone.now()
+                    existing_device.save()
                     
-                    for subscription in subscriptions:
-                        # Check if this device is already registered
-                        existing_device = DeviceSession.objects.filter(
-                            subscription=subscription,
-                            device_id=device_id,
+                    current_device_session = existing_device
+                
+                else:
+                    # New device - check limit
+                    if device_limit.can_add_device():
+                        # Create new device
+                        current_device_session = DeviceSession.objects.create(
+                            student_limit=device_limit,
+                            device_id=device_fingerprint_id,
+                            device_name=device_name,
+                            device_info=device_info,
                             is_active=True
-                        ).exists()
-                        
-                        if existing_device:
-                            # Device already registered - ALLOW
-                            print(f"   ✅ Device already registered for {subscription.course.title}")
-                            continue
-                        
-                        # NEW DEVICE - Check if limit reached
-                        active_devices_count = subscription.devices.filter(is_active=True).count()
-                        
-                        print(f"   📱 {subscription.course.title}: {active_devices_count}/{subscription.max_devices} devices")
-                        
-                        if active_devices_count >= subscription.max_devices:
-                            # LIMIT REACHED - BLOCK LOGIN
-                            device_blocked = True
-                            blocked_course = subscription.course.title
-                            max_allowed = subscription.max_devices
-                            print(f"   ❌ Device limit reached for {blocked_course}!")
-                            break
+                        )
+                        print(f"✅ New device registered: {device_name}")
                     
-                    if device_blocked:
-                        # BLOCK LOGIN
+                    else:
+                        # Device limit reached - BLOCK
+                        active_devices = DeviceSession.objects.filter(
+                            student_limit=device_limit,
+                            is_active=True
+                        ).order_by('-last_login')
+                        
                         error_msg = (
                             f'❌ Device Limit Reached!\n\n'
-                            f'Course: {blocked_course}\n'
-                            f'Maximum devices allowed: {max_allowed}\n\n'
-                            f'Please remove an existing device from your account or contact admin.'
+                            f'Maximum devices allowed: {device_limit.max_devices}\n'
+                            f'Active devices: {active_devices.count()}\n\n'
+                            f'Please remove an existing device or contact admin.'
                         )
-                        print(f"🚫 LOGIN BLOCKED: {error_msg}")
+                        
+                        print(f"🚫 LOGIN BLOCKED: Device limit exceeded")
+                        
                         return render(request, "login.html", {
                             "error": error_msg,
-                            "username": username
+                            "username": username,
+                            "active_devices": active_devices,
+                            "new_device_name": device_name,
                         })
+                
+                # Create login log
+                login_log = StudentLoginLog.objects.create(
+                    student=user,
+                    device_session=current_device_session,
+                    ip_address=get_client_ip(request),
+                    device_info=device_name
+                )
+                
+                # Store in session for logout tracking
+                request.session['attendance_log_id'] = login_log.id
+                request.session['device_fingerprint'] = device_fingerprint_id
+            
             # ========== END DEVICE CHECK ==========
             
-            # ALL CHECKS PASSED - LOGIN ALLOWED
+            # Login user
             login(request, user)
-            
-            # Log the login activity
-            UserActivityLog.objects.create(
-                user=user,
-                action='login',
-                description=f'User logged in successfully',
-                ip_address=get_client_ip(request),
-                user_agent=request.META.get('HTTP_USER_AGENT', '')
-            )
             
             print(f"✅ LOGIN SUCCESS: {username}")
             
@@ -120,98 +167,51 @@ def user_login(request):
             elif user.role == "webinar_user":
                 return redirect("webinars:webinar_landing")
             else:
-                return render(request, "login.html", {"error": "Role not match please login again"})
+                return render(request, "login.html", {"error": "Role not match"})
         else:
-            print(f"❌ LOGIN FAILED: Invalid credentials for {username}")
+            print(f"❌ LOGIN FAILED: Invalid credentials")
             return render(request, "login.html", {"error": "Invalid Credentials"})
     
     return render(request, 'login.html')
 
-# userss/views.py - ADD THIS AT TOP
-from courses.models import StudentLoginLog
-from django.utils import timezone
 
-# THEN FIND AND REPLACE user_logout function:
+
 
 @login_required
 def user_logout(request):
-    """Enhanced logout with attendance tracking"""
+    """Logout with attendance tracking"""
     
-    print(f"🚪 Logout request from: {request.user.username if request.user.is_authenticated else 'Anonymous'}")
+    print(f"🚪 Logout: {request.user.username if request.user.is_authenticated else 'Anonymous'}")
     
-    # CRITICAL: Track attendance BEFORE logout
-    if request.user.is_authenticated:
-        # Store username before logout clears it
-        username = request.user.username
-        user_role = request.user.role
-        
-        print(f"User: {username}, Role: {user_role}")
-        
-        if user_role == 'student':
-            try:
-                # Method 1: Try from session
-                log_id = request.session.get('attendance_log_id')
-                print(f"Session log_id: {log_id}")
+    if request.user.is_authenticated and hasattr(request.user, 'role') and request.user.role == 'student':
+        try:
+            # Get log ID from session
+            log_id = request.session.get('attendance_log_id')
+            
+            if log_id:
+                log = StudentLoginLog.objects.get(id=log_id)
+                if not log.logout_time:
+                    log.logout_time = timezone.now()
+                    log.calculate_duration()
+                    print(f"✅ Session closed: Duration {log.session_duration} min")
+            
+            # Close any other active sessions
+            active_sessions = StudentLoginLog.objects.filter(
+                student=request.user,
+                logout_time__isnull=True
+            )
+            
+            for session in active_sessions:
+                session.logout_time = timezone.now()
+                session.calculate_duration()
+                session.save()
+                print(f"✅ Auto-closed session {session.id}")
                 
-                if log_id:
-                    log = StudentLoginLog.objects.get(id=log_id)
-                    if not log.logout_time:
-                        log.logout_time = timezone.now()
-                        log.calculate_duration()
-                        print(f"✅ Session Logout: {username} - Session {log.id} - Duration: {log.session_duration} min")
-                
-                # Method 2: Close any other active sessions
-                active_sessions = StudentLoginLog.objects.filter(
-                    student=request.user,
-                    logout_time__isnull=True
-                )
-                
-                if active_sessions.exists():
-                    print(f"Found {active_sessions.count()} active sessions to close")
-                    
-                    for session in active_sessions:
-                        session.logout_time = timezone.now()
-                        session.calculate_duration()
-                        session.save()
-                        print(f"✅ Auto Logout: {username} - Session {session.id} - Duration: {session.session_duration} min")
-                
-            except StudentLoginLog.DoesNotExist:
-                print(f"⚠️ No active session found")
-            except Exception as e:
-                print(f"❌ Logout tracking error: {e}")
-                import traceback
-                traceback.print_exc()
+        except Exception as e:
+            print(f"❌ Logout error: {e}")
     
-    # Now perform Django logout
     logout(request)
-    print(f"🔓 Django logout completed")
-    
     return redirect('user_login')
-
-
-
-def check_device_limit(user, course):
-    """Check if student has reached device limit for course"""
-    
-    try:
-        subscription = StudentSubscription.objects.get(
-            student=user,
-            course=course,
-            is_active=True
-        )
-        
-        # Count active devices
-        active_devices = subscription.devices.filter(is_active=True).count()
-        
-        if active_devices >= subscription.max_devices:
-            return False, f"Device limit reached ({subscription.max_devices} devices max)"
-        
-        return True, "OK"
-        
-    except StudentSubscription.DoesNotExist:
-        return True, "No subscription found"
-
-
 
 # Admin Dashboard
 @login_required
@@ -472,6 +472,192 @@ def user_details(request, user_id):
     
     return render(request, 'user_details.html', context)
 
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from datetime import date
+
+@login_required
+def instructor_user_details(request, user_id):
+    # Only instructors can access this view
+    if request.user.role != 'instructor':
+        return redirect('user_login')
+    
+    # Instructor can only view their own details
+    if request.user.id != user_id:
+        return redirect('user_login')
+    
+    user = get_object_or_404(CustomUser, id=user_id)
+    
+    # Common data for the instructor
+    context = {
+        'user': user,
+    }
+    
+    # Email Statistics
+    today = date.today()
+    email_limit = EmailLimitSet.objects.filter(is_active=True).first()
+    daily_limit = email_limit.email_limit_per_day if email_limit else 50
+    
+    # Emails sent TO this instructor
+    today_emails = EmailLog.objects.filter(
+        recipient_user=user,
+        sent_date=today
+    ).count()
+    
+    total_emails = EmailLog.objects.filter(
+        recipient_user=user
+    ).count()
+    
+    remaining_emails = max(0, daily_limit - today_emails)
+    can_receive_email = remaining_emails > 0
+    
+    # Recent emails
+    recent_emails = EmailLog.objects.filter(
+        recipient_user=user
+    ).select_related('sent_by', 'template_used').order_by('-sent_time')[:10]
+    
+    # Add email data to context
+    context.update({
+        'today_emails': today_emails,
+        'total_emails': total_emails,
+        'remaining_emails': remaining_emails,
+        'can_receive_email': can_receive_email,
+        'daily_limit': daily_limit,
+        'recent_emails': recent_emails,
+    })
+    
+    # Instructor-specific statistics
+    instructor_data = get_instructor_statistics(user)
+    context.update(instructor_data)
+    
+    # Emails SENT by this instructor
+    emails_sent_by_user = EmailLog.objects.filter(
+        sent_by=user
+    ).count()
+    
+    emails_sent_today = EmailLog.objects.filter(
+        sent_by=user,
+        sent_date=today
+    ).count()
+    
+    context.update({
+        'emails_sent_by_user': emails_sent_by_user,
+        'emails_sent_today': emails_sent_today,
+    })
+    
+    return render(request, 'user_details_instructor.html', context)
+
+
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from datetime import date
+from courses.models import *
+
+
+@login_required
+def instructor_view_student_profile(request, student_id):
+    """Instructor student profile dekh sakta hai - bilkul user_details jaisa"""
+    
+    # Only instructor access kar sakta
+    if request.user.role != 'instructor':
+        return redirect('user_login')
+    
+    # Student get karo
+    student = get_object_or_404(CustomUser, id=student_id, role='student')
+    
+    # Check: Is student enrolled in this instructor's course?
+    if not Enrollment.objects.filter(student=student, course__instructor=request.user).exists():
+        messages.error(request, "You don't have permission to view this student.")
+        return redirect('instructor_student_management')
+    
+    # Common data
+    context = {
+        'user': student,
+        'is_viewing_student': True,  # Template ke liye flag
+    }
+    
+    # Email Statistics (bilkul user_details jaisa)
+    today = date.today()
+    email_limit = EmailLimitSet.objects.filter(is_active=True).first()
+    daily_limit = email_limit.email_limit_per_day if email_limit else 50
+    
+    today_emails = EmailLog.objects.filter(
+        recipient_user=student,
+        sent_date=today
+    ).count()
+    
+    total_emails = EmailLog.objects.filter(
+        recipient_user=student
+    ).count()
+    
+    remaining_emails = max(0, daily_limit - today_emails)
+    can_receive_email = remaining_emails > 0
+    
+    recent_emails = EmailLog.objects.filter(
+        recipient_user=student
+    ).select_related('sent_by', 'template_used').order_by('-sent_time')[:10]
+    
+    context.update({
+        'today_emails': today_emails,
+        'total_emails': total_emails,
+        'remaining_emails': remaining_emails,
+        'can_receive_email': can_receive_email,
+        'daily_limit': daily_limit,
+        'recent_emails': recent_emails,
+    })
+    
+    # Student Statistics (bas instructor ke courses ka data)
+    student_data = get_student_statistics_for_instructor(student, request.user)
+    context.update(student_data)
+    
+    return render(request, 'user_details_instructor.html', context)
+
+
+def get_student_statistics_for_instructor(student, instructor):
+    """Student ki statistics - sirf instructor ke courses ka"""
+    
+    # Enrollments
+    enrollments = Enrollment.objects.filter(
+        student=student,
+        course__instructor=instructor
+    ).select_related('course')
+    
+    # Batch Enrollments
+    batch_enrollments = BatchEnrollment.objects.filter(
+        student=student,
+        batch__instructor=instructor
+    ).select_related('batch', 'batch__course')
+    
+    # Exam Attempts
+    exam_attempts = ExamAttempt.objects.filter(
+        student=student,
+        exam__created_by=instructor
+    ).select_related('exam')
+    
+    completed_exams = exam_attempts.filter(status='completed', is_graded=True).count()
+    passed_exams = exam_attempts.filter(status='completed', is_graded=True, is_passed=True).count()
+    
+    graded_attempts = exam_attempts.filter(is_graded=True)
+    avg_percentage = round(graded_attempts.aggregate(avg=Avg('percentage'))['avg'] or 0, 2)
+    
+    return {
+        # Courses
+        'enrolled_courses': enrollments.order_by('-enrolled_at'),
+        'total_enrollments': enrollments.count(),
+        'active_enrollments': enrollments.filter(status='enrolled', is_active=True).count(),
+        
+        # Batches
+        'enrolled_batches': batch_enrollments.order_by('-enrolled_at'),
+        'total_batch_enrollments': batch_enrollments.count(),
+        'active_batch_enrollments': batch_enrollments.filter(status='enrolled', is_active=True).count(),
+        
+        # Exams
+        'recent_exam_attempts': exam_attempts.order_by('-started_at')[:5],
+        'completed_exams': completed_exams,
+        'passed_exams': passed_exams,
+        'avg_percentage': avg_percentage,
+    }
 
 def get_instructor_statistics(user):
     """Get comprehensive statistics for instructor"""
@@ -978,7 +1164,7 @@ def student_courses(request):
     if request.user.role != 'student':
         return redirect('user_login')
     
-    from courses.models import Course
+    from courses.models import Course, CourseReview  # ✅ CourseReview import add kiya
     from fees.models import StudentFeeAssignment, EMISchedule
     
     # ⭐ Get ONLY enrolled courses (not all courses)
@@ -1075,12 +1261,19 @@ def student_courses(request):
                 elif days_until_due < 0:
                     lock_info['warning_message'] = f'🔴 Payment of ₹{next_due.amount} overdue by {abs(days_until_due)} days!'
         
+        # ✅ CHECK IF STUDENT HAS REVIEWED THIS COURSE
+        has_reviewed = CourseReview.objects.filter(
+            student=request.user,
+            course=course
+        ).exists()
+        
         enhanced_enrollments.append({
             'enrollment': enrollment,
             'course': course,
             'fee_assignment': fee_assignment,
             'lock_info': lock_info,
             'next_due': next_due,
+            'has_reviewed': has_reviewed,  # ✅ YEH ADD KIYA
         })
     
     # Pagination
@@ -1108,8 +1301,6 @@ def student_courses(request):
     }
     
     return render(request, 'students/student_courses.html', context)
-
-
 
 def get_course_lock_info(course, student, fee_assignment=None):
     """
@@ -1391,6 +1582,7 @@ def student_batches(request):
     }
     
     return render(request, 'students/student_batches.html', context)
+
 
 @login_required
 def browse_courses(request):
@@ -1848,6 +2040,62 @@ from django.db import transaction
 from django.http import JsonResponse
 import json
 
+
+import re
+from datetime import date
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect
+from django.contrib import messages
+from django.core.mail import send_mail
+from django.conf import settings
+import logging
+
+logger = logging.getLogger(__name__)
+
+def replace_template_variables(text, user):
+    """
+    Template se automatically variables detect karo aur user data se replace karo
+    """
+    # Pehle template se saare {{variable}} dhundo
+    pattern = r'\{\{(\w+)\}\}'
+    variables = re.findall(pattern, text)
+    
+    # Ab har variable ko user ke data se replace karo
+    for var in variables:
+        var_lower = var.lower().strip()
+        value = ''
+        
+        # Variable type check karo aur corresponding data lo
+        if var_lower in ['username', 'user']:
+            value = user.username if user.username else user.email.split('@')[0]
+        
+        elif var_lower in ['email', 'mail']:
+            value = user.email if user.email else ''
+        
+        elif var_lower in ['first_name', 'firstname', 'fname']:
+            value = user.first_name if user.first_name else ''
+        
+        elif var_lower in ['last_name', 'lastname', 'lname']:
+            value = user.last_name if user.last_name else ''
+        
+        elif var_lower in ['full_name', 'fullname', 'name']:
+            if user.first_name and user.last_name:
+                value = f"{user.first_name} {user.last_name}"
+            elif user.first_name:
+                value = user.first_name
+            elif user.last_name:
+                value = user.last_name
+            elif user.username:
+                value = user.username
+            else:
+                value = user.email.split('@')[0]
+        
+        # Replace karo
+        text = text.replace('{{' + var + '}}', value)
+    
+    return text
+
+
 @login_required
 def bulk_email(request):
     """Send bulk emails to selected users"""
@@ -1855,7 +2103,6 @@ def bulk_email(request):
         return redirect('user_login')
     
     if request.method == 'POST':
-        # Get form data
         template_id = request.POST.get('template_id')
         recipient_type = request.POST.get('recipient_type')
         custom_subject = request.POST.get('custom_subject')
@@ -1863,17 +2110,14 @@ def bulk_email(request):
         selected_users = request.POST.getlist('selected_users')
         role = request.POST.get('role')
         
-        # Validate required fields
         if not custom_subject or not custom_message:
             messages.error(request, 'Subject and message are required!')
             return redirect('bulk_email')
         
-        # Check daily email limit
         if check_daily_email_limit():
             messages.error(request, 'Daily email limit reached! Cannot send bulk emails.')
             return redirect('bulk_email')
         
-        # Get recipients based on selection
         recipients = []
         if recipient_type == 'all':
             recipients = CustomUser.objects.filter(email__isnull=False).exclude(email='')
@@ -1892,7 +2136,6 @@ def bulk_email(request):
             messages.error(request, 'No valid recipients found!')
             return redirect('bulk_email')
         
-        # Get email template if selected
         template = None
         if template_id:
             try:
@@ -1900,19 +2143,16 @@ def bulk_email(request):
             except EmailTemplate.DoesNotExist:
                 pass
         
-        # Send emails one by one with proper error handling
         successful_count = 0
         failed_count = 0
         failed_emails = []
         
         for user in recipients:
-            # Check individual email limit before each send
             if check_daily_email_limit():
                 messages.warning(request, f'Daily email limit reached! Only {successful_count} emails were sent.')
                 break
             
             try:
-                # Use template or custom content
                 if template:
                     subject = template.subject
                     message = template.email_body
@@ -1920,20 +2160,10 @@ def bulk_email(request):
                     subject = custom_subject
                     message = custom_message
                 
-                # Replace template variables with proper fallbacks
-                context_vars = {
-                    '{{username}}': user.username or user.email.split('@')[0],
-                    '{{email}}': user.email or '',
-                    '{{first_name}}': user.first_name or user.username or user.email.split('@')[0],
-                    '{{last_name}}': user.last_name or ''
-                }
+                # MAIN MAGIC: Template se automatically variables detect aur replace
+                subject = replace_template_variables(subject, user)
+                message = replace_template_variables(message, user)
                 
-                # Replace variables in subject and message
-                for var, value in context_vars.items():
-                    subject = subject.replace(var, str(value))
-                    message = message.replace(var, str(value))
-                
-                # Send individual email
                 send_mail(
                     subject=subject,
                     message=message,
@@ -1944,7 +2174,6 @@ def bulk_email(request):
                 
                 successful_count += 1
                 
-                # Log successful email
                 EmailLog.objects.create(
                     recipient_email=user.email,
                     recipient_user=user,
@@ -1959,7 +2188,6 @@ def bulk_email(request):
                 failed_count += 1
                 failed_emails.append(f"{user.email}: {str(e)}")
                 
-                # Log failed email
                 EmailLog.objects.create(
                     recipient_email=user.email,
                     recipient_user=user,
@@ -1971,10 +2199,9 @@ def bulk_email(request):
                     sent_by=request.user
                 )
         
-        # Update daily summary
         try:
             today = date.today()
-            email_limit = 50  # Default
+            email_limit = 50
             if EmailLimitSet.objects.filter(is_active=True).exists():
                 email_limit = EmailLimitSet.objects.filter(is_active=True).first().email_limit_per_day
             
@@ -1989,13 +2216,11 @@ def bulk_email(request):
         except Exception as e:
             logger.error(f'Error updating daily summary: {e}')
         
-        # Show results
         if successful_count > 0:
             messages.success(request, f'Bulk email sent successfully to {successful_count} recipients!')
         
         if failed_count > 0:
             messages.warning(request, f'{failed_count} emails failed to send. Check email logs for details.')
-            # Optionally log failed emails for debugging
             logger.warning(f'Failed emails: {failed_emails}')
         
         if successful_count == 0 and failed_count == 0:
@@ -2003,7 +2228,7 @@ def bulk_email(request):
         
         return redirect('email_dashboard')
     
-    # GET request - show bulk email form
+    # GET request
     users = CustomUser.objects.filter(
         email__isnull=False
     ).exclude(
@@ -2012,22 +2237,13 @@ def bulk_email(request):
     
     templates = EmailTemplate.objects.filter(is_active=True).order_by('name')
     
-    # Get role-wise counts for UI
     students_count = users.filter(role='student').count()
     instructors_count = users.filter(role='instructor').count()
     admins_count = users.filter(role='superadmin').count()
     
-    # Add role choices that match your template
-    role_choices = [
-        ('student', 'Student'),
-        ('instructor', 'Instructor'), 
-        ('superadmin', 'Admin')
-    ]
-    
     context = {
         'users': users,
         'templates': templates,
-        'role_choices': role_choices,
         'students_count': students_count,
         'instructors_count': instructors_count,
         'admins_count': admins_count,
@@ -2070,6 +2286,7 @@ def create_email_template(request):
         'template_types': EmailTemplate.TEMPLATE_TYPES
     })
 
+
 @login_required
 def email_dashboard(request):
     """Enhanced email management dashboard"""
@@ -2108,22 +2325,25 @@ def email_dashboard(request):
     }
     return render(request, 'email_management/dashboard.html', context)
 
+
 @login_required
 def email_analytics(request):
     """Email analytics and reports"""
     if request.user.role != 'superadmin':
         return redirect('user_login')
     
-    # Monthly email statistics
     from django.db.models import Count, Sum
+    from django.db.models.functions import TruncMonth, ExtractMonth
     from datetime import datetime
     
     # Get monthly data for current year
     current_year = datetime.now().year
+    
+    # Fix for SQLite - Use TruncMonth instead of extra()
     monthly_stats = DailyEmailSummary.objects.filter(
         date__year=current_year
-    ).extra(
-        {'month': "strftime('%m', date)"}
+    ).annotate(
+        month=ExtractMonth('date')
     ).values('month').annotate(
         total_emails=Sum('total_emails_sent'),
         successful_emails=Sum('successful_emails'),
@@ -2138,6 +2358,7 @@ def email_analytics(request):
     ).order_by('-usage_count')[:10]
     
     # Success rate by template
+    from django.db.models import Q
     success_rates = EmailLog.objects.values(
         'template_used__name'
     ).annotate(
@@ -2152,6 +2373,7 @@ def email_analytics(request):
         'current_year': current_year,
     }
     return render(request, 'email_management/analytics.html', context)
+
 
 @login_required
 def test_email_template(request, template_id):
@@ -2202,6 +2424,7 @@ def test_email_template(request, template_id):
         
     except Exception as e:
         return JsonResponse({'success': False, 'message': f'Failed to send test email: {str(e)}'})
+
 
 @login_required
 def delete_email_template(request, template_id):
@@ -3265,6 +3488,8 @@ def student_management(request):
     
     return render(request, 'instructor/student_management.html', context)
 
+
+
 @instructor_permission_required('email_marketing')
 def email_marketing(request):
     """
@@ -3408,8 +3633,6 @@ def instructor_batch_management(request):
     
     return render(request, 'instructor/batch_management.html', context)
 
-def instructor_student_management(request):
-    return render(request,'instructor/student_management.html')
 
 
 
@@ -4295,3 +4518,248 @@ def send_email_to_user(request, user_id):
             messages.error(request, f'Failed to send email: {str(e)}')
     
     return render(request, 'send_email_to_user.html', {'user': user})
+
+from django.http import HttpResponse
+import csv
+from openpyxl import Workbook
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import redirect
+
+@login_required
+def export_students(request):
+    """Export student data based on filters"""
+    if request.user.role != 'instructor':
+        return redirect('user_login')
+    
+    # Get filter parameters
+    export_format = request.GET.get('format', 'csv')
+    course_id = request.GET.get('course')
+    status = request.GET.get('status')
+    fields = request.GET.getlist('fields')
+    
+    # FIXED: Remove 'batch' from select_related - it doesn't exist on Enrollment
+    enrollments = Enrollment.objects.filter(
+        course__instructor=request.user
+    ).select_related('student', 'course')
+    
+    # Apply filters
+    if course_id:
+        enrollments = enrollments.filter(course_id=course_id)
+    if status:
+        enrollments = enrollments.filter(status=status)
+    
+    # Generate export based on format
+    if export_format == 'csv':
+        return export_to_csv(enrollments, fields)
+    elif export_format == 'excel':
+        return export_to_excel(enrollments, fields)
+    elif export_format == 'pdf':
+        return export_to_pdf(enrollments, fields)
+    
+    return HttpResponse("Invalid format", status=400)
+
+
+def export_to_csv(enrollments, fields):
+    """Export to CSV format"""
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = 'attachment; filename="students_export.csv"'
+    
+    writer = csv.writer(response)
+    
+    # Write header
+    header = ['Student ID', 'Full Name', 'Email']
+    if 'contact' in fields:
+        header.extend(['Phone Number'])
+    if 'enrollment' in fields:
+        header.extend(['Course', 'Batch', 'Enrolled Date', 'Status'])
+    if 'progress' in fields:
+        header.extend(['Progress %'])
+    
+    writer.writerow(header)
+    
+    # Write data
+    for enrollment in enrollments:
+        row = [
+            enrollment.student.id,
+            enrollment.student.get_full_name(),
+            enrollment.student.email
+        ]
+        
+        if 'contact' in fields:
+            row.append(enrollment.student.phone_number or 'N/A')
+        
+        if 'enrollment' in fields:
+            # FIXED: Get batch through BatchEnrollment
+            try:
+                batch_enrollment = enrollment.student.batch_enrollments.filter(
+                    batch__course=enrollment.course,
+                    is_active=True
+                ).first()
+                batch_name = batch_enrollment.batch.name if batch_enrollment else 'Direct Enrollment'
+            except:
+                batch_name = 'Direct Enrollment'
+            
+            row.extend([
+                f"{enrollment.course.course_code}",
+                batch_name,
+                enrollment.enrolled_at.strftime('%Y-%m-%d'),
+                enrollment.get_status_display()
+            ])
+        
+        if 'progress' in fields:
+            row.append(f"{enrollment.progress_percentage}%")
+        
+        writer.writerow(row)
+    
+    return response
+
+
+def export_to_excel(enrollments, fields):
+    """Export to Excel format"""
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Students Data"
+    
+    # Write header
+    header = ['Student ID', 'Full Name', 'Email']
+    if 'contact' in fields:
+        header.extend(['Phone Number'])
+    if 'enrollment' in fields:
+        header.extend(['Course', 'Batch', 'Enrolled Date', 'Status'])
+    if 'progress' in fields:
+        header.extend(['Progress %'])
+    
+    ws.append(header)
+    
+    # Style header
+    from openpyxl.styles import Font, PatternFill
+    for cell in ws[1]:
+        cell.font = Font(bold=True, color="FFFFFF")
+        cell.fill = PatternFill(start_color="6366F1", end_color="6366F1", fill_type="solid")
+    
+    # Write data
+    for enrollment in enrollments:
+        row = [
+            enrollment.student.id,
+            enrollment.student.get_full_name(),
+            enrollment.student.email
+        ]
+        
+        if 'contact' in fields:
+            row.append(enrollment.student.phone_number or 'N/A')
+        
+        if 'enrollment' in fields:
+            # FIXED: Get batch through BatchEnrollment
+            try:
+                batch_enrollment = enrollment.student.batch_enrollments.filter(
+                    batch__course=enrollment.course,
+                    is_active=True
+                ).first()
+                batch_name = batch_enrollment.batch.name if batch_enrollment else 'Direct Enrollment'
+            except:
+                batch_name = 'Direct Enrollment'
+            
+            row.extend([
+                f"{enrollment.course.course_code}",
+                batch_name,
+                enrollment.enrolled_at.strftime('%Y-%m-%d'),
+                enrollment.get_status_display()
+            ])
+        
+        if 'progress' in fields:
+            row.append(enrollment.progress_percentage)
+        
+        ws.append(row)
+    
+    # Auto-adjust column widths
+    for column in ws.columns:
+        max_length = 0
+        column_letter = column[0].column_letter
+        for cell in column:
+            try:
+                if len(str(cell.value)) > max_length:
+                    max_length = len(cell.value)
+            except:
+                pass
+        adjusted_width = min(max_length + 2, 50)
+        ws.column_dimensions[column_letter].width = adjusted_width
+    
+    # Create response
+    response = HttpResponse(
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    )
+    response['Content-Disposition'] = 'attachment; filename="students_export.xlsx"'
+    wb.save(response)
+    
+    return response
+
+
+def export_to_pdf(enrollments, fields):
+    """Export to PDF format"""
+    try:
+        from reportlab.lib.pagesizes import letter, landscape
+        from reportlab.lib import colors
+        from reportlab.lib.styles import getSampleStyleSheet
+        from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+        from io import BytesIO
+    except ImportError:
+        return HttpResponse("PDF export requires reportlab library. Install it with: pip install reportlab", status=400)
+    
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=landscape(letter))
+    elements = []
+    
+    # Title
+    styles = getSampleStyleSheet()
+    title = Paragraph("<b>Student Export Report</b>", styles['Heading1'])
+    elements.append(title)
+    elements.append(Spacer(1, 20))
+    
+    # Prepare data
+    data = [['ID', 'Name', 'Email', 'Course', 'Batch', 'Status', 'Progress']]
+    
+    for enrollment in enrollments:
+        # FIXED: Get batch through BatchEnrollment
+        try:
+            batch_enrollment = enrollment.student.batch_enrollments.filter(
+                batch__course=enrollment.course,
+                is_active=True
+            ).first()
+            batch_name = batch_enrollment.batch.name if batch_enrollment else 'Direct'
+        except:
+            batch_name = 'Direct'
+        
+        data.append([
+            str(enrollment.student.id),
+            enrollment.student.get_full_name()[:25],
+            enrollment.student.email[:30],
+            enrollment.course.course_code,
+            batch_name[:15],
+            enrollment.get_status_display(),
+            f"{enrollment.progress_percentage}%"
+        ])
+    
+    # Create table
+    table = Table(data)
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#6366F1')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('TOPPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.white),
+        ('GRID', (0, 0), (-1, -1), 1, colors.grey),
+        ('FONTSIZE', (0, 1), (-1, -1), 8),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#F3F4F6')])
+    ]))
+    
+    elements.append(table)
+    doc.build(elements)
+    
+    buffer.seek(0)
+    response = HttpResponse(buffer, content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="students_export.pdf"'
+    
+    return response

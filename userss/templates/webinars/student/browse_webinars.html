@@ -1,0 +1,144 @@
+{% extends 'students/student_base.html' %}
+{% load static %}
+
+{% block title %}Browse Webinars - Student Panel{% endblock %}
+
+{% block page_title %}Browse Webinars{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Search and Filters -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-4">
+                    <input type="text" name="search" class="form-control" placeholder="Search webinars..." value="{{ current_filters.search }}">
+                </div>
+                <div class="col-md-3">
+                    <select name="type" class="form-select">
+                        <option value="">All Types</option>
+                        <option value="free" {% if current_filters.type == 'free' %}selected{% endif %}>Free</option>
+                        <option value="paid" {% if current_filters.type == 'paid' %}selected{% endif %}>Paid</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <select name="category" class="form-select">
+                        <option value="">All Categories</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}" {% if current_filters.category == category.id|stringformat:"s" %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fas fa-search me-1"></i>Search
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Webinars Grid -->
+    <div class="row">
+        {% for webinar in webinars %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header position-relative" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <h5 class="mb-0">{{ webinar.title }}</h5>
+                    <span class="position-absolute top-0 end-0 m-2">
+                        {% if webinar.webinar_type == 'free' %}
+                            <span class="badge bg-success">FREE</span>
+                        {% else %}
+                            <span class="badge bg-warning text-dark">₹{{ webinar.price }}</span>
+                        {% endif %}
+                    </span>
+                </div>
+                
+                <div class="card-body">
+                    <p class="text-muted small">{{ webinar.short_description|truncatewords:20 }}</p>
+                    
+                    <div class="mb-2">
+                        <i class="fas fa-calendar text-primary me-2"></i>
+                        <small>{{ webinar.scheduled_date|date:"M d, Y" }}</small>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <i class="fas fa-clock text-primary me-2"></i>
+                        <small>{{ webinar.scheduled_date|date:"h:i A" }} ({{ webinar.duration_minutes }} min)</small>
+                    </div>
+                    
+                    <div class="mb-2">
+                        <i class="fas fa-user text-primary me-2"></i>
+                        <small>{{ webinar.instructor.get_full_name }}</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <i class="fas fa-users text-primary me-2"></i>
+                        <small>{{ webinar.get_available_spots }} spots available</small>
+                    </div>
+                    
+                    {% if webinar.id in registered_webinar_ids %}
+                        <button class="btn btn-success w-100" disabled>
+                            <i class="fas fa-check-circle me-1"></i>Already Registered
+                        </button>
+                    {% else %}
+                        {% if webinar.is_registration_open %}
+                            <a href="{% url 'webinars:student_quick_register' webinar.id %}" class="btn btn-primary w-100" onclick="return confirm('Register for this webinar?')">
+                                <i class="fas fa-user-plus me-1"></i>Register Now
+                            </a>
+                        {% else %}
+                            <button class="btn btn-secondary w-100" disabled>
+                                <i class="fas fa-lock me-1"></i>Registration Closed
+                            </button>
+                        {% endif %}
+                    {% endif %}
+                </div>
+                
+                <div class="card-footer bg-light">
+                    <a href="{% url 'webinars:webinar_detail' webinar.slug %}" class="btn btn-sm btn-outline-primary w-100">
+                        <i class="fas fa-info-circle me-1"></i>View Details
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="text-center py-5">
+                <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted">No webinars found</h4>
+                <p class="text-muted">Try adjusting your filters or check back later for new webinars.</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if webinars.has_other_pages %}
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center">
+            {% if webinars.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ webinars.previous_page_number }}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}">
+                    Previous
+                </a>
+            </li>
+            {% endif %}
+            
+            <li class="page-item active">
+                <span class="page-link">{{ webinars.number }} of {{ webinars.paginator.num_pages }}</span>
+            </li>
+            
+            {% if webinars.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ webinars.next_page_number }}{% if current_filters.search %}&search={{ current_filters.search }}{% endif %}{% if current_filters.type %}&type={{ current_filters.type }}{% endif %}{% if current_filters.category %}&category={{ current_filters.category }}{% endif %}">
+                    Next
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,941 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Edit Template - {{ template.name }}{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://unpkg.com/grapesjs/dist/css/grapes.min.css">
+<link rel="stylesheet" href="https://unpkg.com/grapesjs-preset-webpage/dist/grapesjs-preset-webpage.min.css">
+<style>
+/* Top Header Bar */
+.editor-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px 30px;
+    box-shadow: 0 2px 15px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+}
+
+.editor-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.editor-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+}
+
+.status-indicator {
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.status-saved {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+}
+
+.status-saving {
+    background: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+}
+
+/* Template Info Bar */
+.template-info-bar {
+    background: white;
+    padding: 15px 30px;
+    border-bottom: 2px solid #e9ecef;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.info-item label {
+    font-weight: 600;
+    color: #666;
+    margin: 0;
+}
+
+.info-item input, 
+.info-item select {
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    padding: 8px 12px;
+    min-width: 200px;
+}
+
+/* GrapeJS Container */
+.editor-wrapper {
+    display: flex;
+    height: calc(100vh - 200px);
+}
+
+.left-panel {
+    width: 280px;
+    background: #f8f9fa;
+    border-right: 2px solid #e9ecef;
+    overflow-y: auto;
+}
+
+.center-canvas {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+}
+
+.right-panel {
+    width: 300px;
+    background: #f8f9fa;
+    border-left: 2px solid #e9ecef;
+    overflow-y: auto;
+}
+
+#gjs {
+    height: 100%;
+}
+
+/* Panel Headers */
+.panel-header {
+    background: #667eea;
+    color: white;
+    padding: 12px 15px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.panel-content {
+    padding: 15px;
+}
+
+/* Blocks Panel */
+.blocks-container {
+    padding: 10px;
+}
+
+/* Styles Panel */
+.styles-container {
+    padding: 10px;
+}
+
+/* Layers Panel */
+.layers-container {
+    padding: 10px;
+}
+
+/* Traits Panel */
+.traits-container {
+    padding: 10px;
+}
+
+/* Custom GrapeJS Panel Styling */
+.gjs-one-bg {
+    background-color: #f8f9fa;
+}
+
+.gjs-two-color {
+    color: #667eea;
+}
+
+.gjs-three-bg {
+    background-color: #667eea;
+    color: white;
+}
+
+.gjs-four-color,
+.gjs-four-color-h:hover {
+    color: #764ba2;
+}
+
+.gjs-block {
+    width: 100%;
+    min-height: 70px;
+    padding: 10px;
+    margin-bottom: 10px;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    cursor: move;
+    transition: all 0.3s;
+}
+
+.gjs-block:hover {
+    border-color: #667eea;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.gjs-block-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #333;
+}
+
+/* Toolbar */
+.gjs-pn-panel {
+    background: white;
+}
+
+.gjs-pn-btn {
+    padding: 8px 12px;
+    margin: 2px;
+}
+
+/* Custom Buttons */
+.btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.btn-success {
+    background: #10b981;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #059669;
+}
+
+.btn-outline {
+    background: white;
+    color: #667eea;
+    border: 2px solid #667eea;
+}
+
+.btn-outline:hover {
+    background: #667eea;
+    color: white;
+}
+
+.btn-sm {
+    padding: 8px 16px;
+    font-size: 0.9rem;
+}
+
+/* Loading Overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+}
+
+.loading-content {
+    text-align: center;
+    color: white;
+}
+
+.spinner {
+    width: 60px;
+    height: 60px;
+    border: 4px solid rgba(255,255,255,0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Custom Blocks Panel */
+.gjs-block {
+    min-height: 80px;
+    padding: 10px;
+}
+
+.gjs-block-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .template-info-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .info-item input,
+    .info-item select {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<form method="post" id="templateForm">
+    {% csrf_token %}
+    <input type="hidden" name="html_content" id="htmlContent">
+    <input type="hidden" name="css_content" id="cssContent">
+    <input type="hidden" name="name" id="templateName" value="{{ template.name }}">
+    <input type="hidden" name="orientation" id="templateOrientation" value="{{ template.orientation }}">
+
+    <!-- Header -->
+    <div class="editor-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="editor-title">
+                <i class="fas fa-palette"></i>
+                <span id="displayName">{{ template.name }}</span>
+            </h1>
+            <div class="editor-actions">
+                <span id="statusIndicator" class="status-indicator status-saved">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Ready</span>
+                </span>
+                <button type="button" onclick="previewTemplate()" class="btn btn-outline btn-sm">
+                    <i class="fas fa-eye"></i>
+                    Preview
+                </button>
+                <button type="button" onclick="saveTemplate()" class="btn btn-success btn-sm">
+                    <i class="fas fa-save"></i>
+                    Save Template
+                </button>
+                <a href="{% url 'certificates:admin_templates' %}" class="btn btn-outline btn-sm">
+                    <i class="fas fa-arrow-left"></i>
+                    Back
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Template Info Bar -->
+    <div class="template-info-bar">
+        <div class="info-item">
+            <label><i class="fas fa-tag"></i> Template Name:</label>
+            <input type="text" id="nameInput" value="{{ template.name }}" 
+                   onchange="updateName(this.value)">
+        </div>
+        <div class="info-item">
+            <label><i class="fas fa-file"></i> Orientation:</label>
+            <select id="orientationSelect" onchange="updateOrientation(this.value)">
+                <option value="landscape" {% if template.orientation == 'landscape' %}selected{% endif %}>Landscape (A4)</option>
+                <option value="portrait" {% if template.orientation == 'portrait' %}selected{% endif %}>Portrait (A4)</option>
+            </select>
+        </div>
+        <div class="info-item">
+            <button type="button" class="btn btn-sm btn-primary" onclick="insertPlaceholder()">
+                <i class="fas fa-code"></i>
+                Insert Placeholder
+            </button>
+        </div>
+    </div>
+
+    <!-- GrapeJS Editor -->
+    <div class="editor-wrapper">
+        <!-- Left Panel - Blocks -->
+        <div class="left-panel">
+            <div class="panel-header">
+                <i class="fas fa-cubes"></i>
+                Certificate Components
+            </div>
+            <div class="blocks-container"></div>
+        </div>
+
+        <!-- Center - Canvas -->
+        <div class="center-canvas">
+            <div id="gjs"></div>
+        </div>
+
+        <!-- Right Panel - Settings -->
+        <div class="right-panel">
+            <div class="panel-header">
+                <i class="fas fa-layer-group"></i>
+                Layers
+            </div>
+            <div class="layers-container"></div>
+
+            <div class="panel-header" style="margin-top: 20px;">
+                <i class="fas fa-sliders-h"></i>
+                Styles
+            </div>
+            <div class="styles-container"></div>
+
+            <div class="panel-header" style="margin-top: 20px;">
+                <i class="fas fa-cog"></i>
+                Settings
+            </div>
+            <div class="traits-container"></div>
+        </div>
+    </div>
+
+</form>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="loading-content">
+        <div class="spinner"></div>
+        <h4>Saving Template...</h4>
+    </div>
+</div>
+
+<!-- Placeholder Modal -->
+<div class="modal fade" id="placeholderModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-code"></i> Insert Placeholder</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="text-muted">Select a placeholder to insert into your template:</p>
+                <div class="list-group">
+                    <a href="#" class="list-group-item list-group-item-action" onclick="addPlaceholder('{student_name}')">
+                        <strong>{student_name}</strong> - Student's full name
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action" onclick="addPlaceholder('{course_name}')">
+                        <strong>{course_name}</strong> - Course title
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action" onclick="addPlaceholder('{batch_name}')">
+                        <strong>{batch_name}</strong> - Batch name
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action" onclick="addPlaceholder('{completion_date}')">
+                        <strong>{completion_date}</strong> - Completion date
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action" onclick="addPlaceholder('{certificate_id}')">
+                        <strong>{certificate_id}</strong> - Unique certificate ID
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action" onclick="addPlaceholder('{instructor_name}')">
+                        <strong>{instructor_name}</strong> - Instructor name
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action" onclick="addPlaceholder('{grade}')">
+                        <strong>{grade}</strong> - Student grade/score
+                    </a>
+                    <a href="#" class="list-group-item list-group-item-action" onclick="addPlaceholder('{duration}')">
+                        <strong>{duration}</strong> - Course duration
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<!-- GrapeJS Core -->
+<script src="https://unpkg.com/grapesjs"></script>
+<!-- GrapeJS Preset Webpage Plugin -->
+<script src="https://unpkg.com/grapesjs-preset-webpage"></script>
+
+<script>
+let editor;
+
+// Sample data for preview
+const sampleData = {
+    '{student_name}': 'Rahul Kumar',
+    '{course_name}': 'Advanced Django Development',
+    '{batch_name}': 'Batch 2024-A',
+    '{completion_date}': 'November 18, 2025',
+    '{certificate_id}': 'CERT-2024-12345',
+    '{instructor_name}': 'Prof. Amit Sharma',
+    '{grade}': 'A+',
+    '{duration}': '3 Months',
+};
+
+// Initialize GrapeJS
+document.addEventListener('DOMContentLoaded', function() {
+    editor = grapesjs.init({
+        container: '#gjs',
+        fromElement: false,
+        height: '100%',
+        width: 'auto',
+        storageManager: false,
+        
+        // Canvas settings
+        canvas: {
+            styles: [
+                'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css',
+                'https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap'
+            ]
+        },
+
+        // Block Manager
+        blockManager: {
+            appendTo: '.blocks-container',
+        },
+
+        // Style Manager
+        styleManager: {
+            appendTo: '.styles-container',
+            sectors: [
+                {
+                    name: 'General',
+                    open: true,
+                    buildProps: ['width', 'height', 'padding', 'margin'],
+                },
+                {
+                    name: 'Typography',
+                    open: true,
+                    buildProps: ['font-family', 'font-size', 'font-weight', 'color', 'text-align'],
+                },
+                {
+                    name: 'Background',
+                    open: false,
+                    buildProps: ['background-color', 'background'],
+                },
+                {
+                    name: 'Border',
+                    open: false,
+                    buildProps: ['border', 'border-radius'],
+                },
+            ]
+        },
+
+        // Layer Manager
+        layerManager: {
+            appendTo: '.layers-container'
+        },
+
+        // Trait Manager
+        traitManager: {
+            appendTo: '.traits-container',
+        },
+
+        // Panels
+        panels: {
+            defaults: []
+        },
+
+        // Device Manager
+        deviceManager: {
+            devices: [
+                {
+                    name: 'Desktop',
+                    width: '',
+                },
+                {
+                    name: 'Tablet',
+                    width: '768px',
+                },
+                {
+                    name: 'Mobile',
+                    width: '320px',
+                },
+            ]
+        },
+
+        // Load existing template
+        components: `{{ template.html_content|safe }}`,
+        style: `{{ template.css_content|safe }}`,
+    });
+
+    // Add custom certificate blocks
+    addCertificateBlocks();
+
+    // Auto-save status
+    editor.on('change:changesCount', () => {
+        updateStatus('saving');
+        setTimeout(() => updateStatus('saved'), 1000);
+    });
+});
+
+// Add Certificate-specific Blocks
+function addCertificateBlocks() {
+    const bm = editor.BlockManager;
+
+    // Certificate Header Block
+    bm.add('cert-header', {
+        label: '<i class="fas fa-heading"></i><div>Certificate Header</div>',
+        category: 'Certificate Components',
+        content: `
+            <div style="text-align: center; padding: 40px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <h1 style="font-size: 2.5rem; margin: 0; font-family: 'Georgia', serif;">Certificate of Completion</h1>
+            </div>
+        `
+    });
+
+    // Student Name Block
+    bm.add('student-name', {
+        label: '<i class="fas fa-user"></i><div>Student Name</div>',
+        category: 'Certificate Components',
+        content: `
+            <div style="text-align: center; padding: 30px;">
+                <p style="font-size: 1.2rem; color: #666;">This is to certify that</p>
+                <h2 style="font-size: 3rem; color: #333; margin: 20px 0; font-family: 'Georgia', serif; border-bottom: 4px solid #667eea; display: inline-block; padding-bottom: 10px;">{student_name}</h2>
+            </div>
+        `
+    });
+
+    // Course Name Only
+    bm.add('course-name', {
+        label: '<i class="fas fa-book"></i><div>Course Name</div>',
+        category: 'Certificate Components',
+        content: `
+            <div style="text-align: center; padding: 20px;">
+                <p style="font-size: 1.1rem; color: #666;">has successfully completed</p>
+                <h3 style="font-size: 2rem; color: #764ba2; margin: 20px 0; font-family: 'Georgia', serif;">{course_name}</h3>
+            </div>
+        `
+    });
+
+    // Batch Name Block
+    bm.add('batch-block', {
+        label: '<i class="fas fa-users"></i><div>Batch Name</div>',
+        category: 'Certificate Components',
+        content: `
+            <div style="text-align: center; padding: 15px;">
+                <p style="font-size: 1rem; color: #888;">Batch: <span style="font-weight: 600; color: #667eea; font-size: 1.2rem;">{batch_name}</span></p>
+            </div>
+        `
+    });
+
+    // Course + Batch Combined
+    bm.add('course-batch', {
+        label: '<i class="fas fa-book-open"></i><div>Course + Batch</div>',
+        category: 'Certificate Components',
+        content: `
+            <div style="text-align: center; padding: 20px;">
+                <p style="font-size: 1.1rem; color: #666;">has successfully completed</p>
+                <h3 style="font-size: 2rem; color: #764ba2; margin: 20px 0; font-family: 'Georgia', serif;">{course_name}</h3>
+                <p style="font-size: 1rem; color: #888;">Batch: <span style="font-weight: 600; color: #667eea;">{batch_name}</span></p>
+            </div>
+        `
+    });
+
+    // Grade Block
+    bm.add('grade-block', {
+        label: '<i class="fas fa-star"></i><div>Grade</div>',
+        category: 'Certificate Components',
+        content: `
+            <div style="text-align: center; padding: 20px;">
+                <p style="font-size: 1rem; color: #666;">with Grade</p>
+                <div style="display: inline-block; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 15px 40px; border-radius: 50px; font-size: 2rem; font-weight: 700; box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);">
+                    {grade}
+                </div>
+            </div>
+        `
+    });
+
+    // Duration Block
+    bm.add('duration-block', {
+        label: '<i class="fas fa-clock"></i><div>Duration</div>',
+        category: 'Certificate Components',
+        content: `
+            <div style="text-align: center; padding: 15px;">
+                <p style="font-size: 0.95rem; color: #888;">Course Duration: <span style="font-weight: 600; color: #333;">{duration}</span></p>
+            </div>
+        `
+    });
+
+    // Grade + Duration Combined
+    bm.add('grade-duration', {
+        label: '<i class="fas fa-award"></i><div>Grade + Duration</div>',
+        category: 'Certificate Components',
+        content: `
+            <div style="text-align: center; padding: 20px;">
+                <div style="display: flex; justify-content: center; gap: 40px; align-items: center; flex-wrap: wrap;">
+                    <div>
+                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 5px;">Grade</p>
+                        <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 12px 30px; border-radius: 30px; font-size: 1.8rem; font-weight: 700;">
+                            {grade}
+                        </div>
+                    </div>
+                    <div>
+                        <p style="font-size: 0.9rem; color: #666; margin-bottom: 5px;">Duration</p>
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; border-radius: 30px; font-size: 1.2rem; font-weight: 600;">
+                            {duration}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `
+    });
+
+    // Date Block
+    bm.add('date-block', {
+        label: '<i class="fas fa-calendar"></i><div>Completion Date</div>',
+        category: 'Certificate Components',
+        content: `
+            <div style="text-align: center; padding: 20px;">
+                <p style="font-size: 1rem; color: #666;">Completed on</p>
+                <p style="font-size: 1.3rem; color: #333; font-weight: 600;">{completion_date}</p>
+            </div>
+        `
+    });
+
+    // Complete Achievement Block (Course + Batch + Grade + Duration)
+    bm.add('achievement-block', {
+        label: '<i class="fas fa-trophy"></i><div>Achievement Details</div>',
+        category: 'Certificate Components',
+        content: `
+            <div style="text-align: center; padding: 30px; background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%); border-radius: 15px; margin: 20px;">
+                <p style="font-size: 1.1rem; color: #666;">has successfully completed</p>
+                <h3 style="font-size: 2.2rem; color: #764ba2; margin: 15px 0; font-family: 'Georgia', serif;">{course_name}</h3>
+                <p style="font-size: 1rem; color: #888; margin-bottom: 20px;">Batch: <span style="font-weight: 600; color: #667eea;">{batch_name}</span></p>
+                
+                <div style="display: flex; justify-content: center; gap: 30px; margin-top: 25px; flex-wrap: wrap;">
+                    <div style="text-align: center;">
+                        <p style="font-size: 0.85rem; color: #999; margin-bottom: 8px;">GRADE</p>
+                        <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 10px 25px; border-radius: 25px; font-size: 1.5rem; font-weight: 700;">
+                            {grade}
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <p style="font-size: 0.85rem; color: #999; margin-bottom: 8px;">DURATION</p>
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px 25px; border-radius: 25px; font-size: 1rem; font-weight: 600;">
+                            {duration}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `
+    });
+
+    // Signature Block
+    bm.add('signature-block', {
+        label: '<i class="fas fa-pen-fancy"></i><div>Signature</div>',
+        category: 'Certificate Components',
+        content: `
+            <div style="text-align: center; margin-top: 50px; padding: 20px;">
+                <div style="display: inline-block; margin: 0 40px;">
+                    <div style="width: 200px; border-top: 2px solid #333; margin-bottom: 10px;"></div>
+                    <p style="font-size: 1.1rem; font-weight: 600; margin: 5px 0;">{instructor_name}</p>
+                    <p style="color: #666; margin: 0;">Authorized Signatory</p>
+                </div>
+            </div>
+        `
+    });
+
+    // Dual Signature Block
+    bm.add('dual-signature', {
+        label: '<i class="fas fa-pen-nib"></i><div>Dual Signature</div>',
+        category: 'Certificate Components',
+        content: `
+            <div style="display: flex; justify-content: space-around; margin-top: 50px; padding: 20px; flex-wrap: wrap;">
+                <div style="text-align: center; margin: 20px;">
+                    <div style="width: 200px; border-top: 2px solid #333; margin-bottom: 10px;"></div>
+                    <p style="font-size: 1.1rem; font-weight: 600; margin: 5px 0;">{instructor_name}</p>
+                    <p style="color: #666; margin: 0;">Instructor</p>
+                </div>
+                <div style="text-align: center; margin: 20px;">
+                    <div style="width: 200px; border-top: 2px solid #333; margin-bottom: 10px;"></div>
+                    <p style="font-size: 1.1rem; font-weight: 600; margin: 5px 0;">Director</p>
+                    <p style="color: #666; margin: 0;">Authorized Signatory</p>
+                </div>
+            </div>
+        `
+    });
+
+    // Certificate ID Block
+    bm.add('cert-id', {
+        label: '<i class="fas fa-barcode"></i><div>Certificate ID</div>',
+        category: 'Certificate Components',
+        content: `
+            <div style="text-align: center; padding: 20px;">
+                <p style="font-size: 0.9rem; color: #999;">Certificate ID</p>
+                <p style="font-size: 1.1rem; color: #333; font-weight: 600; font-family: monospace;">{certificate_id}</p>
+            </div>
+        `
+    });
+
+    // Border Frame Block
+    bm.add('border-frame', {
+        label: '<i class="fas fa-border-all"></i><div>Border Frame</div>',
+        category: 'Certificate Components',
+        content: `
+            <div style="border: 8px solid #667eea; padding: 40px; margin: 20px; border-radius: 10px; box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);">
+                <div style="border: 2px solid #764ba2; padding: 20px;">
+                    <!-- Add content here -->
+                    <p style="text-align: center; color: #999;">Drop components here</p>
+                </div>
+            </div>
+        `
+    });
+
+    // Logo Placeholder
+    bm.add('logo-block', {
+        label: '<i class="fas fa-image"></i><div>Logo</div>',
+        category: 'Certificate Components',
+        content: `
+            <div style="text-align: center; padding: 20px;">
+                <div style="width: 150px; height: 150px; margin: 0 auto; background: #f0f0f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 3px solid #667eea;">
+                    <i class="fas fa-graduation-cap" style="font-size: 4rem; color: #667eea;"></i>
+                </div>
+            </div>
+        `
+    });
+
+    // Decorative Divider
+    bm.add('divider', {
+        label: '<i class="fas fa-minus"></i><div>Divider</div>',
+        category: 'Certificate Components',
+        content: `
+            <div style="text-align: center; padding: 20px;">
+                <div style="width: 60%; height: 3px; background: linear-gradient(90deg, transparent, #667eea, transparent); margin: 0 auto;"></div>
+            </div>
+        `
+    });
+}
+
+// Insert Placeholder Modal
+function insertPlaceholder() {
+    const modal = new bootstrap.Modal(document.getElementById('placeholderModal'));
+    modal.show();
+}
+
+function addPlaceholder(placeholder) {
+    const selected = editor.getSelected();
+    if (selected) {
+        const content = selected.get('content') || '';
+        selected.set('content', content + placeholder);
+    } else {
+        alert('Please select a text component first!');
+    }
+    bootstrap.Modal.getInstance(document.getElementById('placeholderModal')).hide();
+}
+
+// Save Template
+function saveTemplate() {
+    const html = editor.getHtml();
+    const css = editor.getCss();
+    
+    document.getElementById('htmlContent').value = html;
+    document.getElementById('cssContent').value = css;
+    
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    
+    setTimeout(() => {
+        document.getElementById('templateForm').submit();
+    }, 500);
+}
+
+// Update Name
+function updateName(name) {
+    document.getElementById('templateName').value = name;
+    document.getElementById('displayName').textContent = name;
+    updateStatus('saving');
+    setTimeout(() => updateStatus('saved'), 500);
+}
+
+// Update Orientation
+function updateOrientation(orientation) {
+    document.getElementById('templateOrientation').value = orientation;
+    updateStatus('saving');
+    setTimeout(() => updateStatus('saved'), 500);
+}
+
+// Preview Template
+function previewTemplate() {
+    let html = editor.getHtml();
+    const css = editor.getCss();
+    
+    // Replace placeholders with sample data
+    Object.entries(sampleData).forEach(([key, value]) => {
+        html = html.replaceAll(key, value);
+    });
+    
+    const win = window.open('', '_blank', 'width=1200,height=800');
+    win.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Preview - ${document.getElementById('nameInput').value}</title>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+            <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+            <style>
+                body { 
+                    margin: 0; 
+                    padding: 40px; 
+                    background: #f0f0f0; 
+                    font-family: 'Georgia', serif; 
+                }
+                @media print {
+                    body { padding: 0; background: white; }
+                }
+                ${css}
+            </style>
+        </head>
+        <body>
+            ${html}
+            <div style="text-align: center; margin-top: 40px; padding: 20px; background: white; border-radius: 10px;">
+                <button onclick="window.print()" style="padding: 12px 30px; background: #667eea; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; font-weight: 600;">
+                    <i class="fas fa-print"></i> Print Certificate
+                </button>
+                <button onclick="window.close()" style="padding: 12px 30px; background: #6c757d; color: white; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; font-weight: 600; margin-left: 10px;">
+                    <i class="fas fa-times"></i> Close
+                </button>
+            </div>
+        </body>
+        </html>
+    `);
+}
+
+// Update Status
+function updateStatus(status) {
+    const indicator = document.getElementById('statusIndicator');
+    indicator.className = 'status-indicator';
+    
+    if (status === 'saved') {
+        indicator.classList.add('status-saved');
+        indicator.innerHTML = '<i class="fas fa-check-circle"></i><span>Saved</span>';
+    } else if (status === 'saving') {
+        indicator.classList.add('status-saving');
+        indicator.innerHTML = '<i class="fas fa-spinner fa-spin"></i><span>Auto-saving...</span>';
+    }
+}
+
+// Keyboard Shortcuts
+document.addEventListener('keydown', function(e) {
+    // Ctrl+S to save
+    if (e.ctrlKey && e.key === 's') {
+        e.preventDefault();
+        saveTemplate();
+    }
+    
+    // Ctrl+P to preview
+    if (e.ctrlKey && e.key === 'p') {
+        e.preventDefault();
+        previewTemplate();
+    }
+});
+</script>
+{% endblock %}

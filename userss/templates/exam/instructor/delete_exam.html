@@ -1,0 +1,391 @@
+{% extends 'instructor_base.html' %}
+{% load static %}
+
+{% block title %}Delete Exam - Instructor Panel{% endblock %}
+
+{% block extra_css %}
+<style>
+.page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.delete-card {
+    background: white;
+    border-radius: 15px;
+    padding: 40px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.warning-icon {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 30px;
+    animation: pulse 2s infinite;
+}
+
+.warning-icon i {
+    font-size: 4rem;
+    color: white;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.exam-info-box {
+    background: #f8f9fa;
+    border-left: 4px solid #dc3545;
+    padding: 20px;
+    border-radius: 10px;
+    margin: 30px 0;
+}
+
+.info-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.info-item:last-child {
+    border-bottom: none;
+}
+
+.info-label {
+    font-weight: 600;
+    color: #495057;
+}
+
+.info-value {
+    color: #6c757d;
+}
+
+.warning-list {
+    background: #fff3cd;
+    border-left: 4px solid #ffc107;
+    padding: 20px;
+    border-radius: 10px;
+    margin: 20px 0;
+}
+
+.warning-list ul {
+    margin-bottom: 0;
+    padding-left: 20px;
+}
+
+.warning-list li {
+    margin-bottom: 10px;
+    color: #856404;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.btn-delete {
+    background: linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%);
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+}
+
+.btn-delete:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(238, 90, 111, 0.4);
+    color: white;
+}
+
+.btn-cancel {
+    background: white;
+    color: #6c757d;
+    border: 2px solid #dee2e6;
+    padding: 12px 30px;
+    border-radius: 10px;
+    font-weight: 600;
+    font-size: 1.1rem;
+    transition: all 0.3s ease;
+}
+
+.btn-cancel:hover {
+    background: #f8f9fa;
+    border-color: #adb5bd;
+    transform: translateY(-2px);
+}
+
+.danger-badge {
+    background: #dc3545;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.confirmation-text {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    margin: 20px 0;
+    font-style: italic;
+    color: #6c757d;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-2">
+                    <i class="bi bi-trash me-3"></i>Delete Exam
+                </h1>
+                <p class="mb-0 opacity-75">Permanently remove exam and all related data</p>
+            </div>
+            <div>
+                <a href="{% url 'instructor_my_exams' %}" class="btn btn-light btn-lg">
+                    <i class="bi bi-arrow-left me-2"></i>Back to Exams
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Card -->
+    <div class="delete-card">
+        <!-- Warning Icon -->
+        <div class="warning-icon">
+            <i class="bi bi-exclamation-triangle"></i>
+        </div>
+
+        <!-- Main Warning -->
+        <div class="text-center mb-4">
+            <h2 class="text-danger mb-3">
+                <i class="bi bi-exclamation-octagon me-2"></i>
+                Confirm Deletion
+            </h2>
+            <p class="lead text-muted">
+                You are about to permanently delete this exam. This action cannot be undone.
+            </p>
+        </div>
+
+        <!-- Exam Information -->
+        <div class="exam-info-box">
+            <h5 class="mb-3">
+                <i class="bi bi-file-text me-2"></i>
+                Exam Details
+            </h5>
+            
+            <div class="info-item">
+                <span class="info-label">
+                    <i class="bi bi-card-heading me-2"></i>Title:
+                </span>
+                <span class="info-value fw-bold">{{ exam.title }}</span>
+            </div>
+
+            <div class="info-item">
+                <span class="info-label">
+                    <i class="bi bi-tag me-2"></i>Exam Type:
+                </span>
+                <span class="info-value">{{ exam.get_exam_type_display }}</span>
+            </div>
+
+            <div class="info-item">
+                <span class="info-label">
+                    <i class="bi bi-flag me-2"></i>Status:
+                </span>
+                <span class="info-value">
+                    {% if exam.status == 'published' %}
+                        <span class="badge bg-success">Published</span>
+                    {% elif exam.status == 'draft' %}
+                        <span class="badge bg-warning">Draft</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ exam.status|title }}</span>
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="info-item">
+                <span class="info-label">
+                    <i class="bi bi-question-circle me-2"></i>Total Questions:
+                </span>
+                <span class="info-value">{{ exam.questions.count }}</span>
+            </div>
+
+            <div class="info-item">
+                <span class="info-label">
+                    <i class="bi bi-people me-2"></i>Total Attempts:
+                </span>
+                <span class="info-value">
+                    {% if total_attempts > 0 %}
+                        <span class="danger-badge">{{ total_attempts }}</span>
+                    {% else %}
+                        <span class="badge bg-secondary">{{ total_attempts }}</span>
+                    {% endif %}
+                </span>
+            </div>
+
+            <div class="info-item">
+                <span class="info-label">
+                    <i class="bi bi-calendar me-2"></i>Created:
+                </span>
+                <span class="info-value">{{ exam.created_at|date:"M d, Y h:i A" }}</span>
+            </div>
+        </div>
+
+        <!-- Warning List -->
+        <div class="warning-list">
+            <h6 class="mb-3">
+                <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                <strong>Warning: The following will be deleted:</strong>
+            </h6>
+            <ul>
+                <li>
+                    <strong>All {{ exam.questions.count }} questions</strong> and their answers
+                </li>
+                <li>
+                    <strong>All {{ total_attempts }} student attempts</strong> and submissions
+                </li>
+                <li>
+                    <strong>All grades and feedback</strong> for this exam
+                </li>
+                <li>
+                    <strong>All exam assignments</strong> to students/batches/courses
+                </li>
+                <li>
+                    <strong>All analytics and reports</strong> related to this exam
+                </li>
+            </ul>
+        </div>
+
+        <!-- Additional Warning for Active Attempts -->
+        {% if total_attempts > 0 %}
+        <div class="alert alert-danger" role="alert">
+            <h6 class="alert-heading">
+                <i class="bi bi-exclamation-octagon-fill me-2"></i>
+                Active Student Data!
+            </h6>
+            <p class="mb-0">
+                This exam has <strong>{{ total_attempts }} student attempt(s)</strong>. 
+                Deleting this exam will remove all student submission data and grades permanently.
+            </p>
+        </div>
+        {% endif %}
+
+        <!-- Confirmation Text -->
+        <div class="confirmation-text">
+            <i class="bi bi-info-circle me-2"></i>
+            "I understand that this action is permanent and cannot be undone. All exam data, 
+            student attempts, and related information will be permanently deleted."
+        </div>
+
+        <!-- Action Buttons -->
+        <form method="post">
+            {% csrf_token %}
+            <div class="action-buttons">
+                <button type="submit" class="btn btn-delete flex-fill" 
+                        onclick="return confirm('⚠️ FINAL WARNING!\n\nAre you absolutely sure you want to delete \"{{ exam.title }}\"?\n\nThis will:\n• Delete all {{ exam.questions.count }} questions\n• Delete all {{ total_attempts }} student attempts\n• Remove all grades and feedback\n\nThis action CANNOT be undone!\n\nType DELETE to confirm.');">
+                    <i class="bi bi-trash me-2"></i>Yes, Delete Permanently
+                </button>
+                <a href="{% url 'instructor_my_exams' %}" class="btn btn-cancel flex-fill">
+                    <i class="bi bi-x-circle me-2"></i>No, Keep Exam
+                </a>
+            </div>
+        </form>
+
+        <!-- Safe Alternative -->
+        
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Find the delete form and button
+    const deleteForm = document.querySelector('form[method="post"]');
+    
+    if (!deleteForm) {
+        console.error('Delete form not found');
+        return;
+    }
+    
+    const deleteBtn = deleteForm.querySelector('.btn-delete, .btn-danger, button[type="submit"]');
+    
+    if (!deleteBtn) {
+        console.error('Delete button not found');
+        return;
+    }
+    
+    // Get exam data
+    const examTitle = "{{ exam.title|escapejs }}";
+    const totalAttempts = parseInt("{{ total_attempts }}") || 0;
+    const totalQuestions = parseInt("{{ exam.questions.count }}") || 0;
+    
+    deleteBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Build confirmation message
+        let confirmText = `⚠️ FINAL WARNING!\n\n`;
+        confirmText += `Are you absolutely sure you want to delete "${examTitle}"?\n\n`;
+        confirmText += `This will:\n`;
+        confirmText += `• Delete all ${totalQuestions} question${totalQuestions !== 1 ? 's' : ''}\n`;
+        confirmText += `• Delete all ${totalAttempts} student attempt${totalAttempts !== 1 ? 's' : ''}\n`;
+        confirmText += `• Remove all grades and feedback\n`;
+        confirmText += `• This action CANNOT be undone!\n\n`;
+        confirmText += `Type "DELETE" to confirm or click Cancel to go back.`;
+        
+        // First confirmation
+        if (confirm(confirmText)) {
+            // Second confirmation for extra safety
+            const secondConfirm = confirm('⚠️ LAST CHANCE!\n\nAre you 100% sure? This is irreversible!');
+            
+            if (secondConfirm) {
+                // Update button state
+                deleteBtn.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Deleting...';
+                deleteBtn.disabled = true;
+                deleteBtn.classList.add('disabled');
+                
+                // Add loading class to form
+                deleteForm.classList.add('submitting');
+                
+                // Submit the form
+                deleteForm.submit();
+            }
+        }
+    });
+    
+    // Prevent double submission
+    deleteForm.addEventListener('submit', function(e) {
+        if (deleteForm.classList.contains('submitting')) {
+            return true;
+        }
+        e.preventDefault();
+        deleteBtn.click();
+    });
+});
+</script>
+{% endblock %}

@@ -6,7 +6,7 @@ from .models import (
     Batch, BatchModule, BatchLesson,
     Enrollment, BatchEnrollment, LessonProgress,
     LessonAttachment, CourseReview, CourseFAQ,
-    StudentSubscription, DeviceSession, StudentLoginLog
+     DeviceSession, StudentLoginLog
 )
 
 # ==================== COURSE CATEGORY ADMIN ====================
@@ -122,21 +122,41 @@ class CourseFAQAdmin(admin.ModelAdmin):
     search_fields = ['question', 'answer']
 
 # ==================== SUBSCRIPTION ADMINS ====================
-@admin.register(StudentSubscription)
-class StudentSubscriptionAdmin(admin.ModelAdmin):
-    list_display = ['student', 'course', 'max_devices', 'current_devices', 'is_active', 'subscribed_at']
-    list_filter = ['is_active', 'subscribed_at']
-    search_fields = ['student__username', 'course__title']
+# courses/admin.py
+
+from django.contrib import admin
+from .models import StudentDeviceLimit, DeviceSession, StudentLoginLog
+
+@admin.register(StudentDeviceLimit)
+class StudentDeviceLimitAdmin(admin.ModelAdmin):
+    list_display = ['student', 'max_devices', 'current_device_count', 'is_active', 'created_at']
+    list_filter = ['is_active', 'max_devices']
+    search_fields = ['student__username', 'student__email']
+    
+    def current_device_count(self, obj):
+        return obj.current_device_count()
+    current_device_count.short_description = 'Active Devices'
+
 
 @admin.register(DeviceSession)
 class DeviceSessionAdmin(admin.ModelAdmin):
-    list_display = ['subscription', 'device_name', 'device_id', 'is_active', 'last_login']
-    list_filter = ['is_active', 'last_login']
-    search_fields = ['device_id', 'device_name', 'subscription__student__username']
+    list_display = ['student_name', 'device_name', 'device_id_short', 'first_login', 'last_login', 'is_active']
+    list_filter = ['is_active', 'first_login']
+    search_fields = ['student_limit__student__username', 'device_name', 'device_id']
+    readonly_fields = ['device_id', 'first_login', 'device_info']
+    
+    def student_name(self, obj):
+        return obj.student_limit.student.username
+    student_name.short_description = 'Student'
+    
+    def device_id_short(self, obj):
+        return obj.device_id[:20] + '...' if len(obj.device_id) > 20 else obj.device_id
+    device_id_short.short_description = 'Device ID'
+
 
 @admin.register(StudentLoginLog)
 class StudentLoginLogAdmin(admin.ModelAdmin):
-    list_display = ['student', 'course', 'login_time', 'logout_time', 'session_duration']
-    list_filter = ['login_time', 'course']
-    search_fields = ['student__username', 'ip_address']
-    date_hierarchy = 'login_time'
+    list_display = ['student', 'login_time', 'logout_time', 'session_duration', 'ip_address']
+    list_filter = ['login_time']
+    search_fields = ['student__username']
+    readonly_fields = ['login_time', 'session_duration']

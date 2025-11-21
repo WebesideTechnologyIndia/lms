@@ -1,87 +1,87 @@
+<!-- courses/templates/courses/subscription_list.html -->
+
 {% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Student Subscriptions{% endblock %}
+{% block title %}Device Subscriptions{% endblock %}
 
 {% block content %}
 <div class="container-fluid py-4">
-    <!-- Stats Cards -->
     <div class="row mb-4">
-        <div class="col-md-4">
-            <div class="card bg-primary text-white">
-                <div class="card-body">
-                    <h5>Total Subscriptions</h5>
-                    <h2>{{ total_subs }}</h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card bg-success text-white">
-                <div class="card-body">
-                    <h5>Active</h5>
-                    <h2>{{ active_subs }}</h2>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-4">
-            <div class="card bg-danger text-white">
-                <div class="card-body">
-                    <h5>Expired</h5>
-                    <h2>{{ expired_subs }}</h2>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row">
-        <div class="col-12">
-            <div class="card">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0"><i class="fas fa-crown me-2"></i>Student Subscriptions</h4>
-                    <div>
-                        <a href="{% url 'courses:create_subscription' %}" class="btn btn-success btn-sm me-2">
-                            <i class="fas fa-plus"></i> Create Subscription
-                        </a>
-                        <a href="{% url 'courses:course_dashboard' %}" class="btn btn-secondary btn-sm">
-                            <i class="fas fa-arrow-left"></i> Back
-                        </a>
-                    </div>
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0">
+                        <i class="fas fa-mobile-alt me-2"></i>
+                        Student Device Management
+                    </h4>
+                    <a href="{% url 'courses:create_subscription' %}" class="btn btn-light btn-sm">
+                        <i class="fas fa-plus me-1"></i> Add New Device Limit
+                    </a>
                 </div>
                 <div class="card-body">
-                    <!-- Filters -->
-                    <form method="get" class="row g-3 mb-4">
-                        <div class="col-md-5">
-                            <input type="text" name="search" class="form-control" 
-                                   placeholder="Search student/course..." value="{{ search }}">
-                        </div>
-                        <div class="col-md-3">
-                            <select name="status" class="form-select">
-                                <option value="">All Status</option>
-                                <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
-                                <option value="expired" {% if status_filter == 'expired' %}selected{% endif %}>Expired</option>
-                            </select>
+                    <!-- Stats Cards -->
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <div class="card bg-info text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Total Students</h5>
+                                    <h2 class="mb-0">{{ total_subs }}</h2>
+                                </div>
+                            </div>
                         </div>
                         <div class="col-md-4">
-                            <button type="submit" class="btn btn-primary me-2">
-                                <i class="fas fa-search"></i> Search
-                            </button>
-                            <a href="{% url 'courses:subscription_list' %}" class="btn btn-secondary">
-                                <i class="fas fa-redo"></i> Reset
-                            </a>
+                            <div class="card bg-success text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Active</h5>
+                                    <h2 class="mb-0">{{ active_subs }}</h2>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-danger text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Inactive</h5>
+                                    <h2 class="mb-0">{{ expired_subs }}</h2>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Search & Filter -->
+                    <form method="GET" class="mb-4">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <input type="text" name="search" class="form-control" 
+                                       placeholder="Search by student name or email..." 
+                                       value="{{ search }}">
+                            </div>
+                            <div class="col-md-4">
+                                <select name="status" class="form-control">
+                                    <option value="">All Status</option>
+                                    <option value="active" {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+                                    <option value="expired" {% if status_filter == 'expired' %}selected{% endif %}>Inactive</option>
+                                </select>
+                            </div>
+                            <div class="col-md-2">
+                                <button type="submit" class="btn btn-primary w-100">
+                                    <i class="fas fa-search"></i> Search
+                                </button>
+                            </div>
                         </div>
                     </form>
 
-                    <!-- Table -->
+                    <!-- Subscriptions Table -->
                     <div class="table-responsive">
                         <table class="table table-hover">
-                            <thead>
+                            <thead class="table-light">
                                 <tr>
                                     <th>Student</th>
-                                    <th>Course</th>
-                                    <th>Devices</th>
-                                    <th>Subscribed</th>
-                                    <th>Expires</th>
+                                    <th>Email</th>
+                                    <th>Max Devices</th>
+                                    <th>Active Devices</th>
                                     <th>Status</th>
+                                    <th>Created</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -89,31 +89,23 @@
                                 {% for sub in subscriptions %}
                                 <tr>
                                     <td>
-                                        <strong>{{ sub.student.get_full_name|default:sub.student.username }}</strong><br>
-                                        <small class="text-muted">{{ sub.student.email }}</small>
+                                        <strong>{{ sub.student.get_full_name|default:sub.student.username }}</strong>
+                                    </td>
+                                    <td>{{ sub.student.email }}</td>
+                                    <td>
+                                        <span class="badge bg-info">{{ sub.max_devices }}</span>
                                     </td>
                                     <td>
-                                        <strong>{{ sub.course.title }}</strong><br>
-                                        <small class="text-muted">{{ sub.course.course_code }}</small>
+                                        <span class="badge bg-primary">{{ sub.current_device_count }}</span>
                                     </td>
                                     <td>
-                                        <span class="badge bg-info">{{ sub.current_devices }} / {{ sub.max_devices }}</span>
-                                    </td>
-                                    <td>{{ sub.subscribed_at|date:"M d, Y" }}</td>
-                                    <td>
-                                        {% if sub.expires_at %}
-                                            {{ sub.expires_at|date:"M d, Y" }}
-                                        {% else %}
-                                            <span class="text-muted">Lifetime</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if sub.is_valid %}
+                                        {% if sub.is_active %}
                                             <span class="badge bg-success">Active</span>
                                         {% else %}
-                                            <span class="badge bg-danger">Expired</span>
+                                            <span class="badge bg-danger">Inactive</span>
                                         {% endif %}
                                     </td>
+                                    <td>{{ sub.created_at|date:"d M Y" }}</td>
                                     <td>
                                         <a href="{% url 'courses:subscription_details' sub.student.id %}" 
                                            class="btn btn-sm btn-info" title="View Details">
@@ -133,9 +125,7 @@
                                 <tr>
                                     <td colspan="7" class="text-center py-4">
                                         <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                                        <p class="text-muted">No subscriptions found</p>
-                                        <a href="{% url 'courses:create_subscription' %}" class="btn btn-primary"><i class="fas fa-plus"></i> Create First Subscription
-                                        </a>
+                                        <p class="text-muted">No device limits found</p>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -149,17 +139,25 @@
                         <ul class="pagination justify-content-center">
                             {% if subscriptions.has_previous %}
                             <li class="page-item">
-                                <a class="page-link" href="?page={{ subscriptions.previous_page_number }}&search={{ search }}&status={{ status_filter }}">Previous</a>
+                                <a class="page-link" href="?page={{ subscriptions.previous_page_number }}&search={{ search }}&status={{ status_filter }}">
+                                    Previous
+                                </a>
                             </li>
                             {% endif %}
-                            
-                            <li class="page-item disabled">
-                                <span class="page-link">Page {{ subscriptions.number }} of {{ subscriptions.paginator.num_pages }}</span>
+
+                            {% for num in subscriptions.paginator.page_range %}
+                            <li class="page-item {% if subscriptions.number == num %}active{% endif %}">
+                                <a class="page-link" href="?page={{ num }}&search={{ search }}&status={{ status_filter }}">
+                                    {{ num }}
+                                </a>
                             </li>
-                            
+                            {% endfor %}
+
                             {% if subscriptions.has_next %}
                             <li class="page-item">
-                                <a class="page-link" href="?page={{ subscriptions.next_page_number }}&search={{ search }}&status={{ status_filter }}">Next</a>
+                                <a class="page-link" href="?page={{ subscriptions.next_page_number }}&search={{ search }}&status={{ status_filter }}">
+                                    Next
+                                </a>
                             </li>
                             {% endif %}
                         </ul>

@@ -1,0 +1,176 @@
+{% extends 'students/student_base.html' %}
+{% load static %}
+
+{% block title %}Webinar History - Student Panel{% endblock %}
+
+{% block page_title %}Webinar History{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Stats -->
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-info text-white">
+                <div class="card-body">
+                    <h6>Total Attended</h6>
+                    <h3>{{ stats.total_attended }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-secondary text-white">
+                <div class="card-body">
+                    <h6>Total Past Webinars</h6>
+                    <h3>{{ stats.total_past }}</h3>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-warning text-white">
+                <div class="card-body">
+                    <h6>Certificates Earned</h6>
+                    <h3>{{ stats.certificates_earned }}</h3>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form method="get" class="row g-3">
+                <div class="col-md-10">
+                    <select name="status" class="form-select">
+                        <option value="">All Status</option>
+                        <option value="attended" {% if status_filter == 'attended' %}selected{% endif %}>Attended</option>
+                        <option value="no_show" {% if status_filter == 'no_show' %}selected{% endif %}>No Show</option>
+                        <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">Filter</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Past Webinars Table -->
+    <div class="card">
+        <div class="card-header bg-gradient-primary text-white">
+            <h5 class="mb-0">
+                <i class="fas fa-history me-2"></i>
+                Past Webinars
+            </h5>
+        </div>
+        <div class="card-body">
+            {% if past_registrations %}
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Webinar</th>
+                            <th>Date</th>
+                            <th>Instructor</th>
+                            <th>Type</th>
+                            <th>Status</th>
+                            <th>Duration</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for reg in past_registrations %}
+                        <tr>
+                            <td>
+                                <strong>{{ reg.webinar.title }}</strong>
+                            </td>
+                            <td>{{ reg.webinar.scheduled_date|date:"M d, Y h:i A" }}</td>
+                            <td>{{ reg.webinar.instructor.get_full_name }}</td>
+                            <td>
+                                {% if reg.webinar.webinar_type == 'free' %}
+                                    <span class="badge bg-success">FREE</span>
+                                {% else %}
+                                    <span class="badge bg-warning text-dark">PAID</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if reg.status == 'attended' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle"></i> Attended
+                                    </span>
+                                {% elif reg.status == 'no_show' %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-times-circle"></i> No Show
+                                    </span>
+                                {% elif reg.status == 'cancelled' %}
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-ban"></i> Cancelled
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-info">{{ reg.get_status_display }}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if reg.attended_duration_minutes > 0 %}
+                                    {{ reg.attended_duration_minutes }} min
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                            <td>
+                                <a href="{% url 'webinars:student_webinar_detail' reg.webinar.id %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i> View
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            {% if past_registrations.has_other_pages %}
+            <nav aria-label="Page navigation" class="mt-4">
+                <ul class="pagination justify-content-center">
+                    {% if past_registrations.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ past_registrations.previous_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                            Previous
+                        </a>
+                    </li>
+                    {% endif %}
+                    
+                    <li class="page-item active">
+                        <span class="page-link">{{ past_registrations.number }} of {{ past_registrations.paginator.num_pages }}</span>
+                    </li>
+                    
+                    {% if past_registrations.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ past_registrations.next_page_number }}{% if status_filter %}&status={{ status_filter }}{% endif %}">
+                            Next
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            {% endif %}
+            
+            {% else %}
+            <div class="text-center py-5">
+                <i class="fas fa-inbox fa-4x text-muted mb-3"></i>
+                <h4 class="text-muted">No past webinars</h4>
+                <p class="text-muted">You haven't attended any webinars yet.</p>
+                <a href="{% url 'webinars:student_browse_webinars' %}" class="btn btn-primary">
+                    <i class="fas fa-search me-1"></i>Browse Webinars
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+</style>
+{% endblock %}

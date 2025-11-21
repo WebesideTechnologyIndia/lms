@@ -1,0 +1,305 @@
+{% extends 'students/student_base.html' %}
+{% load static %}
+
+{% block title %}{{ lesson.title }} - {{ batch.name }}{% endblock %}
+
+{% block content %}
+<!-- Batch Header -->
+<div class="lesson-header mb-3">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-2">
+                    <li class="breadcrumb-item">
+                        <a href="{% url 'student_batches' %}">
+                            <i class="fas fa-layer-group me-1"></i>My Batches
+                        </a>
+                    </li>
+                    <li class="breadcrumb-item active">{{ batch.name }}</li>
+                    <li class="breadcrumb-item active">{{ module.title }}</li>
+                </ol>
+            </nav>
+            <h4 class="mb-0">{{ lesson.title }}</h4>
+        </div>
+        
+        <!-- Progress Badge -->
+        <div class="text-end">
+            <span class="badge bg-primary" style="font-size: 1rem; padding: 0.5rem 1rem;">
+                {{ completed_lessons }}/{{ total_lessons }} Lessons
+            </span>
+        </div>
+    </div>
+    
+    <!-- Progress Bar -->
+    <div class="progress mt-3" style="height: 25px;">
+        <div class="progress-bar bg-success" style="width: {{ batch_progress_percentage }}%;">
+            <strong>{{ batch_progress_percentage|floatformat:0 }}% Complete</strong>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Main Lesson Content -->
+    <div class="col-lg-8">
+        <div class="card lesson-content-card mb-4">
+            <div class="card-body">
+                
+                <!-- Lesson Video/Content -->
+                <!-- Lesson Video/Content -->
+{% if youtube_embed_url %}
+<div class="ratio ratio-16x9 mb-4">
+    <iframe 
+        src="{{ youtube_embed_url }}" 
+        title="{{ lesson.title }}"
+        frameborder="0" 
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+        referrerpolicy="strict-origin-when-cross-origin"
+        allowfullscreen>
+    </iframe>
+</div>
+
+{% elif lesson.video_file %}
+<div class="ratio ratio-16x9 mb-4">
+    <video controls>
+        <source src="{{ lesson.video_file.url }}" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+</div>
+
+{% else %}
+<!-- No Video Available -->
+<div class="alert alert-info text-center">
+    <i class="fas fa-video-slash fa-3x mb-3"></i>
+    <h5>No video available for this lesson</h5>
+    <p class="mb-0">Please check the text content or PDF materials below.</p>
+</div>
+{% endif %}
+                
+                <!-- Lesson Description -->
+                <div class="lesson-description">
+                    <h5>About this lesson</h5>
+                    <p>{{ lesson.description|linebreaks }}</p>
+                </div>
+                
+                <!-- Text Content -->
+                {% if lesson.text_content %}
+                <div class="lesson-text-content mt-4">
+                    {{ lesson.text_content|safe }}
+                </div>
+                {% endif %}
+                
+                <!-- PDF Viewer -->
+                {% if lesson.pdf_file %}
+                <div class="pdf-viewer mt-4">
+                    <h5>Course Material</h5>
+                    <iframe 
+                        src="{{ lesson.pdf_file.url }}" 
+                        width="100%" 
+                        height="600px"
+                        style="border: 1px solid #ddd;">
+                    </iframe>
+                    <a href="{{ lesson.pdf_file.url }}" class="btn btn-outline-primary mt-2" download>
+                        <i class="fas fa-download me-2"></i>Download PDF
+                    </a>
+                </div>
+                {% endif %}
+                
+                <!-- Mark Complete Button -->
+                <div class="mt-4 text-center">
+                    {% if lesson_progress.status != 'completed' %}
+                    <button 
+                        class="btn btn-success btn-lg" 
+                        id="markCompleteBtn"
+                        onclick="markLessonComplete()">
+                        <i class="fas fa-check-circle me-2"></i>Mark as Complete
+                    </button>
+                    {% else %}
+                    <button class="btn btn-success btn-lg" disabled>
+                        <i class="fas fa-check-circle me-2"></i>Completed
+                    </button>
+                    {% endif %}
+                </div>
+                
+            </div>
+        </div>
+        
+        <!-- Navigation Buttons -->
+        <div class="d-flex justify-content-between mb-4">
+            {% if prev_lesson %}
+            <a href="{% url 'courses:student_batch_lesson_view' batch.id prev_lesson.batch_module.id prev_lesson.id %}" 
+               class="btn btn-outline-primary">
+                <i class="fas fa-chevron-left me-2"></i>Previous Lesson
+            </a>
+            {% else %}
+            <button class="btn btn-outline-secondary" disabled>
+                <i class="fas fa-chevron-left me-2"></i>Previous Lesson
+            </button>
+            {% endif %}
+            
+            {% if next_lesson %}
+            <a href="{% url 'courses:student_batch_lesson_view' batch.id next_lesson.batch_module.id next_lesson.id %}" 
+               class="btn btn-primary">
+                Next Lesson<i class="fas fa-chevron-right ms-2"></i>
+            </a>
+            {% else %}
+            <button class="btn btn-secondary" disabled>
+                Next Lesson<i class="fas fa-chevron-right ms-2"></i>
+            </button>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Sidebar - Modules & Lessons -->
+    <div class="col-lg-4">
+        <div class="card sticky-sidebar">
+            <div class="card-header bg-primary text-white">
+                <h6 class="mb-0">
+                    <i class="fas fa-list me-2"></i>Batch Content
+                </h6>
+            </div>
+            <div class="card-body p-0" style="max-height: 600px; overflow-y: auto;">
+                {% for mod in all_modules %}
+                <div class="module-item">
+                    <div class="module-header p-3 bg-light">
+                        <strong>{{ mod.title }}</strong>
+                    </div>
+                    <div class="lesson-list">
+                        {% for les in mod.lessons.all %}
+                        <a href="{% url 'courses:student_batch_lesson_view' batch.id mod.id les.id %}" 
+                           class="lesson-item {% if les.id == lesson.id %}active{% endif %}">
+                            <div class="d-flex align-items-center">
+                                {% with progress=les.progress_records.first %}
+                                    {% if progress.status == 'completed' %}
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    {% elif progress.status == 'in_progress' %}
+                                    <i class="fas fa-play-circle text-warning me-2"></i>
+                                    {% else %}
+                                    <i class="far fa-circle text-muted me-2"></i>
+                                    {% endif %}
+                                {% endwith %}
+                                <span class="flex-grow-1">{{ les.title }}</span>
+                            </div>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.lesson-header {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.lesson-content-card {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.sticky-sidebar {
+    position: sticky;
+    top: 20px;
+}
+
+.module-item {
+    border-bottom: 1px solid #dee2e6;
+}
+
+.module-header {
+    font-size: 0.95rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.lesson-item {
+    display: block;
+    padding: 0.75rem 1rem;
+    color: #495057;
+    text-decoration: none;
+    transition: background-color 0.2s;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.lesson-item:hover {
+    background-color: #f8f9fa;
+}
+
+.lesson-item.active {
+    background-color: #e7f3ff;
+    border-left: 3px solid #0d6efd;
+    font-weight: 600;
+}
+
+.lesson-description {
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 0.5rem;
+    margin-top: 1rem;
+}
+
+.lesson-text-content {
+    line-height: 1.8;
+    font-size: 1.05rem;
+}
+</style>
+
+<script>
+function markLessonComplete() {
+    const btn = document.getElementById('markCompleteBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+    
+    fetch("{% url 'courses:mark_batch_lesson_complete' batch.id module.id lesson.id %}", {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Completed';
+            btn.classList.remove('btn-primary');
+            btn.classList.add('btn-success');
+            
+            // Show success message
+            showToast('Lesson marked as complete!', 'success');
+            
+            // Reload after 1 second to update sidebar
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        } else {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Mark as Complete';
+            showToast('Error: ' + data.error, 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Mark as Complete';
+        showToast('Failed to mark as complete', 'error');
+    });
+}
+
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `alert alert-${type === 'success' ? 'success' : 'danger'} position-fixed`;
+    toast.style.top = '20px';
+    toast.style.right = '20px';
+    toast.style.zIndex = '9999';
+    toast.innerHTML = `<i class="fas fa-${type === 'success' ? 'check' : 'exclamation'}-circle me-2"></i>${message}`;
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.remove();
+    }, 3000);
+}
+</script>
+{% endblock %}

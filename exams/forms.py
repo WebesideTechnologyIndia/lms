@@ -11,8 +11,65 @@ from courses.models import Course, Batch
 
 User = get_user_model()
 
+        
+        
+from django import forms
+from .models import Exam
+
 class ExamForm(forms.ModelForm):
     """Main form for creating/editing exams"""
+    
+    # Custom dropdown fields for time selection
+    TIME_PER_QUESTION_CHOICES = [
+        ('', '-- Select Time Per Question --'),
+        ('1', '1 minute'),
+        ('2', '2 minutes'),
+        ('3', '3 minutes'),
+        ('5', '5 minutes'),
+        ('10', '10 minutes'),
+        ('15', '15 minutes'),
+        ('20', '20 minutes'),
+        ('30', '30 minutes'),
+        ('45', '45 minutes'),
+        ('60', '60 minutes'),
+    ]
+    
+    TOTAL_EXAM_TIME_CHOICES = [
+        ('', '-- Select Total Exam Time --'),
+        ('5', '5 minutes'),
+        ('10', '10 minutes'),
+        ('15', '15 minutes'),
+        ('20', '20 minutes'),
+        ('30', '30 minutes'),
+        ('45', '45 minutes'),
+        ('60', '1 hour (60 min)'),
+        ('90', '1.5 hours (90 min)'),
+        ('120', '2 hours (120 min)'),
+        ('150', '2.5 hours (150 min)'),
+        ('180', '3 hours (180 min)'),
+        ('240', '4 hours (240 min)'),
+        ('300', '5 hours (300 min)'),
+        ('360', '6 hours (360 min)'),
+    ]
+    
+    # Override time fields as ChoiceFields
+    time_per_question_minutes = forms.ChoiceField(
+        choices=TIME_PER_QUESTION_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'id_time_per_question_minutes'
+        })
+    )
+    
+    total_exam_time_minutes = forms.ChoiceField(
+        choices=TOTAL_EXAM_TIME_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={
+            'class': 'form-select',
+            'id': 'id_total_exam_time_minutes'
+        })
+    )
     
     class Meta:
         model = Exam
@@ -24,7 +81,6 @@ class ExamForm(forms.ModelForm):
             'randomize_questions', 'randomize_options',
             'start_datetime', 'end_datetime', 'status'
         ]
-        
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -42,7 +98,7 @@ class ExamForm(forms.ModelForm):
             }),
             'exam_type': forms.Select(attrs={
                 'class': 'form-select',
-                'id': 'exam_type_select'
+                'id': 'id_exam_type'
             }),
             'total_marks': forms.NumberInput(attrs={
                 'class': 'form-control',
@@ -54,17 +110,7 @@ class ExamForm(forms.ModelForm):
             }),
             'timing_type': forms.Select(attrs={
                 'class': 'form-select',
-                'id': 'timing_type_select'
-            }),
-            'time_per_question_minutes': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': 1,
-                'max': 60
-            }),
-            'total_exam_time_minutes': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'min': 5,
-                'max': 600
+                'id': 'id_timing_type'
             }),
             'allow_retake': forms.CheckboxInput(attrs={
                 'class': 'form-check-input'
@@ -95,21 +141,23 @@ class ExamForm(forms.ModelForm):
                 'class': 'form-select'
             }),
         }
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         
         # Add help text
         self.fields['timing_type'].help_text = "Choose how time limits will be applied"
-        self.fields['time_per_question_minutes'].help_text = "Only applies if 'Time Per Question' is selected"
-        self.fields['total_exam_time_minutes'].help_text = "Only applies if 'Total Exam Time' is selected"
         self.fields['randomize_options'].help_text = "Only for MCQ exams"
+        
+        # Make timing fields not required (conditionally required in clean method)
+        self.fields['time_per_question_minutes'].required = False
+        self.fields['total_exam_time_minutes'].required = False
         
         # Make some fields required
         self.fields['title'].required = True
         self.fields['description'].required = True
         self.fields['exam_type'].required = True
-    
+
     def clean(self):
         cleaned_data = super().clean()
         exam_type = cleaned_data.get('exam_type')
@@ -118,29 +166,51 @@ class ExamForm(forms.ModelForm):
         total_marks = cleaned_data.get('total_marks')
         start_datetime = cleaned_data.get('start_datetime')
         end_datetime = cleaned_data.get('end_datetime')
-        
+
         # Validate passing marks
         if passing_marks and total_marks and passing_marks > total_marks:
             raise forms.ValidationError("Passing marks cannot be greater than total marks")
-        
+
         # Validate date range
         if start_datetime and end_datetime and start_datetime >= end_datetime:
             raise forms.ValidationError("End date must be after start date")
-        
-        # Validate timing settings
-        if timing_type == 'per_question':
+
+        # Handle timing settings based on timing_type
+        if timing_type == 'no_timing':
+            # Clear both time fields when no limit is selected
+            cleaned_data['time_per_question_minutes'] = None
+            cleaned_data['total_exam_time_minutes'] = None
+            
+        elif timing_type == 'per_question':
+            # Clear total exam time and validate time per question
+            cleaned_data['total_exam_time_minutes'] = None
             time_per_question = cleaned_data.get('time_per_question_minutes')
-            if not time_per_question or time_per_question < 1:
-                raise forms.ValidationError("Time per question must be at least 1 minute")
-        
+            
+            if not time_per_question:
+                raise forms.ValidationError("Please select time per question when 'Time Per Question' is selected")
+            
+            # Convert to integer for saving
+            try:
+                cleaned_data['time_per_question_minutes'] = int(time_per_question)
+            except (ValueError, TypeError):
+                raise forms.ValidationError("Invalid time per question value")
+                
         elif timing_type == 'total_exam':
+            # Clear time per question and validate total exam time
+            cleaned_data['time_per_question_minutes'] = None
             total_time = cleaned_data.get('total_exam_time_minutes')
-            if not total_time or total_time < 5:
-                raise forms.ValidationError("Total exam time must be at least 5 minutes")
-        
+            
+            if not total_time:
+                raise forms.ValidationError("Please select total exam time when 'Total Exam Time' is selected")
+            
+            # Convert to integer for saving
+            try:
+                cleaned_data['total_exam_time_minutes'] = int(total_time)
+            except (ValueError, TypeError):
+                raise forms.ValidationError("Invalid total exam time value")
+
         return cleaned_data
-
-
+    
 class MCQQuestionForm(forms.ModelForm):
     """Form for MCQ Questions"""
     

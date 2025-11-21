@@ -7,184 +7,184 @@
 
 {% block extra_css %}
 <style>
-.student-lesson-container {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 20px;
-}
+    .student-lesson-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
 
-.lesson-player {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-    overflow: hidden;
-    margin-bottom: 30px;
-}
+    .lesson-player {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+        margin-bottom: 30px;
+    }
 
-.lesson-header {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 25px;
-}
+    .lesson-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 25px;
+    }
 
-.breadcrumb-custom {
-    background: transparent;
-    color: rgba(255,255,255,0.8);
-    padding: 0;
-    margin-bottom: 10px;
-}
+    .breadcrumb-custom {
+        background: transparent;
+        color: rgba(255, 255, 255, 0.8);
+        padding: 0;
+        margin-bottom: 10px;
+    }
 
-.breadcrumb-custom a {
-    color: rgba(255,255,255,0.9);
-    text-decoration: none;
-}
+    .breadcrumb-custom a {
+        color: rgba(255, 255, 255, 0.9);
+        text-decoration: none;
+    }
 
-.video-container {
-    position: relative;
-    padding-bottom: 56.25%;
-    height: 0;
-    background: #000;
-}
+    .video-container {
+        position: relative;
+        padding-bottom: 56.25%;
+        height: 0;
+        background: #000;
+    }
 
-.video-container iframe,
-.video-container video {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-}
+    .video-container iframe,
+    .video-container video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
 
-.lesson-content-area {
-    padding: 30px;
-}
+    .lesson-content-area {
+        padding: 30px;
+    }
 
-.progress-indicator {
-    background: rgba(255,255,255,0.2);
-    height: 6px;
-    border-radius: 10px;
-    overflow: hidden;
-    margin: 15px 0;
-}
+    .progress-indicator {
+        background: rgba(255, 255, 255, 0.2);
+        height: 6px;
+        border-radius: 10px;
+        overflow: hidden;
+        margin: 15px 0;
+    }
 
-.progress-fill {
-    background: linear-gradient(90deg, #28a745, #20c997);
-    height: 100%;
-    transition: width 0.3s ease;
-}
+    .progress-fill {
+        background: linear-gradient(90deg, #28a745, #20c997);
+        height: 100%;
+        transition: width 0.3s ease;
+    }
 
-.lesson-nav {
-    background: #f8f9fa;
-    border-radius: 8px;
-    padding: 20px;
-    margin-top: 20px;
-}
+    .lesson-nav {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin-top: 20px;
+    }
 
-.complete-btn {
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-    border: none;
-    color: white;
-    padding: 12px 30px;
-    border-radius: 25px;
-    font-weight: 600;
-    transition: all 0.3s ease;
-}
+    .complete-btn {
+        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        border: none;
+        color: white;
+        padding: 12px 30px;
+        border-radius: 25px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+    }
 
-.complete-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
-}
+    .complete-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+    }
 
-.module-sidebar {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-    padding: 20px;
-    max-height: 80vh;
-    overflow-y: auto;
-    position: sticky;
-    top: 20px;
-}
+    .module-sidebar {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+        padding: 20px;
+        max-height: 80vh;
+        overflow-y: auto;
+        position: sticky;
+        top: 20px;
+    }
 
-.module-section {
-    margin-bottom: 20px;
-    border-bottom: 1px solid #e9ecef;
-    padding-bottom: 15px;
-}
+    .module-section {
+        margin-bottom: 20px;
+        border-bottom: 1px solid #e9ecef;
+        padding-bottom: 15px;
+    }
 
-.module-section:last-child {
-    border-bottom: none;
-}
+    .module-section:last-child {
+        border-bottom: none;
+    }
 
-.module-title {
-    font-weight: 600;
-    color: #495057;
-    margin-bottom: 10px;
-    font-size: 0.95rem;
-    display: flex;
-    align-items: center;
-}
+    .module-title {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 10px;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+    }
 
-.module-number {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 10px;
-    font-size: 0.85rem;
-    font-weight: bold;
-}
+    .module-number {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 10px;
+        font-size: 0.85rem;
+        font-weight: bold;
+    }
 
-.lesson-item {
-    padding: 10px 12px;
-    border-radius: 6px;
-    margin-bottom: 6px;
-    transition: all 0.2s ease;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    text-decoration: none;
-    color: #495057;
-}
+    .lesson-item {
+        padding: 10px 12px;
+        border-radius: 6px;
+        margin-bottom: 6px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        text-decoration: none;
+        color: #495057;
+    }
 
-.lesson-item:hover {
-    background: #f8f9fa;
-    transform: translateX(3px);
-}
+    .lesson-item:hover {
+        background: #f8f9fa;
+        transform: translateX(3px);
+    }
 
-.lesson-item.active {
-    background: linear-gradient(135deg, #e7f3ff 0%, #e3f2fd 100%);
-    border-left: 3px solid #667eea;
-    font-weight: 600;
-    color: #667eea;
-}
+    .lesson-item.active {
+        background: linear-gradient(135deg, #e7f3ff 0%, #e3f2fd 100%);
+        border-left: 3px solid #667eea;
+        font-weight: 600;
+        color: #667eea;
+    }
 
-.lesson-icon {
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-right: 10px;
-    font-size: 0.9rem;
-}
+    .lesson-icon {
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 10px;
+        font-size: 0.9rem;
+    }
 
-.lesson-title-text {
-    flex: 1;
-    font-size: 0.9rem;
-}
+    .lesson-title-text {
+        flex: 1;
+        font-size: 0.9rem;
+    }
 
-.course-info-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    padding: 20px;
-    border-radius: 10px;
-    margin-top: 20px;
-}
+    .course-info-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin-top: 20px;
+    }
 </style>
 {% endblock %}
 
@@ -202,7 +202,7 @@
                         <span class="mx-2">/</span>
                         <span>{{ module.title }}</span>
                     </nav>
-                    
+
                     <div class="d-flex justify-content-between align-items-start">
                         <div>
                             <h2 class="mb-2">{{ lesson.title }}</h2>
@@ -217,7 +217,7 @@
                         </div>
                         {% endif %}
                     </div>
-                    
+
                     <!-- Progress Bar -->
                     {% if lesson_progress %}
                     <div class="progress-indicator">
@@ -227,25 +227,35 @@
                 </div>
 
                 <!-- Video/Content Player -->
+
+                <!-- Video/Content Player -->
                 {% if lesson.youtube_url or lesson.video_file %}
                 <div class="video-container">
-                    {% if lesson.youtube_url %}
-                        {% if "youtube.com/watch?v=" in lesson.youtube_url %}
-                            {% with lesson.youtube_url|cut:"https://www.youtube.com/watch?v=" as video_id %}
-                                <iframe src="https://www.youtube.com/embed/{{ video_id }}" 
-                                        frameborder="0" allowfullscreen></iframe>
-                            {% endwith %}
-                        {% elif "youtu.be/" in lesson.youtube_url %}
-                            {% with lesson.youtube_url|cut:"https://youtu.be/" as video_id %}
-                                <iframe src="https://www.youtube.com/embed/{{ video_id }}" 
-                                        frameborder="0" allowfullscreen></iframe>
-                            {% endwith %}
-                        {% endif %}
+                    {% if youtube_embed_url %}
+                    <!-- ✅ YouTube Video -->
+                    <iframe src="{{ youtube_embed_url }}" frameborder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowfullscreen referrerpolicy="strict-origin-when-cross-origin">
+                    </iframe>
                     {% elif lesson.video_file %}
-                        <video controls>
-                            <source src="{{ lesson.video_file.url }}" type="video/mp4">
-                        </video>
+                    <!-- ✅ Uploaded Video -->
+                    <video controls controlsList="nodownload">
+                        <source src="{{ lesson.video_file.url }}" type="video/mp4">
+                        Your browser does not support video playback.
+                    </video>
+                    {% else %}
+                    <!-- ❌ No video available -->
+                    <div class="alert alert-warning m-3 text-center">
+                        <i class="fas fa-video-slash fa-2x mb-2"></i>
+                        <p class="mb-0">No video content available for this lesson</p>
+                    </div>
                     {% endif %}
+                </div>
+                {% else %}
+                <!-- No video at all -->
+                <div class="alert alert-info m-3 text-center">
+                    <i class="fas fa-book-open fa-2x mb-2"></i>
+                    <p class="mb-0">This lesson contains text content only</p>
                 </div>
                 {% endif %}
 
@@ -285,8 +295,8 @@
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         {% if prev_lesson %}
-                        <a href="{% url 'courses:student_lesson_view' course.id prev_lesson.module.id prev_lesson.id %}" 
-                           class="btn btn-outline-secondary">
+                        <a href="{% url 'courses:student_lesson_view' course.id prev_lesson.module.id prev_lesson.id %}"
+                            class="btn btn-outline-secondary">
                             <i class="fas fa-chevron-left me-2"></i>Previous
                         </a>
                         {% else %}
@@ -302,8 +312,8 @@
 
                     <div>
                         {% if next_lesson %}
-                        <a href="{% url 'courses:student_lesson_view' course.id next_lesson.module.id next_lesson.id %}" 
-                           class="btn btn-primary">
+                        <a href="{% url 'courses:student_lesson_view' course.id next_lesson.module.id next_lesson.id %}"
+                            class="btn btn-primary">
                             Next<i class="fas fa-chevron-right ms-2"></i>
                         </a>
                         {% else %}
@@ -331,16 +341,16 @@
                         <span class="module-number">{{ forloop.counter }}</span>
                         <span>{{ mod.title }}</span>
                     </div>
-                    
+
                     <div class="lessons-list">
                         {% for other_lesson in mod.lessons.all %}
-                        <a href="{% url 'courses:student_lesson_view' course.id mod.id other_lesson.id %}" 
-                           class="lesson-item {% if other_lesson.id == lesson.id %}active{% endif %}">
+                        <a href="{% url 'courses:student_lesson_view' course.id mod.id other_lesson.id %}"
+                            class="lesson-item {% if other_lesson.id == lesson.id %}active{% endif %}">
                             <div class="lesson-icon">
                                 {% if other_lesson.id == lesson.id %}
-                                    <i class="fas fa-play-circle text-primary"></i>
+                                <i class="fas fa-play-circle text-primary"></i>
                                 {% else %}
-                                    <i class="far fa-circle text-muted"></i>
+                                <i class="far fa-circle text-muted"></i>
                                 {% endif %}
                             </div>
                             <div class="lesson-title-text">
@@ -368,49 +378,49 @@
 </div>
 
 <script>
-// Mark Complete
-document.getElementById('markCompleteBtn')?.addEventListener('click', function() {
-    const btn = this;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
-    
-    fetch("{% url 'courses:mark_lesson_complete' course.id module.id lesson.id %}", {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'Content-Type': 'application/json'
-        }
-    })
-    .then(res => res.json())
-    .then(data => {
-        if (data.success) {
-            btn.outerHTML = `
+    // Mark Complete
+    document.getElementById('markCompleteBtn')?.addEventListener('click', function () {
+        const btn = this;
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+
+        fetch("{% url 'courses:mark_lesson_complete' course.id module.id lesson.id %}", {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    btn.outerHTML = `
                 <div class="alert alert-success">
                     <i class="fas fa-check-circle me-2"></i>
                     <strong>Great job!</strong> Lesson completed. 🎉
                 </div>
             `;
-            
-            if (document.querySelector('.progress-fill')) {
-                document.querySelector('.progress-fill').style.width = '100%';
-            }
-            
-            {% if next_lesson %}
-            setTimeout(() => {
-                window.location.href = "{% url 'courses:student_lesson_view' course.id next_lesson.module.id next_lesson.id %}";
-            }, 2000);
-            {% endif %}
-        } else {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Mark as Complete';
-            alert('Error: ' + data.error);
-        }
-    })
-    .catch(err => {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Mark as Complete';
-        alert('Something went wrong!');
+
+                    if (document.querySelector('.progress-fill')) {
+                        document.querySelector('.progress-fill').style.width = '100%';
+                    }
+
+                    {% if next_lesson %}
+                    setTimeout(() => {
+                        window.location.href = "{% url 'courses:student_lesson_view' course.id next_lesson.module.id next_lesson.id %}";
+                    }, 2000);
+                    {% endif %}
+                } else {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Mark as Complete';
+                    alert('Error: ' + data.error);
+                }
+            })
+            .catch(err => {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-check-circle me-2"></i>Mark as Complete';
+                alert('Something went wrong!');
+            });
     });
-});
 </script>
 {% endblock %}

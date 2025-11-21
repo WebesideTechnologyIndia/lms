@@ -31,6 +31,12 @@ urlpatterns = [
     path("delete_user/<int:user_id>/", views.delete_user, name="delete_user"),
     path("user_details/<int:user_id>/", views.user_details, name="user_details"),
     
+    
+    # Instructor apni profile dekhne ke liye
+# path("instructor/my-profile/", views.instructor_user_details, name="instructor_my_profile"),
+
+# Instructor student ki profile dekhne ke liye  
+path("instructor/student/<int:student_id>/", views.instructor_view_student_profile, name="instructor_view_student_profile"),
     # Email Management
     path("email-dashboard/", views.email_dashboard, name="email_dashboard"),
     path("email-templates/", views.manage_email_templates, name="manage_email_templates"),
@@ -55,7 +61,7 @@ urlpatterns = [
     # Password Reset
     path("password-reset/", views.password_reset_request, name="password_reset_request"),
     path("password-reset/verify/", views.password_reset_verify, name="password_reset_verify"),
-    path("password-reset/confirm/", views.password_reset_confirm, name="password_reset_confirm"),
+    path("password  -reset/confirm/", views.password_reset_confirm, name="password_reset_confirm"),
     
     # Instructor
     path("dashboard/", views.instructor_dashboard, name="instructor_dashboard"),
@@ -107,5 +113,8 @@ urlpatterns = [
     path("exam-submission", views.exam_submission, name="exam_submission"),
 
     path('email-configuration/', views.email_smtp_settings, name='email_configuration_settings'),
+
+    path('export-students/', views.export_students, name='export_students'),
+
 
 ]

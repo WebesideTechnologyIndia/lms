@@ -1,0 +1,268 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Certificate Template - Admin Panel{% endblock %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/monokai.min.css">
+<style>
+.page-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+}
+
+.form-card {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+}
+
+.template-preview-card {
+    border: 3px solid #e9ecef;
+    border-radius: 12px;
+    padding: 15px;
+    cursor: pointer;
+    transition: all 0.3s;
+    height: 100%;
+}
+
+.template-preview-card:hover {
+    border-color: #667eea;
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
+}
+
+.template-preview-card.selected {
+    border-color: #667eea;
+    background: #e7f3ff;
+    box-shadow: 0 5px 20px rgba(102, 126, 234, 0.3);
+}
+
+.template-preview-img {
+    width: 100%;
+    height: 200px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 3rem;
+    margin-bottom: 15px;
+}
+
+.CodeMirror {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    height: 400px;
+    font-size: 14px;
+}
+
+.placeholder-item {
+    background: #f8f9fa;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin: 5px;
+    display: inline-block;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.placeholder-item:hover {
+    background: #667eea;
+    color: white;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    
+    <!-- Page Header -->
+    <div class="page-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="mb-2">
+                    <i class="bi bi-plus-circle me-3"></i>Create Certificate Template
+                </h1>
+                <p class="mb-0 opacity-75">Choose from library or create custom design</p>
+            </div>
+            <div>
+                <a href="{% url 'certificates:admin_templates' %}" class="btn btn-light btn-lg">
+                    <i class="bi bi-arrow-left me-2"></i>Back
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <form method="post" enctype="multipart/form-data" id="createTemplateForm">
+        {% csrf_token %}
+        
+        <!-- Step 1: Basic Info -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="form-card">
+                    <h5 class="mb-4">
+                        <span class="badge bg-primary me-2">1</span>
+                        Basic Information
+                    </h5>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-bold">Template Name *</label>
+                            <input type="text" name="name" class="form-control form-control-lg" 
+                                   placeholder="e.g., Modern Certificate" required>
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label fw-bold">Certificate Type *</label>
+                            <select name="certificate_type" class="form-select form-select-lg" required>
+                                <option value="">Select Type</option>
+                                {% for type in types %}
+                                <option value="{{ type.id }}">{{ type.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+
+                        <div class="col-md-3 mb-3">
+                            <label class="form-label fw-bold">Orientation</label>
+                            <select name="orientation" class="form-select form-select-lg">
+                                <option value="landscape">Landscape</option>
+                                <option value="portrait">Portrait</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Choose Template -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="form-card">
+                    <h5 class="mb-4">
+                        <span class="badge bg-primary me-2">2</span>
+                        Choose Starting Template
+                    </h5>
+
+                    <div class="row">
+                        <!-- Blank Template -->
+                        <div class="col-md-3 mb-3">
+                            <label class="template-preview-card" onclick="selectTemplate('blank')">
+                                <input type="radio" name="use_template" value="" 
+                                       class="form-check-input me-2" checked>
+                                <div class="template-preview-img">
+                                    <i class="bi bi-file-earmark-plus"></i>
+                                </div>
+                                <div class="text-center">
+                                    <h6 class="fw-bold">Blank Template</h6>
+                                    <small class="text-muted">Start from scratch</small>
+                                </div>
+                            </label>
+                        </div>
+
+                        <!-- Pre-made Templates -->
+                        {% for key, template in template_library.items %}
+                        <div class="col-md-3 mb-3">
+                            <label class="template-preview-card" onclick="selectTemplate('{{ key }}')">
+                                <input type="radio" name="use_template" value="{{ key }}" 
+                                       class="form-check-input me-2">
+                                <div class="template-preview-img">
+                                    <i class="bi bi-award"></i>
+                                </div>
+                                <div class="text-center">
+                                    <h6 class="fw-bold">{{ template.name }}</h6>
+                                    <small class="text-muted">Ready to use</small>
+                                </div>
+                            </label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Customize (Optional) -->
+        <div class="row mb-4">
+            <div class="col-lg-6 mb-3">
+                <div class="form-card">
+                    <h5 class="mb-3">
+                        <span class="badge bg-primary me-2">3</span>
+                        HTML Template (Optional)
+                    </h5>
+                    <p class="text-muted small mb-3">Edit after creation for full customization</p>
+                    <textarea name="html_content" id="htmlEditor" style="display:none;">{{ default_html }}</textarea>
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        You can customize the template in the editor after creation
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-6 mb-3">
+                <div class="form-card">
+                    <h5 class="mb-3">
+                        <span class="badge bg-primary me-2">4</span>
+                        Available Placeholders
+                    </h5>
+                    <p class="text-muted small mb-3">These will be replaced with actual data</p>
+                    
+                    <div>
+                        <span class="placeholder-item">{student_name}</span>
+                        <span class="placeholder-item">{course_name}</span>
+                        <span class="placeholder-item">{batch_name}</span>
+                        <span class="placeholder-item">{completion_date}</span>
+                        <span class="placeholder-item">{issue_date}</span>
+                        <span class="placeholder-item">{certificate_id}</span>
+                        <span class="placeholder-item">{instructor_name}</span>
+                        <span class="placeholder-item">{grade}</span>
+                        <span class="placeholder-item">{duration}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="row">
+            <div class="col-12">
+                <div class="form-card">
+                    <div class="d-flex gap-3">
+                        <button type="submit" class="btn btn-primary btn-lg flex-fill">
+                            <i class="bi bi-check-circle me-2"></i>Create Template
+                        </button>
+                        <a href="{% url 'certificates:admin_templates' %}" class="btn btn-outline-secondary btn-lg">
+                            Cancel
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function selectTemplate(templateKey) {
+    // Remove selected class from all cards
+    document.querySelectorAll('.template-preview-card').forEach(card => {
+        card.classList.remove('selected');
+    });
+    
+    // Add selected class to clicked card
+    event.currentTarget.classList.add('selected');
+}
+
+// Initial selection
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelector('.template-preview-card').classList.add('selected');
+});
+</script>
+{% endblock %}

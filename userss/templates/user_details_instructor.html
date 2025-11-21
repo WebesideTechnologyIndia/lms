@@ -1,0 +1,509 @@
+{% extends 'instructor_base.html' %}
+
+{% block title %}{{ user.username }} - Student Details{% endblock %}
+
+{% block extra_css %}
+<style>
+    .profile-header {
+        background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        color: white;
+        border-radius: 12px;
+        padding: 30px;
+        margin-bottom: 30px;
+    }
+
+    .profile-avatar {
+        width: 80px;
+        height: 80px;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        margin-right: 20px;
+    }
+
+    .info-card {
+        background: white;
+        border-radius: 12px;
+        padding: 25px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+        margin-bottom: 20px;
+    }
+
+    .stat-card {
+        background: white;
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .stat-card h3 {
+        font-size: 2.5rem;
+        font-weight: bold;
+        margin: 10px 0;
+        color: var(--primary-color);
+    }
+
+    .stat-card p {
+        color: #666;
+        font-size: 0.9rem;
+        margin: 0;
+    }
+
+    .list-item {
+        padding: 12px;
+        border-left: 3px solid #e5e7eb;
+        margin-bottom: 10px;
+        border-radius: 4px;
+        background: #f9fafb;
+    }
+
+    .list-item:hover {
+        background: #f3f4f6;
+        border-left-color: var(--primary-color);
+    }
+
+    .badge-custom {
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Profile Header -->
+<div class="profile-header">
+    <div class="d-flex align-items-center">
+        {% if user.profile_picture %}
+        <img src="{{ user.profile_picture.url }}" alt="{{ user.get_full_name }}" class="profile-avatar"
+            style="object-fit: cover;">
+        {% else %}
+        <div class="profile-avatar">
+            <i class="fas fa-user"></i>
+        </div>
+        {% endif %}
+        <div>
+            <h3 class="mb-1">{{ user.first_name }} {{ user.last_name }}</h3>
+            <p class="mb-2 opacity-75">
+                <i class="fas fa-at me-1"></i>{{ user.username }} •
+                <i class="fas fa-envelope me-1"></i>{{ user.email }}
+            </p>
+            <span class="badge bg-light text-dark">{{ user.get_role_display }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Basic Information -->
+    <div class="col-lg-6">
+        <div class="info-card">
+            <h5 class="mb-3"><i class="fas fa-user me-2"></i>Basic Information</h5>
+            <div class="row">
+                <div class="col-sm-6"><strong>Username:</strong></div>
+                <div class="col-sm-6">{{ user.username }}</div>
+
+                <div class="col-sm-6 mt-2"><strong>Full Name:</strong></div>
+                <div class="col-sm-6 mt-2">{{ user.get_full_name|default:"Not provided" }}</div>
+
+                <div class="col-sm-6 mt-2"><strong>Email:</strong></div>
+                <div class="col-sm-6 mt-2">{{ user.email }}</div>
+
+                <div class="col-sm-6 mt-2"><strong>Role:</strong></div>
+                <div class="col-sm-6 mt-2">{{ user.get_role_display }}</div>
+
+                <div class="col-sm-6 mt-2"><strong>Status:</strong></div>
+                <div class="col-sm-6 mt-2">
+                    {% if user.is_active %}
+                    <span class="badge bg-success">Active</span>
+                    {% else %}
+                    <span class="badge bg-danger">Inactive</span>
+                    {% endif %}
+                </div>
+
+                <div class="col-sm-6 mt-2"><strong>Joined:</strong></div>
+                <div class="col-sm-6 mt-2">{{ user.date_joined|date:"F d, Y" }}</div>
+
+                <div class="col-sm-6 mt-2"><strong>Last Login:</strong></div>
+                <div class="col-sm-6 mt-2">
+                    {% if user.last_login %}
+                    {{ user.last_login|date:"F d, Y g:i A" }}
+                    {% else %}
+                    <span class="text-muted">Never</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Statistics -->
+    <div class="col-lg-6">
+        <div class="info-card" style="background: linear-gradient(135deg, #10b981, #059669); color: white;">
+            <h5 class="mb-3"><i class="fas fa-envelope me-2"></i>Email Statistics</h5>
+            <div class="row text-center">
+                <div class="col-4">
+                    <div class="p-2">
+                        <div style="font-size: 2rem; font-weight: bold;">{{ today_emails }}</div>
+                        <div style="font-size: 0.9rem; opacity: 0.9;">Today</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="p-2">
+                        <div style="font-size: 2rem; font-weight: bold;">{{ remaining_emails }}</div>
+                        <div style="font-size: 0.9rem; opacity: 0.9;">Remaining</div>
+                    </div>
+                </div>
+                <div class="col-4">
+                    <div class="p-2">
+                        <div style="font-size: 2rem; font-weight: bold;">{{ total_emails }}</div>
+                        <div style="font-size: 0.9rem; opacity: 0.9;">Total</div>
+                    </div>
+                </div>
+            </div>
+
+            {% if not can_receive_email %}
+            <div class="alert alert-warning mt-3 mb-0">
+                <small><i class="fas fa-exclamation-triangle me-1"></i>Student has reached daily email limit</small>
+            </div>
+            {% endif %}
+
+            {% if emails_sent_by_user %}
+            <hr style="border-color: rgba(255,255,255,0.3);">
+            <div class="row text-center">
+                <div class="col-6">
+                    <div class="p-2">
+                        <div style="font-size: 1.5rem; font-weight: bold;">{{ emails_sent_today }}</div>
+                        <div style="font-size: 0.85rem; opacity: 0.9;">Sent Today</div>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="p-2">
+                        <div style="font-size: 1.5rem; font-weight: bold;">{{ emails_sent_by_user }}</div>
+                        <div style="font-size: 0.85rem; opacity: 0.9;">Total Sent</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- STUDENT STATISTICS -->
+<div class="info-card">
+    <h5 class="mb-4"><i class="fas fa-user-graduate me-2"></i>Student Overview</h5>
+
+    <!-- Stats Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="stat-card">
+                <i class="fas fa-book-open fa-2x text-primary"></i>
+                <h3>{{ total_enrollments }}</h3>
+                <p>Course Enrollments</p>
+                <small class="text-success">{{ active_enrollments }} Active</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <i class="fas fa-users fa-2x text-info"></i>
+                <h3>{{ total_batch_enrollments }}</h3>
+                <p>Batch Enrollments</p>
+                <small class="text-success">{{ active_batch_enrollments }} Active</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <i class="fas fa-clipboard-check fa-2x text-warning"></i>
+                <h3>{{ completed_exams }}</h3>
+                <p>Exams Completed</p>
+                <small class="text-success">{{ passed_exams }} Passed</small>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="stat-card">
+                <i class="fas fa-chart-line fa-2x text-success"></i>
+                <h3>{{ avg_percentage }}%</h3>
+                <p>Average Score</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enrolled Courses -->
+    {% if enrolled_courses %}
+    <h6 class="mb-3"><i class="fas fa-book-open me-2"></i>Enrolled Courses</h6>
+    {% for enrollment in enrolled_courses %}
+    <div class="list-item">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <strong>{{ enrollment.course.title }}</strong>
+                <br><small class="text-muted">Instructor: {{ enrollment.course.instructor.get_full_name }}</small>
+            </div>
+            <div class="text-end">
+                <span class="badge-custom" style="background: #dcfce7; color: #166534;">
+                    {{ enrollment.status }}
+                </span>
+                <br><small class="text-muted">{{ enrollment.enrolled_at|date:"M d, Y" }}</small>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Enrolled Batches -->
+    {% if enrolled_batches %}
+    <h6 class="mb-3 mt-4"><i class="fas fa-users me-2"></i>Enrolled Batches</h6>
+    {% for enrollment in enrolled_batches %}
+    <div class="list-item">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <strong>{{ enrollment.batch.name }}</strong>
+                <br><small class="text-muted">{{ enrollment.batch.course.title }} • Instructor: {{ enrollment.batch.instructor.get_full_name }}</small>
+            </div>
+            <div class="text-end">
+                <span class="badge-custom" style="background: #dbeafe; color: #1e40af;">
+                    {{ enrollment.status }}
+                </span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Exam Attempts -->
+    {% if recent_exam_attempts %}
+    <h6 class="mb-3 mt-4"><i class="fas fa-clipboard-check me-2"></i>Recent Exam Attempts</h6>
+    {% for attempt in recent_exam_attempts %}
+    <div class="list-item">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <strong>{{ attempt.exam.title }}</strong>
+                <br><small class="text-muted">Attempt {{ attempt.attempt_number }} • {{ attempt.started_at|date:"M d, Y" }}</small>
+            </div>
+            <div class="text-end">
+                {% if attempt.is_graded %}
+                <strong class="{% if attempt.is_passed %}text-success{% else %}text-danger{% endif %}">
+                    {{ attempt.total_marks_obtained }}/{{ attempt.exam.total_marks }}
+                </strong>
+                <br><span class="badge-custom"
+                    style="background: {% if attempt.is_passed %}#dcfce7{% else %}#fecaca{% endif %}; color: {% if attempt.is_passed %}#166534{% else %}#991b1b{% endif %};">
+                    {{ attempt.percentage }}% - {% if attempt.is_passed %}Passed{% else %}Failed{% endif %}
+                </span>
+                {% else %}
+                <span class="badge-custom" style="background: #fef3c7; color: #92400e;">
+                    {{ attempt.status }}
+                </span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Attendance -->
+    {% if total_sessions_assigned > 0 %}
+    <h6 class="mb-3 mt-4"><i class="fas fa-calendar-check me-2"></i>Session Attendance Overview</h6>
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="stat-card">
+                <i class="fas fa-check-circle fa-2x text-success"></i>
+                <h3>{{ total_sessions_attended }}</h3>
+                <p>Sessions Attended</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <i class="fas fa-times-circle fa-2x text-danger"></i>
+                <h3>{{ total_sessions_assigned|add:"-"|add:total_sessions_attended }}</h3>
+                <p>Sessions Missed</p>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <i class="fas fa-percentage fa-2x text-info"></i>
+                <h3>{{ attendance_percentage }}%</h3>
+                <p>Attendance Rate</p>
+            </div>
+        </div>
+    </div>
+
+    {% if all_attendance %}
+    <h6 class="mb-3"><i class="fas fa-history me-2"></i>All Attendance Records ({{ total_sessions_assigned }} Total)</h6>
+    {% for attendance in all_attendance %}
+    <div class="list-item">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <strong>{{ attendance.session.title }}</strong>
+                <br><small class="text-muted">
+                    <i class="fas fa-users-class me-1"></i>{{ attendance.session.batch.name }} •
+                    <i class="fas fa-book me-1"></i>{{ attendance.session.batch.course.title }}
+                </small>
+                <br><small class="text-muted">
+                    <i class="fas fa-calendar me-1"></i>{{ attendance.session.scheduled_date|date:"M d, Y" }} •
+                    <i class="fas fa-clock me-1"></i>{{ attendance.session.start_time|time:"g:i A" }}
+                </small>
+            </div>
+            <div class="text-end">
+                {% if attendance.is_present %}
+                <span class="badge-custom" style="background: #dcfce7; color: #166534;">
+                    <i class="fas fa-check-circle me-1"></i>Present
+                </span>
+                <br><small class="text-muted">
+                    <i class="fas fa-hourglass-half me-1"></i>{{ attendance.duration_minutes }} min
+                    ({{ attendance.attendance_percentage }}%)
+                </small>
+                {% if attendance.joined_at %}
+                <br><small class="text-muted">
+                    <i class="fas fa-sign-in-alt me-1"></i>{{ attendance.joined_at|time:"g:i A" }}
+                </small>
+                {% endif %}
+                {% else %}
+                <span class="badge-custom" style="background: #fecaca; color: #991b1b;">
+                    <i class="fas fa-times-circle me-1"></i>Absent
+                </span>
+                {% endif %}
+                {% if attendance.manually_marked %}
+                <br><small class="text-info">
+                    <i class="fas fa-user-edit me-1"></i>Manually marked
+                </small>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+
+    <!-- Upcoming Sessions -->
+    {% if upcoming_sessions %}
+    <h6 class="mb-3 mt-4"><i class="fas fa-clock me-2"></i>Upcoming Sessions</h6>
+    {% for session in upcoming_sessions %}
+    <div class="list-item" style="border-left-color: #3b82f6;">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <strong>{{ session.title }}</strong>
+                <br><small class="text-muted">
+                    <i class="fas fa-users-class me-1"></i>{{ session.batch.name }}
+                </small>
+            </div>
+            <div class="text-end">
+                <div class="mb-1">
+                    <i class="fas fa-calendar me-1"></i>
+                    <strong>{{ session.scheduled_date|date:"M d, Y" }}</strong>
+                </div>
+                <div>
+                    <i class="fas fa-clock me-1"></i>
+                    {{ session.start_time|time:"g:i A" }}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+    {% endif %}
+    {% endif %}
+</div>
+
+<!-- Recent Email Activity -->
+<div class="info-card">
+    <h5 class="mb-3"><i class="fas fa-history me-2"></i>Recent Email Activity</h5>
+    {% if recent_emails %}
+    {% for email in recent_emails %}
+    <div class="list-item">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <strong>{{ email.subject }}</strong>
+                {% if email.sent_by %}
+                <br><small class="text-muted">Sent by: {{ email.sent_by.username }}</small>
+                {% endif %}
+            </div>
+            <div class="col-md-3 text-center">
+                <span class="badge-custom"
+                    style="background: {% if email.is_sent_successfully %}#dcfce7{% else %}#fecaca{% endif %}; color: {% if email.is_sent_successfully %}#166534{% else %}#991b1b{% endif %};">
+                    {% if email.is_sent_successfully %}
+                    <i class="fas fa-check me-1"></i>Sent
+                    {% else %}
+                    <i class="fas fa-times me-1"></i>Failed
+                    {% endif %}
+                </span>
+            </div>
+            <div class="col-md-3 text-end">
+                <small class="text-muted">
+                    {{ email.sent_time|date:"M d, g:i A" }}
+                </small>
+            </div>
+        </div>
+        {% if email.email_body %}
+        <div class="mt-2">
+            <small class="text-muted">{{ email.email_body|truncatechars:100 }}</small>
+        </div>
+        {% endif %}
+    </div>
+    {% endfor %}
+    {% else %}
+    <div class="text-center py-4">
+        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+        <p class="text-muted">No email activity found for this student</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Summary Cards -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="info-card">
+            <h5 class="mb-3"><i class="fas fa-chart-bar me-2"></i>Quick Summary</h5>
+            <div class="row text-center">
+                <div class="col-md-3">
+                    <div class="p-3">
+                        <i class="fas fa-calendar-alt fa-2x text-primary mb-2"></i>
+                        <h6>Member Since</h6>
+                        <p class="mb-0">{{ user.date_joined|date:"M d, Y" }}</p>
+                        <small class="text-muted">{{ user.date_joined|timesince }} ago</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3">
+                        <i class="fas fa-sign-in-alt fa-2x text-success mb-2"></i>
+                        <h6>Last Login</h6>
+                        <p class="mb-0">
+                            {% if user.last_login %}
+                            {{ user.last_login|date:"M d, Y" }}
+                            {% else %}
+                            Never
+                            {% endif %}
+                        </p>
+                        {% if user.last_login %}
+                        <small class="text-muted">{{ user.last_login|timesince }} ago</small>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3">
+                        <i class="fas fa-envelope fa-2x text-info mb-2"></i>
+                        <h6>Emails Received</h6>
+                        <p class="mb-0">{{ total_emails }}</p>
+                        <small class="text-muted">{{ today_emails }} today</small>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="p-3">
+                        <i class="fas fa-user-check fa-2x text-warning mb-2"></i>
+                        <h6>Account Status</h6>
+                        <p class="mb-0">
+                            {% if user.is_active %}
+                            <span class="badge bg-success">Active</span>
+                            {% else %}
+                            <span class="badge bg-danger">Inactive</span>
+                            {% endif %}
+                        </p>
+                        <small class="text-muted">{{ user.get_role_display }}</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

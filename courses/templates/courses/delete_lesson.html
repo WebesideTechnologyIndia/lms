@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Delete Lesson - {{ lesson.title }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h4 class="mb-0">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        Delete Lesson
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <!-- Warning Alert -->
+                    <div class="alert alert-danger" role="alert">
+                        <h5 class="alert-heading">
+                            <i class="fas fa-exclamation-circle"></i>
+                            Warning!
+                        </h5>
+                        <p class="mb-0">This action cannot be undone. All lesson content and student progress will be permanently deleted.</p>
+                    </div>
+
+                    <!-- Lesson Details -->
+                    <div class="mb-4">
+                        <h5 class="mb-3">Lesson Details:</h5>
+                        
+                        <table class="table table-bordered">
+                            <tr>
+                                <th style="width: 30%;">Course:</th>
+                                <td>{{ course.title }} ({{ course.course_code }})</td>
+                            </tr>
+                            <tr>
+                                <th>Module:</th>
+                                <td>{{ module.title }}</td>
+                            </tr>
+                            <tr>
+                                <th>Lesson:</th>
+                                <td>
+                                    <strong>{{ lesson.title }}</strong>
+                                    <span class="badge bg-secondary ms-2">Order: {{ lesson.order }}</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Type:</th>
+                                <td>
+                                    <span class="badge bg-info">{{ lesson.get_lesson_type_display }}</span>
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Duration:</th>
+                                <td>{{ lesson.duration_minutes }} minutes</td>
+                            </tr>
+                            <tr>
+                                <th>Content:</th>
+                                <td>
+                                    {% if lesson.get_content_types %}
+                                        {% for content_type in lesson.get_content_types %}
+                                            <span class="badge bg-primary me-1">{{ content_type }}</span>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">No content</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        </table>
+                    </div>
+
+                    <!-- Confirmation Form -->
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{% url 'courses:module_lessons' course.id module.id %}" 
+                               class="btn btn-secondary">
+                                <i class="fas fa-times"></i>
+                                Cancel
+                            </a>
+                            
+                            <button type="submit" class="btn btn-danger">
+                                <i class="fas fa-trash"></i>
+                                Yes, Delete This Lesson
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Additional Info -->
+            <div class="card mt-3 border-warning">
+                <div class="card-body">
+                    <h6 class="text-warning">
+                        <i class="fas fa-info-circle"></i>
+                        What will be deleted?
+                    </h6>
+                    <ul class="mb-0">
+                        <li>Lesson content (text, videos, PDFs)</li>
+                        <li>Student progress for this lesson</li>
+                        <li>Any attachments or resources</li>
+                        <li>Lesson order will be adjusted automatically</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal (Optional - Extra Safety) -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const deleteForm = document.querySelector('form');
+    const deleteButton = deleteForm.querySelector('button[type="submit"]');
+    
+    deleteButton.addEventListener('click', function(e) {
+        if (!confirm('Are you absolutely sure you want to delete "{{ lesson.title }}"?\n\nThis action CANNOT be undone!')) {
+            e.preventDefault();
+            return false;
+        }
+    });
+});
+</script>
+
+<style>
+.card-header {
+    font-weight: 600;
+}
+
+.table th {
+    background-color: #0080ff;
+    font-weight: 600;
+}
+
+.btn {
+    padding: 10px 25px;
+    font-weight: 500;
+}
+
+.alert-danger {
+    border-left: 4px solid #dc3545;
+}
+
+.card.border-warning {
+    background-color: #fff9e6;
+}
+</style>
+{% endblock %}

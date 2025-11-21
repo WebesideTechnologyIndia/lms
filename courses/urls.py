@@ -75,6 +75,9 @@ urlpatterns = [
         views.module_lessons,
         name="module_lessons",
     ),
+    path('<int:course_id>/modules/<int:module_id>/lessons/<int:lesson_id>/move/<str:direction>/',
+         views.move_lesson_simple,
+         name='move_lesson'),
     path(
         "<int:course_id>/modules/<int:module_id>/lessons/create/",
         views.create_lesson,
@@ -122,6 +125,8 @@ urlpatterns = [
         views.manage_enrollments,
         name="admin_manage_enrollments",
     ),
+    path('enrollment-details/<int:enrollment_id>/', views.enrollment_details, name='enrollment_details'),
+
     # Add these URL patterns to your courses/urls.py
 
 # ==================== ENROLLMENT MANAGEMENT ====================
@@ -204,6 +209,8 @@ path(
     path("api/<int:course_id>/stats/", views.get_course_stats, name="get_course_stats"),
     # ==================== BATCH MANAGEMENT (ORIGINAL) ====================
     path("<int:course_id>/batches/", views.batch_list, name="batch_list"),
+        path('user/<int:user_id>/assign-batch/', views.assign_batch_to_student, name='assign_batch_to_student'),
+
     path("<int:course_id>/batches/create/", views.create_batch, name="create_batch"),
     path(
         "<int:course_id>/batches/<int:batch_id>/",
@@ -320,6 +327,16 @@ path(
         views.instructor_batch_enrollment_toggle,
         name="instructor_batch_enrollment_toggle",
     ),
+
+
+
+
+
+
+
+
+
+
     path("subscriptions/", views.subscription_list, name="subscription_list"),
     path(
         "subscriptions/create/", views.create_subscription, name="create_subscription"
@@ -349,6 +366,27 @@ path(
         views.update_device_restriction,
         name="update_device_restriction",
     ),
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     # ==================== COURSE REVIEWS ====================
     path("reviews/", views.course_reviews, name="course_reviews"),
     path(
@@ -402,4 +440,13 @@ path(
         views.course_detail_continue_learning_student,
         name="course_detail_continue_learning_student",
     ),
+
+    # Student Batch Learning URLs
+path('batch/<int:batch_id>/continue/', views.batch_continue_learning, name='batch_continue_learning'),
+path('batch/<int:batch_id>/module/<int:module_id>/lesson/<int:lesson_id>/view/', 
+     views.student_batch_lesson_view, name='student_batch_lesson_view'),
+path('batch/<int:batch_id>/module/<int:module_id>/lesson/<int:lesson_id>/complete/',
+     views.mark_batch_lesson_complete, name='mark_batch_lesson_complete'),
+
+    
 ]

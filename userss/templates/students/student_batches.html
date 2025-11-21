@@ -16,7 +16,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-2 mb-3">
         <div class="card text-center bg-success text-white">
             <div class="card-body">
@@ -26,7 +26,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-2 mb-3">
         <div class="card text-center bg-danger text-white">
             <div class="card-body">
@@ -36,7 +36,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-2 mb-3">
         <div class="card text-center bg-info text-white">
             <div class="card-body">
@@ -46,7 +46,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="col-md-2 mb-3">
         <div class="card text-center bg-warning text-white">
             <div class="card-body">
@@ -59,24 +59,21 @@
 </div>
 
 <!-- Filter Section -->
+<!-- Filter Section -->
 <div class="card mb-4">
     <div class="card-body">
         <form method="get" class="row g-3">
             <div class="col-md-5">
                 <label for="search" class="form-label">Search Batches</label>
                 <div class="input-group">
-                    <input type="text" 
-                           class="form-control" 
-                           id="search" 
-                           name="search" 
-                           value="{{ search|default:'' }}" 
-                           placeholder="Search by batch name or course...">
+                    <input type="text" class="form-control" id="search" name="search" value="{{ search|default:'' }}"
+                        placeholder="Search by batch name or course...">
                     <button class="btn btn-outline-primary" type="submit">
                         <i class="fas fa-search"></i>
                     </button>
                 </div>
             </div>
-            
+
             <div class="col-md-3">
                 <label for="status" class="form-label">Filter by Status</label>
                 <select class="form-select" id="status" name="status">
@@ -87,7 +84,7 @@
                     <option value="completed" {% if status == 'completed' %}selected{% endif %}>Completed</option>
                 </select>
             </div>
-            
+
             <div class="col-md-2">
                 <label for="sort" class="form-label">Sort By</label>
                 <select class="form-select" id="sort" name="sort">
@@ -96,7 +93,7 @@
                     <option value="batch__name" {% if sort == 'batch__name' %}selected{% endif %}>Batch Name</option>
                 </select>
             </div>
-            
+
             <div class="col-md-2 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary w-100">Apply</button>
             </div>
@@ -106,280 +103,275 @@
 
 <!-- Batches List -->
 {% if batch_enrollments %}
-    <div class="row">
-        {% for enrollment in batch_enrollments %}
-        <div class="col-lg-6 mb-4">
-            <div class="card h-100 batch-card {% if enrollment.is_locked %}locked-batch{% endif %}">
-                
-                <!-- Card Header with Lock Status -->
-                <div class="card-header {% if enrollment.is_locked %}bg-danger{% else %}bg-gradient-primary{% endif %} text-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <h5 class="mb-1">
-                                {% if enrollment.is_locked %}<i class="fas fa-lock me-2"></i>{% endif %}
-                                {{ enrollment.batch.name }}
-                            </h5>
-                            <small class="opacity-75">{{ enrollment.batch.code }}</small>
-                        </div>
-                        <div>
-                            {% if enrollment.is_locked %}
-                                <span class="badge bg-dark">
-                                    <i class="fas fa-lock me-1"></i>ACCESS DENIED
-                                </span>
-                                {% if enrollment.get_lock_reason == 'payment' %}
-                                    <span class="badge bg-warning text-dark">
-                                        <i class="fas fa-dollar-sign me-1"></i>PAYMENT DUE
-                                    </span>
-                                {% endif %}
-                            {% elif enrollment.batch.status == 'active' %}
-                                <span class="badge bg-success">
-                                    <i class="fas fa-play me-1"></i>Active
-                                </span>
-                            {% elif enrollment.batch.status == 'completed' %}
-                                <span class="badge bg-info">
-                                    <i class="fas fa-check me-1"></i>Completed
-                                </span>
-                            {% else %}
-                                <span class="badge bg-warning text-dark">
-                                    <i class="fas fa-clock me-1"></i>{{ enrollment.batch.status|title }}
-                                </span>
-                            {% endif %}
-                        </div>
+<div class="row">
+    {% for enrollment in batch_enrollments %}
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100 batch-card {% if enrollment.is_locked %}locked-batch{% endif %}">
+
+            <!-- Card Header with Lock Status -->
+            <div
+                class="card-header {% if enrollment.is_locked %}bg-danger{% else %}bg-gradient-primary{% endif %} text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-1">
+                            {% if enrollment.is_locked %}<i class="fas fa-lock me-2"></i>{% endif %}
+                            {{ enrollment.batch.name }}
+                        </h5>
+                        <small class="opacity-75">{{ enrollment.batch.code }}</small>
                     </div>
-                </div>
-
-                <div class="card-body {% if enrollment.is_locked %}locked-content{% endif %}">
-                    
-                    <!-- LOCKED OVERLAY -->
-                    {% if enrollment.is_locked %}
-                    <div class="lock-overlay">
-                        <div class="lock-message">
-                            <i class="fas fa-lock fa-3x text-danger mb-3"></i>
-                            <h4 class="text-danger">Access Locked</h4>
-                            {% if enrollment.get_lock_reason == 'payment' %}
-                                <p class="text-muted">
-                                    This batch is locked due to pending payment.
-                                    {% if enrollment.fee_assignment %}
-                                        <br><strong>Amount Due: ${{ enrollment.fee_assignment.amount_pending }}</strong>
-                                    {% endif %}
-                                </p>
-                                <div class="mt-3">
-                                    <a href="{% url 'student_fee_details' %}" class="btn btn-warning btn-sm">
-                                        <i class="fas fa-dollar-sign me-1"></i>View Payment Details
-                                    </a>
-                                </div>
-                            {% elif enrollment.get_lock_reason == 'admin' %}
-                                <p class="text-muted">
-                                    Access has been restricted by the administrator.
-                                    <br>Please contact support for assistance.
-                                </p>
-                                <div class="mt-3">
-                                    <a href="mailto:support@yourlms.com" class="btn btn-outline-warning btn-sm">
-                                        <i class="fas fa-envelope me-1"></i>Contact Support
-                                    </a>
-                                </div>
-                            {% else %}
-                                <p class="text-muted">
-                                    This batch is currently locked.
-                                    <br>Please contact your administrator.
-                                </p>
-                            {% endif %}
-                        </div>
+                    <div>
+                        {% if enrollment.is_locked %}
+                        <span class="badge bg-dark">
+                            <i class="fas fa-lock me-1"></i>ACCESS DENIED
+                        </span>
+                        {% if enrollment.get_lock_reason == 'payment' %}
+                        <span class="badge bg-warning text-dark">
+                            <i class="fas fa-dollar-sign me-1"></i>PAYMENT DUE
+                        </span>
+                        {% endif %}
+                        {% elif enrollment.batch.status == 'active' %}
+                        <span class="badge bg-success">
+                            <i class="fas fa-play me-1"></i>Active
+                        </span>
+                        {% elif enrollment.batch.status == 'completed' %}
+                        <span class="badge bg-info">
+                            <i class="fas fa-check me-1"></i>Completed
+                        </span>
+                        {% else %}
+                        <span class="badge bg-warning text-dark">
+                            <i class="fas fa-clock me-1"></i>{{ enrollment.batch.status|title }}
+                        </span>
+                        {% endif %}
                     </div>
-                    {% endif %}
-
-                    <!-- ORIGINAL CONTENT (Blurred when locked) -->
-                    <div class="batch-content {% if enrollment.is_locked %}content-blur{% endif %}">
-                        <!-- Course Info -->
-                        <div class="mb-3">
-                            <h6 class="text-primary mb-2">
-                                <i class="fas fa-book me-2"></i>
-                                {{ enrollment.batch.course.title }}
-                            </h6>
-                            <p class="text-muted small mb-0">
-                                {{ enrollment.batch.course.short_description|truncatechars:120 }}
-                            </p>
-                        </div>
-
-                        <!-- Instructor -->
-                        <div class="mb-3">
-                            <div class="d-flex align-items-center">
-                                {% if enrollment.batch.instructor.profile_picture %}
-                                    <img src="{{ enrollment.batch.instructor.profile_picture.url }}" 
-                                         alt="Instructor" 
-                                         class="rounded-circle me-2" 
-                                         style="width: 35px; height: 35px; object-fit: cover;">
-                                {% else %}
-                                    <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-2 text-white" 
-                                         style="width: 35px; height: 35px;">
-                                        <i class="fas fa-user-tie"></i>
-                                    </div>
-                                {% endif %}
-                                <div>
-                                    <div class="fw-bold">{{ enrollment.batch.instructor.get_full_name }}</div>
-                                    <small class="text-muted">Instructor</small>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Batch Details -->
-                        <div class="row mb-3">
-                            <div class="col-6">
-                                <small class="text-muted d-block">Start Date</small>
-                                <strong>{{ enrollment.batch.start_date|date:"M d, Y" }}</strong>
-                            </div>
-                            <div class="col-6">
-                                <small class="text-muted d-block">End Date</small>
-                                <strong>{{ enrollment.batch.end_date|date:"M d, Y" }}</strong>
-                            </div>
-                        </div>
-
-                        <!-- Batch Stats -->
-                        <div class="row mb-3">
-                            <div class="col-4 text-center">
-                                <div class="border-end">
-                                    <div class="h6 mb-0 text-primary">{{ enrollment.batch.get_enrolled_count }}</div>
-                                    <small class="text-muted">Students</small>
-                                </div>
-                            </div>
-                            <div class="col-4 text-center">
-                                <div class="border-end">
-                                    <div class="h6 mb-0 text-success">{{ enrollment.batch.batch_modules.count }}</div>
-                                    <small class="text-muted">Modules</small>
-                                </div>
-                            </div>
-                            <div class="col-4 text-center">
-                                <div class="h6 mb-0 text-info">
-                                    {% with total_lessons=enrollment.batch.batch_modules.all|length %}
-                                        {{ total_lessons|default:0 }}
-                                    {% endwith %}
-                                </div>
-                                <small class="text-muted">Lessons</small>
-                            </div>
-                        </div>
-
-                        <!-- Enrollment Info -->
-                        <div class="bg-light p-2 rounded mb-3">
-                            <small class="text-muted">
-                                <i class="fas fa-calendar-plus me-1"></i>
-                                Joined: {{ enrollment.enrolled_at|date:"M d, Y" }}
-                            </small>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Card Footer with Lock-Aware Actions -->
-                <div class="card-footer bg-transparent">
-                    {% if enrollment.is_locked %}
-                        <!-- LOCKED ACTIONS -->
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-danger disabled-btn" disabled>
-                                <i class="fas fa-lock me-2"></i>Access Locked
-                            </button>
-                            {% if enrollment.get_lock_reason == 'payment' and enrollment.fee_assignment %}
-                                <div class="alert alert-warning mb-2 p-2">
-                                    <small>
-                                        <i class="fas fa-exclamation-triangle me-1"></i>
-                                        <strong>Payment Required:</strong> ${{ enrollment.fee_assignment.amount_pending }}
-                                    </small>
-                                </div>
-                                <a href="{% url 'student_fee_details' %}" class="btn btn-warning btn-sm">
-                                    <i class="fas fa-dollar-sign me-1"></i>Make Payment
-                                </a>
-                            {% elif enrollment.get_lock_reason == 'admin' %}
-                                <small class="text-muted text-center d-block">
-                                    <i class="fas fa-shield-alt me-1"></i>
-                                    Admin restricted access
-                                </small>
-                            {% endif %}
-                        </div>
-                    {% elif enrollment.batch.status == 'active' %}
-                        <!-- ACTIVE BATCH ACTIONS -->
-                        <div class="d-grid gap-2">
-<a href="{% url 'courses:batch_detail' enrollment.batch.course.id enrollment.batch.id %}" class="btn btn-primary">
-                                <i class="fas fa-play me-2"></i>Continue Learning
-                            </a>
-                            <div class="row g-2">
-                                <div class="col-6">
-                                    <a href="#" class="btn btn-outline-info btn-sm w-100">
-                                        <i class="fas fa-users me-1"></i>Classmates
-                                    </a>
-                                </div>
-                                <div class="col-6">
-                                    <a href="{% url 'zoom:student_sessions_browse' %}" class="btn btn-outline-secondary btn-sm w-100">
-                                        <i class="fas fa-video me-1"></i>Sessions
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-                    {% elif enrollment.batch.status == 'completed' %}
-                        <!-- COMPLETED BATCH ACTIONS -->
-                        <div class="d-grid gap-2">
-                            <a href="#" class="btn btn-success">
-                                <i class="fas fa-certificate me-2"></i>View Certificate
-                            </a>
-                            <a href="{% url 'batch_detail' enrollment.batch.id %}" class="btn btn-outline-primary btn-sm">
-                                <i class="fas fa-redo me-1"></i>Review Content
-                            </a>
-                        </div>
-                    {% else %}
-                        <!-- UPCOMING BATCH -->
-                        <div class="d-grid">
-                            <button class="btn btn-outline-warning" disabled>
-                                <i class="fas fa-clock me-2"></i>Starts {{ enrollment.batch.start_date|date:"M d" }}
-                            </button>
-                        </div>
-                    {% endif %}
                 </div>
             </div>
+
+            <div class="card-body {% if enrollment.is_locked %}locked-content{% endif %}">
+
+                <!-- LOCKED OVERLAY -->
+                {% if enrollment.is_locked %}
+                <div class="lock-overlay">
+                    <div class="lock-message">
+                        <i class="fas fa-lock fa-3x text-danger mb-3"></i>
+                        <h4 class="text-danger">Access Locked</h4>
+                        {% if enrollment.get_lock_reason == 'payment' %}
+                        <p class="text-muted">
+                            This batch is locked due to pending payment.
+                            {% if enrollment.fee_assignment %}
+                            <br><strong>Amount Due: ${{ enrollment.fee_assignment.amount_pending }}</strong>
+                            {% endif %}
+                        </p>
+                        <div class="mt-3">
+                            <a href="{% url 'student_fee_details' %}" class="btn btn-warning btn-sm">
+                                <i class="fas fa-dollar-sign me-1"></i>View Payment Details
+                            </a>
+                        </div>
+                        {% elif enrollment.get_lock_reason == 'admin' %}
+                        <p class="text-muted">
+                            Access has been restricted by the administrator.
+                            <br>Please contact support for assistance.
+                        </p>
+                        <div class="mt-3">
+                            <a href="mailto:support@yourlms.com" class="btn btn-outline-warning btn-sm">
+                                <i class="fas fa-envelope me-1"></i>Contact Support
+                            </a>
+                        </div>
+                        {% else %}
+                        <p class="text-muted">
+                            This batch is currently locked.
+                            <br>Please contact your administrator.
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+
+                <!-- ORIGINAL CONTENT (Blurred when locked) -->
+                <div class="batch-content {% if enrollment.is_locked %}content-blur{% endif %}">
+                    <!-- Course Info -->
+                    <div class="mb-3">
+                        <h6 class="text-primary mb-2">
+                            <i class="fas fa-book me-2"></i>
+                            {{ enrollment.batch.course.title }}
+                        </h6>
+                        <p class="text-muted small mb-0">
+                            {{ enrollment.batch.course.short_description|truncatechars:120 }}
+                        </p>
+                    </div>
+
+                    <!-- Instructor -->
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center">
+                            {% if enrollment.batch.instructor.profile_picture %}
+                            <img src="{{ enrollment.batch.instructor.profile_picture.url }}" alt="Instructor"
+                                class="rounded-circle me-2" style="width: 35px; height: 35px; object-fit: cover;">
+                            {% else %}
+                            <div class="bg-secondary rounded-circle d-flex align-items-center justify-content-center me-2 text-white"
+                                style="width: 35px; height: 35px;">
+                                <i class="fas fa-user-tie"></i>
+                            </div>
+                            {% endif %}
+                            <div>
+                                <div class="fw-bold">{{ enrollment.batch.instructor.get_full_name }}</div>
+                                <small class="text-muted">Instructor</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Batch Details -->
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <small class="text-muted d-block">Start Date</small>
+                            <strong>{{ enrollment.batch.start_date|date:"M d, Y" }}</strong>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block">End Date</small>
+                            <strong>{{ enrollment.batch.end_date|date:"M d, Y" }}</strong>
+                        </div>
+                    </div>
+
+                    <!-- Batch Stats -->
+                    <div class="row mb-3">
+                        <div class="col-4 text-center">
+                            <div class="border-end">
+                                <div class="h6 mb-0 text-primary">{{ enrollment.batch.get_enrolled_count }}</div>
+                                <small class="text-muted">Students</small>
+                            </div>
+                        </div>
+                        <div class="col-4 text-center">
+                            <div class="border-end">
+                                <div class="h6 mb-0 text-success">{{ enrollment.batch.batch_modules.count }}</div>
+                                <small class="text-muted">Modules</small>
+                            </div>
+                        </div>
+                        <div class="col-4 text-center">
+                            <div class="h6 mb-0 text-info">
+                                {% with total_lessons=enrollment.batch.batch_modules.all|length %}
+                                {{ total_lessons|default:0 }}
+                                {% endwith %}
+                            </div>
+                            <small class="text-muted">Lessons</small>
+                        </div>
+                    </div>
+
+                    <!-- Enrollment Info -->
+                    <div class="bg-light p-2 rounded mb-3">
+                        <small class="text-muted">
+                            <i class="fas fa-calendar-plus me-1"></i>
+                            Joined: {{ enrollment.enrolled_at|date:"M d, Y" }}
+                        </small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Footer with Lock-Aware Actions -->
+            <div class="card-footer bg-transparent">
+                {% if enrollment.is_locked %}
+                <!-- LOCKED ACTIONS -->
+                <div class="d-grid gap-2">
+                    <button class="btn btn-danger disabled-btn" disabled>
+                        <i class="fas fa-lock me-2"></i>Access Locked
+                    </button>
+                    {% if enrollment.get_lock_reason == 'payment' and enrollment.fee_assignment %}
+                    <div class="alert alert-warning mb-2 p-2">
+                        <small>
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            <strong>Payment Required:</strong> ${{ enrollment.fee_assignment.amount_pending }}
+                        </small>
+                    </div>
+                    <a href="{% url 'student_fee_details' %}" class="btn btn-warning btn-sm">
+                        <i class="fas fa-dollar-sign me-1"></i>Make Payment
+                    </a>
+                    {% elif enrollment.get_lock_reason == 'admin' %}
+                    <small class="text-muted text-center d-block">
+                        <i class="fas fa-shield-alt me-1"></i>
+                        Admin restricted access
+                    </small>
+                    {% endif %}
+                </div>
+                {% elif enrollment.batch.status == 'active' %}
+                <!-- ACTIVE BATCH ACTIONS -->
+                <div class="d-grid gap-2">
+                    <a href="{% url 'courses:batch_continue_learning' enrollment.batch.id %}" class="btn btn-primary">
+                        <i class="fas fa-play me-2"></i>Continue Learning
+                    </a>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <a href="{% url 'zoom:student_sessions_browse' %}"
+                                class="btn btn-outline-secondary btn-sm w-100">
+                                <i class="fas fa-video me-1"></i>Sessions
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% elif enrollment.batch.status == 'completed' %}
+                <!-- COMPLETED BATCH ACTIONS -->
+                <div class="d-grid gap-2">
+                    <a href="#" class="btn btn-success">
+                        <i class="fas fa-certificate me-2"></i>View Certificate
+                    </a>
+                    <a href="{% url 'batch_detail' enrollment.batch.id %}" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-redo me-1"></i>Review Content
+                    </a>
+                </div>
+                {% else %}
+                <!-- UPCOMING BATCH -->
+                <div class="d-grid">
+                    <button class="btn btn-outline-warning" disabled>
+                        <i class="fas fa-clock me-2"></i>Starts {{ enrollment.batch.start_date|date:"M d" }}
+                    </button>
+                </div>
+                {% endif %}
+            </div>
         </div>
-        {% endfor %}
     </div>
+    {% endfor %}
+</div>
 
 {% else %}
-    <!-- Empty State -->
-    <div class="text-center py-5">
-        <div class="mb-4">
-            <i class="fas fa-users fa-4x text-muted"></i>
-        </div>
-        
-        <h4 class="text-muted mb-3">No batches found</h4>
-        
-        {% if search or status %}
-            <p class="text-muted mb-4">
-                No batches match your current filters. Try adjusting your search criteria.
-            </p>
-            <a href="{% url 'student_batches' %}" class="btn btn-primary">
-                <i class="fas fa-refresh me-2"></i>Clear Filters
-            </a>
-        {% else %}
-            <p class="text-muted mb-4">
-                You haven't joined any batches yet. Enroll in courses to get started.
-            </p>
-            <a href="{% url 'browse_courses' %}" class="btn btn-primary">
-                <i class="fas fa-search me-2"></i>Browse Courses
-            </a>
-        {% endif %}
+<!-- Empty State -->
+<div class="text-center py-5">
+    <div class="mb-4">
+        <i class="fas fa-users fa-4x text-muted"></i>
     </div>
+
+    <h4 class="text-muted mb-3">No batches found</h4>
+
+    {% if search or status %}
+    <p class="text-muted mb-4">
+        No batches match your current filters. Try adjusting your search criteria.
+    </p>
+    <a href="{% url 'student_batches' %}" class="btn btn-primary">
+        <i class="fas fa-refresh me-2"></i>Clear Filters
+    </a>
+    {% else %}
+    <p class="text-muted mb-4">
+        You haven't joined any batches yet. Enroll in courses to get started.
+    </p>
+    <a href="{% url 'browse_courses' %}" class="btn btn-primary">
+        <i class="fas fa-search me-2"></i>Browse Courses
+    </a>
+    {% endif %}
+</div>
 {% endif %}
 
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // Disable all interactions on locked batches
         const lockedBatches = document.querySelectorAll('.locked-batch');
-        
-        lockedBatches.forEach(function(batch) {
+
+        lockedBatches.forEach(function (batch) {
             // Add click prevention
-            batch.addEventListener('click', function(e) {
+            batch.addEventListener('click', function (e) {
                 const target = e.target;
                 // Allow clicks on payment/support buttons
                 if (!target.closest('.btn-warning') && !target.closest('.btn-outline-warning')) {
                     e.preventDefault();
                     e.stopPropagation();
-                    
+
                     // Shake animation
                     const lockMessage = batch.querySelector('.lock-message');
                     if (lockMessage) {
@@ -394,26 +386,26 @@
 
         // Hover effects for unlocked batches only
         const unlockedBatchCards = document.querySelectorAll('.batch-card:not(.locked-batch)');
-        
-        unlockedBatchCards.forEach(function(card) {
-            card.addEventListener('mouseenter', function() {
+
+        unlockedBatchCards.forEach(function (card) {
+            card.addEventListener('mouseenter', function () {
                 this.style.transform = 'translateY(-3px)';
                 this.style.transition = 'transform 0.3s ease';
                 this.style.boxShadow = '0 4px 8px rgba(0,0,0,0.15)';
             });
-            
-            card.addEventListener('mouseleave', function() {
+
+            card.addEventListener('mouseleave', function () {
                 this.style.transform = 'translateY(0)';
                 this.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
             });
         });
 
         // Auto-submit form on filter change
-        document.getElementById('status').addEventListener('change', function() {
+        document.getElementById('status').addEventListener('change', function () {
             this.form.submit();
         });
-        
-        document.getElementById('sort').addEventListener('change', function() {
+
+        document.getElementById('sort').addEventListener('change', function () {
             this.form.submit();
         });
     });
@@ -423,25 +415,25 @@
     .batch-card {
         transition: transform 0.3s ease, box-shadow 0.3s ease;
         border: none;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
     }
-    
+
     .locked-batch {
         position: relative;
         border: 2px solid #dc3545 !important;
         opacity: 0.95;
     }
-    
+
     .locked-batch:hover {
         transform: none !important;
         cursor: not-allowed !important;
     }
-    
+
     .locked-content {
         position: relative;
         min-height: 300px;
     }
-    
+
     .lock-overlay {
         position: absolute;
         top: 0;
@@ -455,48 +447,58 @@
         z-index: 10;
         border-radius: 0 0 8px 8px;
     }
-    
+
     .lock-message {
         text-align: center;
         padding: 20px;
     }
-    
+
     .content-blur {
         filter: blur(2px);
         opacity: 0.4;
         pointer-events: none;
         user-select: none;
     }
-    
+
     .disabled-btn {
         cursor: not-allowed !important;
         opacity: 0.7 !important;
     }
-    
+
     .bg-gradient-primary {
         background: linear-gradient(135deg, #4f46e5, #6366f1);
     }
-    
+
     .border-end {
         border-right: 1px solid #dee2e6 !important;
     }
-    
+
     .card-header {
         border-radius: 8px 8px 0 0 !important;
     }
-    
+
     /* Shake animation */
     @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-8px); }
-        75% { transform: translateX(8px); }
+
+        0%,
+        100% {
+            transform: translateX(0);
+        }
+
+        25% {
+            transform: translateX(-8px);
+        }
+
+        75% {
+            transform: translateX(8px);
+        }
     }
-    
+
     /* Locked batch prevents selection */
     .locked-batch * {
         user-select: none;
     }
-    
+
     /* Allow buttons in lock overlay to be clickable */
     .lock-overlay .btn {
         pointer-events: auto;

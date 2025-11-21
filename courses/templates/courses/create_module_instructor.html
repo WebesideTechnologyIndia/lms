@@ -4,32 +4,7 @@
 {% block title %}{% if module %}Edit Module{% else %}Create Module{% endif %} - {{ course.title }}{% endblock %}
 
 {% block content %}
-<!-- Header -->
-<div class="welcome-card">
-    <div class="row align-items-center">
-        <div class="col-md-8">
-            <nav aria-label="breadcrumb" class="mb-2">
-                <ol class="breadcrumb text-white-50">
-                    <li class="breadcrumb-item"><a href="{% url 'courses:course_dashboard' %}" class="text-white-50">Courses</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'courses:course_detail' course.id %}" class="text-white-50">{{ course.course_code }}</a></li>
-                    <li class="breadcrumb-item"><a href="{% url 'courses:course_modules' course.id %}" class="text-white-50">Modules</a></li>
-                    <li class="breadcrumb-item active text-white">{% if module %}Edit{% else %}Create{% endif %}</li>
-                </ol>
-            </nav>
-            <h1 class="mb-2">
-                <i class="fas fa-{% if module %}edit{% else %}plus{% endif %} me-3"></i>
-                {{ title }}
-            </h1>
-            <p class="mb-0 opacity-75">{{ course.title }} - Course Module Management</p>
-        </div>
-        <div class="col-md-4 text-end">
-            <a href="{% url 'courses:course_modules' course.id %}" class="btn btn-light">
-                <i class="fas fa-arrow-left me-2"></i>
-                Back to Modules
-            </a>
-        </div>
-    </div>
-</div>
+
 
 <!-- Form -->
 <div class="row">

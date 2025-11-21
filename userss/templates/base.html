@@ -278,9 +278,12 @@
         }
 
         @keyframes shimmer {
-            0%, 100% {
+
+            0%,
+            100% {
                 transform: rotate(0deg);
             }
+
             50% {
                 transform: rotate(180deg);
             }
@@ -387,15 +390,19 @@
             </a>
             <div class="navbar-nav ms-auto">
                 <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
+                        style="color: black !important;">
                         <i class="fas fa-user-circle me-2"></i>
                         {{ user.username|default:"Admin" }}
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" href="#"><i class="fas fa-user me-2"></i>Profile</a></li>
                         <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="{% url 'user_logout' %}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item" href="{% url 'user_logout' %}"><i
+                                    class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
                     </ul>
                 </div>
             </div>
@@ -563,9 +570,9 @@
                     <i class="fas fa-chevron-down"></i>
                 </div>
                 <div class="submenu-items">
-                    <a class="submenu-item" href="{% url 'courses:manage_courses' %}">
+                    <!-- <a class="submenu-item" href="{% url 'courses:manage_courses' %}">
                         All Course Batches
-                    </a>
+                    </a> -->
                     {% for course in sidebar_courses %}
                     <a class="submenu-item" href="{% url 'courses:batch_list' course.id %}">
                         {{ course.course_code }} Batches
@@ -656,7 +663,7 @@
                         Assign Exam
                     </a>
                     <a class="submenu-item {% if request.resolver_match.url_name == 'exam_submission' %}active{% endif %}"
-                        href="{% url 'exam_submission' %}">
+                        href="{% url 'exam_submissions' %}">
                         Exam Submissions
                     </a>
                 </div>
@@ -777,6 +784,35 @@
                 Student Course Control
             </a>
 
+
+
+            <!-- Certificate Management Section -->
+            <div class="submenu" data-submenu="certificates">
+                <div class="submenu-toggle">
+                    <span><i class="fas fa-award me-2"></i>Certificate Management</span>
+                    <i class="fas fa-chevron-down"></i>
+                </div>
+                <div class="submenu-items">
+                    <a class="submenu-item" href="{% url 'certificates:admin_dashboard' %}">
+                        Dashboard
+                    </a>
+                    <a class="submenu-item" href="{% url 'certificates:admin_types' %}">
+                        Certificate Types
+                    </a>
+                    <a class="submenu-item" href="{% url 'certificates:admin_templates' %}">
+                        Templates
+                    </a>
+                    <a class="submenu-item" href="{% url 'certificates:admin_issue' %}">
+                        Issue Certificate
+                    </a>
+                    <a class="submenu-item" href="{% url 'certificates:admin_issued' %}">
+                        Issued Certificates
+                    </a>
+                </div>
+            </div>
+
+
+
             <!-- Email Management -->
             <div class="nav-section">Email Management</div>
             <div class="submenu" data-submenu="email">
@@ -832,9 +868,9 @@
                 </div>
                 <div class="submenu-items">
                     <a href="{% url 'email_configuration_settings' %}" class="nav-link">
-    <i class="fas fa-envelope-open-text"></i>
-    <span>Email Configuration</span>
-</a>
+                        <i class="fas fa-envelope-open-text"></i>
+                        <span>Email Configuration</span>
+                    </a>
                 </div>
             </div>
 
@@ -897,9 +933,9 @@
     </div>
 
     <!-- Bootstrap JS -->
-   <!-- Bootstrap JS -->
+    <!-- Bootstrap JS -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
-    
+
     <script>
         // Zoom Status Checker
         function checkZoomStatus() {
@@ -1008,7 +1044,7 @@
 
             // Restore scroll position on page load
             restoreSidebarScroll();
-            
+
             // Restore open submenus
             restoreOpenSubmenus();
 
@@ -1027,7 +1063,7 @@
 
             // Add event listeners to all submenu toggles
             document.querySelectorAll('.submenu-toggle').forEach(toggle => {
-                toggle.addEventListener('click', function(e) {
+                toggle.addEventListener('click', function (e) {
                     e.preventDefault();
                     e.stopPropagation();
                     const submenu = this.closest('.submenu');
@@ -1040,13 +1076,13 @@
 
             // Save scroll position on scroll
             if (sidebar) {
-                sidebar.addEventListener('scroll', function() {
+                sidebar.addEventListener('scroll', function () {
                     saveSidebarScroll();
                 });
             }
 
             // Save scroll position before page unload
-            window.addEventListener('beforeunload', function() {
+            window.addEventListener('beforeunload', function () {
                 saveSidebarScroll();
                 saveOpenSubmenus();
             });
@@ -1056,7 +1092,7 @@
                 link.addEventListener('click', function () {
                     saveSidebarScroll();
                     saveOpenSubmenus();
-                    
+
                     if (window.innerWidth <= 768) {
                         closeSidebar();
                     }
@@ -1073,4 +1109,5 @@
 
     {% block extra_js %}{% endblock %}
 </body>
+
 </html>

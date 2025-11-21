@@ -323,7 +323,7 @@
     <div class="row justify-content-center">
         <div class="col-auto">
             <div class="badge bg-light text-success fs-6 px-3 py-2">
-                <i class="fas fa-check-circle me-2"></i>Total Paid: ${{ total_paid|floatformat:2 }}
+                <i class="fas fa-check-circle me-2"></i>Total Paid: ₹{{ total_paid|floatformat:2 }}
             </div>
         </div>
         <div class="col-auto">
@@ -342,7 +342,7 @@
         <i class="fas fa-exclamation-triangle fa-2x me-3"></i>
         <div>
             <h5 class="mb-1">Payment Overdue!</h5>
-            <p class="mb-0">This student has <strong>${{ overdue_amount|floatformat:2 }}</strong> in overdue payments across <strong>{{ overdue_emis.count }}</strong> installment(s).</p>
+            <p class="mb-0">This student has <strong>₹{{ overdue_amount|floatformat:2 }}</strong> in overdue payments across <strong>{{ overdue_emis.count }}</strong> installment(s).</p>
         </div>
     </div>
 </div>
@@ -352,13 +352,13 @@
 <div class="row mb-4">
     <div class="col-lg-3 col-md-6 mb-3">
         <div class="stat-card total">
-            <div class="stat-value text-primary">${{ assignment.total_amount|floatformat:2 }}</div>
+            <div class="stat-value text-primary">₹{{ assignment.total_amount|floatformat:2 }}</div>
             <div class="stat-label">Total Amount</div>
         </div>
     </div>
     <div class="col-lg-3 col-md-6 mb-3">
         <div class="stat-card paid">
-            <div class="stat-value text-success">${{ total_paid|floatformat:2 }}</div>
+            <div class="stat-value text-success">₹{{ total_paid|floatformat:2 }}</div>
             <div class="stat-label">Amount Paid</div>
             <div class="mt-2">
                 <small class="text-success fw-semibold">
@@ -370,14 +370,14 @@
     <div class="col-lg-3 col-md-6 mb-3">
         <div class="stat-card pending">
             <div class="stat-value text-warning">
-                ${{ assignment.total_amount|add:0|floatformat:2|add:"-"|add:total_paid|floatformat:2 }}
+                ₹{{ assignment.total_amount|add:0|floatformat:2|add:"-"|add:total_paid|floatformat:2 }}
             </div>
             <div class="stat-label">Amount Pending</div>
         </div>
     </div>
     <div class="col-lg-3 col-md-6 mb-3">
         <div class="stat-card overdue">
-            <div class="stat-value text-danger">${{ overdue_amount|floatformat:2 }}</div>
+            <div class="stat-value text-danger">₹{{ overdue_amount|floatformat:2 }}</div>
             <div class="stat-label">Overdue Amount</div>
             {% if overdue_emis.count > 0 %}
                 <div class="mt-2">
@@ -403,8 +403,8 @@
             <div class="progress-fill" style="width: {% widthratio total_paid assignment.total_amount 100 %}%"></div>
         </div>
         <div class="d-flex justify-content-between mt-2">
-            <small class="text-muted">$0</small>
-            <small class="text-muted">${{ assignment.total_amount|floatformat:2 }}</small>
+            <small class="text-muted">₹0</small>
+            <small class="text-muted">₹{{ assignment.total_amount|floatformat:2 }}</small>
         </div>
     </div>
 </div>
@@ -468,7 +468,7 @@
         <!-- Nav Tabs -->
         <ul class="nav nav-tabs" id="detailTabs" role="tablist">
             <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="emi-tab" data-bs-toggle="tab" data-bs-target="#emi-schedule" type="button" role="tab">
+                <button class="nav-link active" id="emi-tab" data-bs-toggle="tab" data-bs-target="#emi-schedule" type="button" role="tab" style="color: black !important;">
                     <i class="fas fa-calendar-alt me-2"></i>
                     {% if is_payment_complete %}
                         Payment Complete
@@ -480,13 +480,13 @@
                     {% endif %}
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="payments-tab" data-bs-toggle="tab" data-bs-target="#payment-history" type="button" role="tab">
+            <li class="nav-item" role="presentation" >
+                <button class="nav-link" id="payments-tab" data-bs-toggle="tab" data-bs-target="#payment-history" type="button" role="tab" style="color: black !important;">
                     <i class="fas fa-credit-card me-2"></i>Payment History ({{ payments.count }})
                 </button>
             </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="access-tab" data-bs-toggle="tab" data-bs-target="#course-access" type="button" role="tab">
+            <li class="nav-item" role="presentation" >
+                <button class="nav-link" id="access-tab" data-bs-toggle="tab" data-bs-target="#course-access" type="button" role="tab" style="color: black !important;">
                     <i class="fas fa-key me-2"></i>Course Access
                 </button>
             </li>
@@ -508,7 +508,7 @@
                                 <div class="alert alert-success border-success">
                                     <div class="row text-center">
                                         <div class="col-md-4">
-                                            <div class="fw-bold text-success">${{ total_paid|floatformat:2 }}</div>
+                                            <div class="fw-bold text-success">₹{{ total_paid|floatformat:2 }}</div>
                                             <small class="text-muted">Total Paid</small>
                                         </div>
                                         <div class="col-md-4">
@@ -545,7 +545,7 @@
                                             </div>
                                         </div>
                                         <div class="col-md-3">
-                                            <div class="fw-semibold text-dark">${{ emi.amount|floatformat:2 }}</div>
+                                            <div class="fw-semibold text-dark">₹{{ emi.amount|floatformat:2 }}</div>
                                             <small class="text-muted">Amount Due</small>
                                         </div>
                                         <div class="col-md-3">
@@ -590,7 +590,7 @@
                                                 {% if emi.late_fee_applied > 0 %}
                                                     <br><small class="text-warning">
                                                         <i class="fas fa-exclamation-circle me-1"></i>
-                                                        Late fee applied: ${{ emi.late_fee_applied|floatformat:2 }}
+                                                        Late fee applied: ₹{{ emi.late_fee_applied|floatformat:2 }}
                                                     </small>
                                                 {% endif %}
                                             </div>
@@ -617,7 +617,7 @@
                     <div class="payment-item">
                         <div class="row align-items-center">
                             <div class="col-md-3">
-                                <div class="fw-bold text-success">${{ payment.amount|floatformat:2 }}</div>
+                                <div class="fw-bold text-success">₹{{ payment.amount|floatformat:2 }}</div>
                                 <small class="text-muted">{{ payment.get_payment_method_display }}</small>
                             </div>
                             <div class="col-md-3">

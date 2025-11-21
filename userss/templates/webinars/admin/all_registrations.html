@@ -566,7 +566,7 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+                'X-CSRFToken': getCsrfToken()
             },
             body: JSON.stringify({ status: newStatus })
         })
@@ -592,7 +592,8 @@
         fetch(`/webinars/admin/registration/${registrationId}/delete/`, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
+                'X-CSRFToken': getCsrfToken(),
+                'Content-Type': 'application/json',
             }
         })
         .then(response => response.json())
@@ -617,80 +618,20 @@
         fetch(`/webinars/admin/registration/${registrationId}/send-reminder/`, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]')?.value || ''
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Reminder sent successfully!');
-            } else {
-                alert('Error sending reminder: ' + data.message);
-            }
-        })
-        .catch(error => {
-            alert('Error sending reminder. Please try again.');
-            console.error('Error:', error);
-        });
-    }
-
-    function deleteRegistration(registrationId) {
-        if (!confirm('Are you sure you want to delete this registration? This action cannot be undone.')) {
-            return;
-        }
-
-        // Get CSRF token properly
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
-                         document.querySelector('meta[name="csrf-token"]')?.content ||
-                         getCookie('csrftoken');
-
-        fetch(`/webinars/admin/registration/${registrationId}/delete/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': csrfToken,
+                'X-CSRFToken': getCsrfToken(),
                 'Content-Type': 'application/json',
             }
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                location.reload();
+                alert('✅ Reminder sent successfully!');
             } else {
-                alert('Error deleting registration: ' + data.message);
+                alert('❌ Error sending reminder: ' + data.message);
             }
         })
         .catch(error => {
-            alert('Error deleting registration. Please try again.');
-            console.error('Error:', error);
-        });
-    }
-
-    function sendIndividualReminder(registrationId) {
-        if (!confirm('Send webinar reminder email to this participant?')) {
-            return;
-        }
-
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
-                         document.querySelector('meta[name="csrf-token"]')?.content ||
-                         getCookie('csrftoken');
-
-        fetch(`/webinars/admin/registration/${registrationId}/send-reminder/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': csrfToken,
-                'Content-Type': 'application/json',
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                alert('Reminder sent successfully!');
-            } else {
-                alert('Error sending reminder: ' + data.message);
-            }
-        })
-        .catch(error => {
-            alert('Error sending reminder. Please try again.');
+            alert('❌ Error sending reminder. Please try again.');
             console.error('Error:', error);
         });
     }
@@ -700,33 +641,30 @@
             return;
         }
 
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
-                         document.querySelector('meta[name="csrf-token"]')?.content ||
-                         getCookie('csrftoken');
-
         fetch(`/webinars/admin/registration/${registrationId}/send-payment-reminder/`, {
             method: 'POST',
             headers: {
-                'X-CSRFToken': csrfToken,
+                'X-CSRFToken': getCsrfToken(),
                 'Content-Type': 'application/json',
             }
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert('Payment reminder sent successfully!');
+                alert('✅ Payment reminder sent successfully!');
             } else {
-                alert('Error sending payment reminder: ' + data.message);
+                alert('❌ Error sending payment reminder: ' + data.message);
             }
         })
         .catch(error => {
-            alert('Error sending payment reminder. Please try again.');
+            alert('❌ Error sending payment reminder. Please try again.');
             console.error('Error:', error);
         });
     }
 
     function viewUserProfile(userId) {
-        window.open(`/admin/users/${userId}/`, '_blank');
+        // ✅ FIXED: Correct URL from userss app
+        window.open(`/user_details/${userId}/`, '_blank');
     }
 
     function bulkUpdateStatus(newStatus) {
@@ -741,15 +679,11 @@
             return;
         }
 
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
-                         document.querySelector('meta[name="csrf-token"]')?.content ||
-                         getCookie('csrftoken');
-
         fetch('/webinars/admin/bulk-update-status/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken
+                'X-CSRFToken': getCsrfToken()
             },
             body: JSON.stringify({ 
                 registration_ids: selectedIds,
@@ -759,13 +693,14 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
+                alert(`✅ Updated ${data.count} registrations successfully!`);
                 location.reload();
             } else {
-                alert('Error updating statuses: ' + data.message);
+                alert('❌ Error updating statuses: ' + data.message);
             }
         })
         .catch(error => {
-            alert('Error updating statuses. Please try again.');
+            alert('❌ Error updating statuses. Please try again.');
             console.error('Error:', error);
         });
     }
@@ -782,28 +717,24 @@
             return;
         }
 
-        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
-                         document.querySelector('meta[name="csrf-token"]')?.content ||
-                         getCookie('csrftoken');
-
         fetch('/webinars/admin/bulk-send-reminders/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRFToken': csrfToken
+                'X-CSRFToken': getCsrfToken()
             },
             body: JSON.stringify({ registration_ids: selectedIds })
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                alert(`Reminders sent to ${data.count} participants!`);
+                alert(`✅ Reminders sent to ${data.count} participants!`);
             } else {
-                alert('Error sending reminders: ' + data.message);
+                alert('❌ Error sending reminders: ' + data.message);
             }
         })
         .catch(error => {
-            alert('Error sending reminders. Please try again.');
+            alert('❌ Error sending reminders. Please try again.');
             console.error('Error:', error);
         });
     }
@@ -814,10 +745,30 @@
         
         // Close modal
         const modal = bootstrap.Modal.getInstance(document.getElementById('exportModal'));
-        modal.hide();
+        if (modal) {
+            modal.hide();
+        }
     }
 
-    // Helper function to get CSRF token from cookies
+    // ✅ Helper function to get CSRF token - IMPROVED
+    function getCsrfToken() {
+        // Try to get from form input
+        const tokenInput = document.querySelector('[name=csrfmiddlewaretoken]');
+        if (tokenInput) {
+            return tokenInput.value;
+        }
+        
+        // Try to get from meta tag
+        const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+        if (tokenMeta) {
+            return tokenMeta.content;
+        }
+        
+        // Try to get from cookie
+        return getCookie('csrftoken');
+    }
+
+    // Helper function to get cookie value
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {

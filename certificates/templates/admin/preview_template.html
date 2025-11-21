@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Preview: {{ template.name }}</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .preview-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .preview-header {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        .print-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 30px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .print-btn:hover {
+            background: #5568d3;
+        }
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .preview-header,
+            .print-btn {
+                display: none;
+            }
+            .preview-container {
+                box-shadow: none;
+                padding: 0;
+            }
+        }
+        {{ css_content|safe }}
+    </style>
+</head>
+<body>
+    <button class="print-btn" onclick="window.print()">
+        <i class="bi bi-printer"></i> Print / Save as PDF
+    </button>
+
+    <div class="preview-header">
+        <h2>{{ template.name }} - Preview</h2>
+        <p>Sample Certificate with Placeholder Data</p>
+    </div>
+
+    <div class="preview-container">
+        {{ html_content|safe }}
+    </div>
+
+    <script>
+        // Close window on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                window.close();
+            }
+        });
+    </script>
+</body>
+</html>

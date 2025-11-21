@@ -34,7 +34,7 @@
         }
 
         /* Sidebar Styles */
-    /* Sidebar */
+        /* Sidebar */
         .sidebar {
             background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)) !important;
             width: var(--sidebar-width);
@@ -269,15 +269,20 @@
             </a>
             <div class="navbar-nav ms-auto">
                 <div class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown"
+                        style="color: black !important;">
                         <i class="fas fa-user-circle me-2"></i>
                         {{ user.get_full_name|default:user.username }}
                     </a>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="{% url 'instructor_profile_management' %}"><i class="fas fa-user me-2"></i>Profile</a></li>
+                    <ul class="dropdown-menu dropdown-menu-end" ">
+                        <li><a class=" dropdown-item" href="{% url 'instructor_profile_management' %}"><i
+                            class="fas fa-user me-2"></i>Profile</a></li>
                         <li><a class="dropdown-item" href="#"><i class="fas fa-cog me-2"></i>Settings</a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="{% url 'user_login' %}"><i class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
+                        <li>
+                            <hr class="dropdown-divider">
+                        </li>
+                        <li><a class="dropdown-item" href="{% url 'user_login' %}"><i
+                                    class="fas fa-sign-out-alt me-2"></i>Logout</a></li>
                     </ul>
                 </div>
             </div>
@@ -285,231 +290,340 @@
     </nav>
 
     <div class="container-fluid p-0">
-        <div class="row g-0">
-            <!-- Sidebar -->
-            <div class="sidebar" id="sidebar">
-                <div class="sidebar-header">
-                    <h4><i class="fas fa-chalkboard-teacher me-2"></i>Instructor</h4>
-                    <small>Learning Management System</small>
-                </div>
+    <div class="row g-0">
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h4><i class="fas fa-chalkboard-teacher me-2"></i>Instructor</h4>
+                <small>Learning Management System</small>
+            </div>
 
-                <div class="instructor-info">
-                    <div class="name">{{ user.get_full_name|default:user.username }}</div>
-                    <div class="role">{{ user.get_role_display }}</div>
-                </div>
+            <div class="instructor-info">
+                <div class="name">{{ user.get_full_name|default:user.username }}</div>
+                <div class="role">{{ user.get_role_display }}</div>
+            </div>
 
-                <div class="sidebar-content">
-                    <!-- Dashboard Section -->
-                    <div class="nav-section">Dashboard</div>
-                    <a class="nav-link {% if request.resolver_match.url_name == 'instructor_dashboard' %}active{% endif %}"
-                        href="{% url 'instructor_dashboard' %}">
-                        <i class="fas fa-tachometer-alt"></i>
-                        Main Dashboard
-                    </a>
+            <div class="sidebar-content">
+                <!-- Dashboard Section -->
+                <div class="nav-section">Dashboard</div>
+                <a class="nav-link {% if request.resolver_match.url_name == 'instructor_dashboard' %}active{% endif %}"
+                    href="{% url 'instructor_dashboard' %}">
+                    <i class="fas fa-tachometer-alt"></i>
+                    Main Dashboard
+                </a>
 
-                    <!-- Course Management Section -->
-                    <div class="nav-section">Course Management</div>
-                    
-                    <a class="nav-link {% if not has_course_permission %}disabled{% endif %}"
-                        {% if has_course_permission %}href="{% url 'instructor_course_management' %}" {% endif %}>
+                <!-- Course Management Section -->
+                <div class="nav-section">Course Management</div>
+
+                {% if has_course_permission %}
+                    <a class="nav-link {% if request.resolver_match.url_name == 'instructor_course_management' %}active{% endif %}" 
+                       href="{% url 'instructor_course_management' %}">
                         <i class="fas fa-book"></i>
                         My Courses
-                        {% if not has_course_permission %}
-                        <span class="permission-badge">No Access</span>
-                        {% else %}
                         <span class="permission-badge granted">Granted</span>
-                        {% endif %}
                     </a>
-
-                    <a class="nav-link {% if not has_batch_permission %}disabled{% endif %}"
-                        {% if has_batch_permission %}href="{% url 'instructor_batch_management' %}"{% endif %}>
-                        <i class="fas fa-layer-group"></i>
-                        Batch Management
-                        {% if not has_batch_permission %}
+                {% else %}
+                    <a class="nav-link disabled">
+                        <i class="fas fa-book"></i>
+                        My Courses
                         <span class="permission-badge">No Access</span>
-                        {% else %}
-                        <span class="permission-badge granted">Granted</span>
-                        {% endif %}
                     </a>
-
-                    <a class="nav-link {% if not has_content_permission %}disabled{% endif %}"
-                        {% if has_content_permission %}href="{% url 'instructor_content_management' %}"{% endif %}>
-                        <i class="fas fa-file-alt"></i>
-                        Content Management
-                        {% if not has_content_permission %}
-                        <span class="permission-badge">No Access</span>
-                        {% else %}
-                        <span class="permission-badge granted">Granted</span>
-                        {% endif %}
-                    </a>
-
-                    <!-- Exam Management Section -->
-                    <div class="nav-section">Exam Management</div>
-                    
-                    <a class="nav-link {% if not has_exam_permission %}disabled{% endif %} {% if 'instructor_exam' in request.resolver_match.url_name %}active{% endif %}"
-                        {% if has_exam_permission %}href="{% url 'instructor_exam_dashboard' %}"{% endif %}>
-                        <i class="fas fa-clipboard-list"></i>
-                        Exam Dashboard
-                        {% if not has_exam_permission %}
-                        <span class="permission-badge">No Access</span>
-                        {% else %}
-                        <span class="permission-badge granted">Granted</span>
-                        {% endif %}
-                    </a>
-                    
-                    <a class="nav-link {% if not has_create_exam_permission %}disabled{% endif %} {% if 'instructor_create_exam' in request.resolver_match.url_name %}active{% endif %}"
-                        {% if has_create_exam_permission %}href="{% url 'instructor_create_exam' %}"{% endif %}>
-                        <i class="fas fa-plus-circle"></i>
-                        Create Exam
-                        {% if not has_create_exam_permission %}
-                        <span class="permission-badge">No Access</span>
-                        {% else %}
-                        <span class="permission-badge granted">Granted</span>
-                        {% endif %}
-                    </a>
-                    
-                    <a class="nav-link {% if not has_my_exams_permission %}disabled{% endif %} {% if 'instructor_my_exams' in request.resolver_match.url_name %}active{% endif %}"
-                        {% if has_my_exams_permission %}href="{% url 'instructor_my_exams' %}"{% endif %}>
-                        <i class="fas fa-list-alt"></i>
-                        My Exams
-                        {% if not has_my_exams_permission %}
-                        <span class="permission-badge">No Access</span>
-                        {% else %}
-                        <span class="permission-badge granted">Granted</span>
-                        {% endif %}
-                    </a>
-                    
-                    <a class="nav-link {% if not has_assign_exam_permission %}disabled{% endif %} {% if 'instructor_assign_exam' in request.resolver_match.url_name %}active{% endif %}"
-                        {% if has_assign_exam_permission %}href="{% url 'instructor_assign_exam' %}"{% endif %}>
-                        <i class="fas fa-user-plus"></i>
-                        Assign Exams
-                        {% if not has_assign_exam_permission %}
-                        <span class="permission-badge">No Access</span>
-                        {% else %}
-                        <span class="permission-badge granted">Granted</span>
-                        {% endif %}
-                    </a>
-
-                    <!-- Attendance Management Section -->
-                    <div class="nav-section">Attendance Management</div>
-
-                    <a class="nav-link {% if not has_attendance_dashboard_permission %}disabled{% endif %} {% if request.resolver_match.url_name == 'instructor_sessions' %}active{% endif %}"
-                        {% if has_attendance_dashboard_permission %}href="{% url 'attendance:instructor_sessions' %}"{% endif %}>
-                        <i class="fas fa-clipboard-check"></i>
-                        Attendance Dashboard
-                        {% if not has_attendance_dashboard_permission %}
-                        <span class="permission-badge">No Access</span>
-                        {% else %}
-                        <span class="permission-badge granted">Granted</span>
-                        {% endif %}
-                    </a>
-
-                    <a class="nav-link {% if not has_createsession_permission %}disabled{% endif %} {% if request.resolver_match.url_name == 'create_session' %}active{% endif %}"
-                        {% if has_createsession_permission %}href="{% url 'attendance:create_session' %}"{% endif %}>
-                        <i class="fas fa-calendar-plus"></i>
-                        Create Session
-                        {% if not has_createsession_permission %}
-                        <span class="permission-badge">No Access</span>
-                        {% else %}
-                        <span class="permission-badge granted">Granted</span>
-                        {% endif %}
-                    </a>
-
-                    <a class="nav-link {% if not has_all_sessions_permission %}disabled{% endif %} {% if request.resolver_match.url_name == 'session_list' %}active{% endif %}"
-                        {% if has_all_sessions_permission %}href="{% url 'attendance:session_list' %}"{% endif %}>
-                        <i class="fas fa-list-alt"></i>
-                        All Sessions
-                        {% if not has_all_sessions_permission %}
-                        <span class="permission-badge">No Access</span>
-                        {% else %}
-                        <span class="permission-badge granted">Granted</span>
-                        {% endif %}
-                    </a>
-
-                    <a class="nav-link {% if not has_attendance_pending_permission %}disabled{% endif %} {% if request.resolver_match.url_name == 'pending_requests' %}active{% endif %}"
-                        {% if has_attendance_pending_permission %}href="{% url 'attendance:pending_requests' %}"{% endif %}>
-                        <i class="fas fa-clock"></i>
-                        Pending Requests
-                        {% if not has_attendance_pending_permission %}
-                        <span class="permission-badge">No Access</span>
-                        {% else %}
-                        <span class="permission-badge granted">Granted</span>
-                        {% endif %}
-                    </a>
-
-                    <a class="nav-link {% if not has_attendance_reports_permission %}disabled{% endif %} {% if request.resolver_match.url_name == 'attendance_reports' %}active{% endif %}"
-                        {% if has_attendance_reports_permission %}href="{% url 'attendance:attendance_reports' %}"{% endif %}>
-                        <i class="fas fa-chart-bar"></i>
-                        Attendance Reports
-                        {% if not has_attendance_reports_permission %}
-                        <span class="permission-badge">No Access</span>
-                        {% else %}
-                        <span class="permission-badge granted">Granted</span>
-                        {% endif %}
-                    </a>
-
-                    <!-- Student Management Section -->
-                    <div class="nav-section">Student Management</div>
-                    
-                    <a class="nav-link {% if not has_student_permission %}disabled{% endif %}"
-                        {% if has_student_permission %}href="{% url 'instructor_student_management' %}"{% endif %}>
-                        <i class="fas fa-user-graduate"></i>
-                        My Students
-                        {% if not has_student_permission %}
-                        <span class="permission-badge">No Access</span>
-                        {% else %}
-                        <span class="permission-badge granted">Granted</span>
-                        {% endif %}
-                    </a>
-
-                    <!-- Email Management Section -->
-                    <div class="nav-section">Communication</div>
-                    
-                    <a class="nav-link {% if not has_email_permission %}disabled{% endif %}"
-                        {% if has_email_permission %}href="{% url 'instructor_email_management' %}"{% endif %}>
-                        <i class="fas fa-envelope"></i>
-                        Email Marketing
-                        {% if not has_email_permission %}
-                        <span class="permission-badge">No Access</span>
-                        {% else %}
-                        <span class="permission-badge granted">Granted</span>
-                        {% endif %}
-                    </a>
-
-                    <!-- Settings Section -->
-                    <div class="nav-section">Settings</div>
-                    <a class="nav-link {% if not has_profile_setting_permission %}disabled{% endif %}" 
-                        {% if has_profile_setting_permission %}href="{% url 'instructor_profile_management' %}"{% endif %}>
-                        <i class="fas fa-user-cog"></i>
-                        Profile Settings
-                        {% if not has_profile_setting_permission %}
-                        <span class="permission-badge">No Access</span>
-                        {% else %}
-                        <span class="permission-badge granted">Granted</span>
-                        {% endif %}
-                    </a>
-                </div>
-            </div>
-
-            <!-- Main Content -->
-            <div class="main-content">
-                {% if messages %}
-                <div class="container-fluid mb-3">
-                    {% for message in messages %}
-                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                        <i class="fas fa-info-circle me-2"></i>
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                    {% endfor %}
-                </div>
                 {% endif %}
 
-                {% block content %}
-                {% endblock %}
+                {% if has_batch_permission %}
+                    <a class="nav-link {% if request.resolver_match.url_name == 'instructor_batch_management' %}active{% endif %}" 
+                       href="{% url 'instructor_batch_management' %}">
+                        <i class="fas fa-layer-group"></i>
+                        Batch Management
+                        <span class="permission-badge granted">Granted</span>
+                    </a>
+                {% else %}
+                    <a class="nav-link disabled">
+                        <i class="fas fa-layer-group"></i>
+                        Batch Management
+                        <span class="permission-badge">No Access</span>
+                    </a>
+                {% endif %}
+
+                {% if has_content_permission %}
+                    <a class="nav-link {% if request.resolver_match.url_name == 'instructor_content_management' %}active{% endif %}" 
+                       href="{% url 'instructor_content_management' %}">
+                        <i class="fas fa-file-alt"></i>
+                        Content Management
+                        <span class="permission-badge granted">Granted</span>
+                    </a>
+                {% else %}
+                    <a class="nav-link disabled">
+                        <i class="fas fa-file-alt"></i>
+                        Content Management
+                        <span class="permission-badge">No Access</span>
+                    </a>
+                {% endif %}
+
+                <!-- Exam Management Section -->
+                <div class="nav-section">Exam Management</div>
+
+                {% if has_exam_permission %}
+                    <a class="nav-link {% if 'instructor_exam' in request.resolver_match.url_name %}active{% endif %}" 
+                       href="{% url 'instructor_exam_dashboard' %}">
+                        <i class="fas fa-clipboard-list"></i>
+                        Exam Dashboard
+                        <span class="permission-badge granted">Granted</span>
+                    </a>
+                {% else %}
+                    <a class="nav-link disabled">
+                        <i class="fas fa-clipboard-list"></i>
+                        Exam Dashboard
+                        <span class="permission-badge">No Access</span>
+                    </a>
+                {% endif %}
+
+                {% if has_create_exam_permission %}
+                    <a class="nav-link {% if 'instructor_create_exam' in request.resolver_match.url_name %}active{% endif %}" 
+                       href="{% url 'instructor_create_exam' %}">
+                        <i class="fas fa-plus-circle"></i>
+                        Create Exam
+                        <span class="permission-badge granted">Granted</span>
+                    </a>
+                {% else %}
+                    <a class="nav-link disabled">
+                        <i class="fas fa-plus-circle"></i>
+                        Create Exam
+                        <span class="permission-badge">No Access</span>
+                    </a>
+                {% endif %}
+
+                {% if has_my_exams_permission %}
+                    <a class="nav-link {% if 'instructor_my_exams' in request.resolver_match.url_name %}active{% endif %}" 
+                       href="{% url 'instructor_my_exams' %}">
+                        <i class="fas fa-list-alt"></i>
+                        My Exams
+                        <span class="permission-badge granted">Granted</span>
+                    </a>
+                {% else %}
+                    <a class="nav-link disabled">
+                        <i class="fas fa-list-alt"></i>
+                        My Exams
+                        <span class="permission-badge">No Access</span>
+                    </a>
+                {% endif %}
+
+                {% if has_assign_exam_permission %}
+                    <a class="nav-link {% if 'instructor_assign_exam' in request.resolver_match.url_name %}active{% endif %}" 
+                       href="{% url 'instructor_assign_exam' %}">
+                        <i class="fas fa-user-plus"></i>
+                        Assign Exams
+                        <span class="permission-badge granted">Granted</span>
+                    </a>
+                {% else %}
+                    <a class="nav-link disabled">
+                        <i class="fas fa-user-plus"></i>
+                        Assign Exams
+                        <span class="permission-badge">No Access</span>
+                    </a>
+                {% endif %}
+
+                <!-- Attendance Management Section -->
+                <div class="nav-section">Attendance Management</div>
+
+                {% if has_attendance_dashboard_permission %}
+                    <a class="nav-link {% if request.resolver_match.url_name == 'instructor_sessions' %}active{% endif %}" 
+                       href="{% url 'attendance:instructor_sessions' %}">
+                        <i class="fas fa-clipboard-check"></i>
+                        Attendance Dashboard
+                        <span class="permission-badge granted">Granted</span>
+                    </a>
+                {% else %}
+                    <a class="nav-link disabled">
+                        <i class="fas fa-clipboard-check"></i>
+                        Attendance Dashboard
+                        <span class="permission-badge">No Access</span>
+                    </a>
+                {% endif %}
+
+                {% if has_createsession_permission %}
+                    <a class="nav-link {% if request.resolver_match.url_name == 'create_session' %}active{% endif %}" 
+                       href="{% url 'attendance:create_session' %}">
+                        <i class="fas fa-calendar-plus"></i>
+                        Create Session
+                        <span class="permission-badge granted">Granted</span>
+                    </a>
+                {% else %}
+                    <a class="nav-link disabled">
+                        <i class="fas fa-calendar-plus"></i>
+                        Create Session
+                        <span class="permission-badge">No Access</span>
+                    </a>
+                {% endif %}
+
+                {% if has_all_sessions_permission %}
+                    <a class="nav-link {% if request.resolver_match.url_name == 'session_list' %}active{% endif %}" 
+                       href="{% url 'attendance:session_list' %}">
+                        <i class="fas fa-list-alt"></i>
+                        All Sessions
+                        <span class="permission-badge granted">Granted</span>
+                    </a>
+                {% else %}
+                    <a class="nav-link disabled">
+                        <i class="fas fa-list-alt"></i>
+                        All Sessions
+                        <span class="permission-badge">No Access</span>
+                    </a>
+                {% endif %}
+
+                {% if has_attendance_pending_permission %}
+                    <a class="nav-link {% if request.resolver_match.url_name == 'pending_requests' %}active{% endif %}" 
+                       href="{% url 'attendance:pending_requests' %}">
+                        <i class="fas fa-clock"></i>
+                        Pending Requests
+                        <span class="permission-badge granted">Granted</span>
+                    </a>
+                {% else %}
+                    <a class="nav-link disabled">
+                        <i class="fas fa-clock"></i>
+                        Pending Requests
+                        <span class="permission-badge">No Access</span>
+                    </a>
+                {% endif %}
+
+                {% if has_attendance_reports_permission %}
+                    <a class="nav-link {% if request.resolver_match.url_name == 'attendance_reports' %}active{% endif %}" 
+                       href="{% url 'attendance:attendance_reports' %}">
+                        <i class="fas fa-chart-bar"></i>
+                        Attendance Reports
+                        <span class="permission-badge granted">Granted</span>
+                    </a>
+                {% else %}
+                    <a class="nav-link disabled">
+                        <i class="fas fa-chart-bar"></i>
+                        Attendance Reports
+                        <span class="permission-badge">No Access</span>
+                    </a>
+                {% endif %}
+
+                <!-- Student Management Section -->
+                <div class="nav-section">Student Management</div>
+
+                {% if has_student_permission %}
+                    <a class="nav-link {% if request.resolver_match.url_name == 'instructor_student_management' %}active{% endif %}" 
+                       href="{% url 'instructor_student_management' %}">
+                        <i class="fas fa-user-graduate"></i>
+                        My Students
+                        <span class="permission-badge granted">Granted</span>
+                    </a>
+                {% else %}
+                    <a class="nav-link disabled">
+                        <i class="fas fa-user-graduate"></i>
+                        My Students
+                        <span class="permission-badge">No Access</span>
+                    </a>
+                {% endif %}
+
+                <!-- Certificate Management Section -->
+                <div class="nav-section">Certificate Management</div>
+
+                {% if has_certificate_permission %}
+                    <a class="nav-link {% if request.resolver_match.url_name == 'certificates:instructor_dashboard' %}active{% endif %}" 
+                       href="{% url 'certificates:instructor_dashboard' %}">
+                        <i class="fas fa-award"></i>
+                        Certificate Dashboard
+                        <span class="permission-badge granted">Granted</span>
+                    </a>
+                {% else %}
+                    <a class="nav-link disabled">
+                        <i class="fas fa-award"></i>
+                        Certificate Dashboard
+                        <span class="permission-badge">No Access</span>
+                    </a>
+                {% endif %}
+
+                {% if has_certificate_permission %}
+                    <a class="nav-link {% if request.resolver_match.url_name == 'certificates:instructor_issue' %}active{% endif %}" 
+                       href="{% url 'certificates:instructor_issue' %}">
+                        <i class="fas fa-plus-circle"></i>
+                        Issue Certificate
+                        <span class="permission-badge granted">Granted</span>
+                    </a>
+                {% else %}
+                    <a class="nav-link disabled">
+                        <i class="fas fa-plus-circle"></i>
+                        Issue Certificate
+                        <span class="permission-badge">No Access</span>
+                    </a>
+                {% endif %}
+
+                {% if has_certificate_permission %}
+                    <a class="nav-link {% if request.resolver_match.url_name == 'certificates:instructor_issued' %}active{% endif %}" 
+                       href="{% url 'certificates:instructor_issued' %}">
+                        <i class="fas fa-list-check"></i>
+                        Issued Certificates
+                        <span class="permission-badge granted">Granted</span>
+                    </a>
+                {% else %}
+                    <a class="nav-link disabled">
+                        <i class="fas fa-list-check"></i>
+                        Issued Certificates
+                        <span class="permission-badge">No Access</span>
+                    </a>
+                {% endif %}
+
+                <!-- Email Management Section -->
+                <div class="nav-section">Communication</div>
+
+                {% if has_email_permission %}
+                    <a class="nav-link {% if request.resolver_match.url_name == 'instructor_email_management' %}active{% endif %}" 
+                       href="{% url 'instructor_email_management' %}">
+                        <i class="fas fa-envelope"></i>
+                        Email Marketing
+                        <span class="permission-badge granted">Granted</span>
+                    </a>
+                {% else %}
+                    <a class="nav-link disabled">
+                        <i class="fas fa-envelope"></i>
+                        Email Marketing
+                        <span class="permission-badge">No Access</span>
+                    </a>
+                {% endif %}
+
+                <!-- Settings Section -->
+                <div class="nav-section">Settings</div>
+
+                {% if has_profile_setting_permission %}
+                    <a class="nav-link {% if request.resolver_match.url_name == 'instructor_profile_management' %}active{% endif %}" 
+                       href="{% url 'instructor_profile_management' %}">
+                        <i class="fas fa-user-cog"></i>
+                        Profile Settings
+                        <span class="permission-badge granted">Granted</span>
+                    </a>
+                {% else %}
+                    <a class="nav-link disabled">
+                        <i class="fas fa-user-cog"></i>
+                        Profile Settings
+                        <span class="permission-badge">No Access</span>
+                    </a>
+                {% endif %}
             </div>
         </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            {% if messages %}
+            <div class="container-fluid mb-3">
+                {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    <i class="fas fa-info-circle me-2"></i>
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% block content %}
+            {% endblock %}
+        </div>
     </div>
+</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
     <script>
@@ -520,4 +634,5 @@
     </script>
     {% block extra_js %}{% endblock %}
 </body>
+
 </html>

@@ -633,7 +633,7 @@ def delete_module(request, course_id, module_id):
     # Check permissions
     if request.user.role == 'instructor' and course.instructor != request.user:
         messages.error(request, "You can only delete your own course modules!")
-        return redirect('manage_courses')
+        return redirect('courses:manage_courses')  # ✅ Fixed
     elif request.user.role not in ['superadmin', 'instructor']:
         return redirect('user_login')
     
@@ -643,7 +643,7 @@ def delete_module(request, course_id, module_id):
         module.delete()
         
         messages.success(request, f'Module "{module_title}" and {lesson_count} associated lessons deleted successfully!')
-        return redirect('course_modules', course_id=course.id)
+        return redirect('courses:course_modules', course_id=course.id)  # ✅ Fixed
     
     context = {
         'course': course,
@@ -652,8 +652,6 @@ def delete_module(request, course_id, module_id):
     }
     
     return render(request, 'courses/delete_module.html', context)
-
-
 # ==================== COURSE LESSONS MANAGEMENT ====================
 
 
@@ -860,6 +858,196 @@ def module_lessons(request, course_id, module_id):
     }
     
     return render(request, 'courses/module_lessons.html', context)
+
+
+from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from courses.models import CourseModule, CourseLesson
+
+from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from courses.models import CourseModule, CourseLesson
+
+from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+from django.db import transaction, connection
+from courses.models import CourseModule, CourseLesson
+
+@login_required
+@require_POST
+def move_lesson_simple(request, course_id, module_id, lesson_id, direction):
+    """
+    Move lesson up or down - Final working version
+    """
+    try:
+        lesson = get_object_or_404(
+            CourseLesson,
+            id=lesson_id, 
+            module_id=module_id,
+            module__course_id=course_id
+        )
+        
+        with transaction.atomic():
+            # Get ALL lessons in this module
+            all_lessons = list(
+                CourseLesson.objects.filter(module_id=module_id)
+                .order_by('order')
+            )
+            
+            # Find current lesson's position
+            current_index = None
+            for idx, lsn in enumerate(all_lessons):
+                if lsn.id == lesson_id:
+                    current_index = idx
+                    break
+            
+            if current_index is None:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Lesson not found'
+                }, status=404)
+            
+            # Check movement validity
+            if direction == 'up':
+                if current_index == 0:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Lesson is already at the top'
+                    })
+                target_index = current_index - 1
+                
+            elif direction == 'down':
+                if current_index == len(all_lessons) - 1:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Lesson is already at the bottom'
+                    })
+                target_index = current_index + 1
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Invalid direction'
+                })
+            
+            # Swap lessons in the list
+            all_lessons[current_index], all_lessons[target_index] = \
+                all_lessons[target_index], all_lessons[current_index]
+            
+            # TRICK: Temporarily disable unique constraint by setting orders very high
+            # Step 1: Set all orders to 10000+ range (no conflicts)
+            for idx, lsn in enumerate(all_lessons):
+                CourseLesson.objects.filter(id=lsn.id).update(order=10000 + idx)
+            
+            # Step 2: Now set correct orders (no conflicts as old orders are gone)
+            for idx, lsn in enumerate(all_lessons, start=1):
+                CourseLesson.objects.filter(id=lsn.id).update(order=idx)
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Lesson reordered successfully'
+        })
+        
+    except CourseLesson.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Lesson not found'
+        }, status=404)
+        
+    except Exception as e:
+        import traceback
+        error_trace = traceback.format_exc()
+        print(f"Error in move_lesson: {error_trace}")
+        
+        return JsonResponse({
+            'success': False,
+            'message': f'Server error: {str(e)}'
+        }, status=500)
+    
+    
+@login_required
+@require_POST  
+def reorder_lesson_alt(request, course_id, module_id, lesson_id, direction):
+    """
+    Alternative reorder method - reassigns all order numbers
+    """
+    try:
+        lesson = get_object_or_404(
+            CourseLesson,  # ✅ Changed
+            id=lesson_id,
+            module_id=module_id
+        )
+        
+        with transaction.atomic():
+            # Get all lessons in order
+            all_lessons = list(
+                CourseLesson.objects.filter(module_id=module_id)  # ✅ Changed
+                .order_by('order')
+            )
+            
+            # Find current position
+            current_pos = None
+            for idx, lsn in enumerate(all_lessons):
+                if lsn.id == lesson_id:
+                    current_pos = idx
+                    break
+            
+            if current_pos is None:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Lesson not found'
+                }, status=404)
+            
+            # Calculate new position
+            if direction == 'up':
+                if current_pos == 0:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Already at top'
+                    })
+                new_pos = current_pos - 1
+            elif direction == 'down':
+                if current_pos == len(all_lessons) - 1:
+                    return JsonResponse({
+                        'success': False,
+                        'message': 'Already at bottom'
+                    })
+                new_pos = current_pos + 1
+            else:
+                return JsonResponse({
+                    'success': False,
+                    'message': 'Invalid direction'
+                })
+            
+            # Swap in list
+            all_lessons[current_pos], all_lessons[new_pos] = \
+                all_lessons[new_pos], all_lessons[current_pos]
+            
+            # Update all order numbers
+            for idx, lsn in enumerate(all_lessons, start=1):
+                lsn.order = idx
+                lsn.save(update_fields=['order'])
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Reordered successfully'
+        })
+        
+    except Exception as e:
+        import traceback
+        print(f"Error: {traceback.format_exc()}")
+        return JsonResponse({
+            'success': False,
+            'message': str(e)
+        }, status=500)
+    
 
 @login_required
 def edit_lesson(request, course_id, module_id, lesson_id):
@@ -1239,6 +1427,37 @@ def manage_enrollments(request):
     return render(request, 'courses/manage_enrollments.html', context)
 
 
+
+
+
+
+@login_required
+def enrollment_details(request, enrollment_id):
+    """View detailed enrollment information"""
+    if request.user.role not in ['superadmin', 'instructor']:
+        return redirect('user_login')
+    
+    try:
+        enrollment = Enrollment.objects.select_related(
+            'student', 'course', 'course__instructor'
+        ).get(id=enrollment_id)
+        
+        # Instructor can only view their own course enrollments
+        if request.user.role == 'instructor' and enrollment.course.instructor != request.user:
+            messages.error(request, '❌ You do not have permission to view this enrollment')
+            return redirect('courses:admin_manage_enrollments')
+        
+        context = {
+            'enrollment': enrollment,
+        }
+        
+        return render(request, 'courses/enrollment_details.html', context)
+        
+    except Enrollment.DoesNotExist:
+        messages.error(request, '❌ Enrollment not found')
+        return redirect('courses:admin_manage_enrollments')
+
+
 # ==================== API ENDPOINTS ====================
 
 @require_http_methods(["GET"])
@@ -1527,6 +1746,8 @@ def send_student_email(request):
             'message': f'Server error: {str(e)}'
         }, status=500)
     
+
+from userss.models import EmailLog,EmailTemplateType,EmailTemplate
 @login_required
 def manual_enrollment(request):
     """Manually enroll a student with email notification"""
@@ -1563,12 +1784,12 @@ def manual_enrollment(request):
                     'suspended': 'Cannot enroll students in suspended courses. Please unsuspend.',
                 }
                 messages.error(request, status_messages.get(course.status))
-                return redirect('courses:manual_enrollment')
+                return redirect('courses:admin_manual_enrollment')
             
             # Check existing enrollment
             if Enrollment.objects.filter(student=student, course=course, is_active=True).exists():
                 messages.error(request, f'Student "{student.get_full_name()}" is already enrolled in "{course.title}"')
-                return redirect('courses:manual_enrollment')
+                return redirect('courses:admin_manual_enrollment')
             
             # Create enrollment
             enrollment = Enrollment.objects.create(
@@ -1599,7 +1820,7 @@ def manual_enrollment(request):
                     messages.success(request, 'Instructor notification sent!')
             
             messages.success(request, f'Student "{student.get_full_name()}" enrolled in "{course.title}" successfully!')
-            return redirect('courses:manage_enrollments')
+            return redirect('courses:admin_manage_enrollments')
             
         except (Course.DoesNotExist, CustomUser.DoesNotExist):
             messages.error(request, 'Selected course or student not found.')
@@ -1612,6 +1833,8 @@ def manual_enrollment(request):
     }
     
     return render(request, 'courses/manual_enrollment.html', context)
+
+
 
 def send_enrollment_welcome_email(enrollment, notes=''):
     """Send welcome email to newly enrolled student"""
@@ -1992,6 +2215,7 @@ def update_enrollment_api(request, enrollment_id):
         }, status=500)
 
 @csrf_exempt
+@require_http_methods(["POST", "DELETE"])  # ✅ Dono allow hai already
 @login_required
 def delete_enrollment_api(request, enrollment_id):
     """Delete single enrollment via API"""
@@ -3102,17 +3326,26 @@ def instructor_view_all_batches(request):
 def instructor_create_batch(request, course_id):
     """Instructor: Create new batch for their course"""
     if request.user.role != 'instructor':
+        messages.error(request, "Access denied!")
         return redirect('user_login')
     
     course = get_object_or_404(Course, id=course_id)
     
     # Check permissions
     if course.instructor != request.user:
-        messages.error(request, "Access denied!")
-        return redirect('courses:manage_courses')  # FIXED
+        messages.error(request, "You don't have permission to create batches for this course!")
+        return redirect('courses:instructor_course_list')
     
     if request.method == 'POST':
         form = BatchForm(request.POST, course=course)
+        
+        # Debug: Print form errors
+        if not form.is_valid():
+            print("Form Errors:", form.errors)  # Console mein dekhega
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"{field}: {error}")
+        
         if form.is_valid():
             batch = form.save(commit=False)
             batch.course = course
@@ -3120,21 +3353,61 @@ def instructor_create_batch(request, course_id):
             batch.instructor = request.user
             batch.save()
             
+            # Handle content_type from form
+            content_type = request.POST.get('content_type', 'copy')
+            if content_type == 'copy':
+                # Copy course content to batch
+                copy_course_content_to_batch(course, batch)
+            
             messages.success(request, f'Batch "{batch.name}" created successfully!')
-            return redirect('courses:batch_list', course_id=course.id)  # FIXED
+            return redirect('courses:instructor_batch_list', course_id=course.id)
     else:
         form = BatchForm(course=course)
+    
+    # Get all instructor courses
+    courses = Course.objects.filter(instructor=request.user, is_active=True)
     
     context = {
         'form': form,
         'course': course,
-        'courses': Course.objects.filter(instructor=request.user, is_active=True),
+        'courses': courses,
         'page_title': f'Create Batch - {course.title}',
-        'submit_url': reverse('courses:create_batch', args=[course.id]),  # FIXED
     }
     
     return render(request, 'batch_management_instructor/batch_form.html', context)
 
+
+def copy_course_content_to_batch(course, batch):
+    """Copy all modules and lessons from course to batch"""
+    from courses.models import Module, Lesson
+    
+    # Get all modules from course
+    modules = Module.objects.filter(course=course).order_by('order')
+    
+    for module in modules:
+        # Create new module for batch
+        new_module = Module.objects.create(
+            course=course,
+            batch=batch,  # Assign to batch
+            title=module.title,
+            description=module.description,
+            order=module.order,
+            created_by=batch.instructor
+        )
+        
+        # Copy all lessons from this module
+        lessons = Lesson.objects.filter(module=module).order_by('order')
+        for lesson in lessons:
+            Lesson.objects.create(
+                module=new_module,
+                title=lesson.title,
+                content=lesson.content,
+                video_url=lesson.video_url,
+                duration_minutes=lesson.duration_minutes,
+                order=lesson.order,
+                is_preview=lesson.is_preview,
+                created_by=batch.instructor
+            )
 
 @login_required
 def instructor_batch_detail(request, course_id, batch_id):
@@ -3229,7 +3502,7 @@ def instructor_edit_batch(request, course_id, batch_id):
             else:
                 messages.success(request, f'Batch "{updated_batch.name}" updated successfully!')
             
-            return redirect('courses:batch_detail', course_id=course.id, batch_id=updated_batch.id)
+            return redirect('courses:instructor_batch_detail', course_id=course.id, batch_id=updated_batch.id)
         else:
             # DEBUG: Show form errors in messages
             for field, errors in form.errors.items():
@@ -3476,7 +3749,7 @@ def instructor_batch_enrollment_toggle(request, course_id, batch_id, enrollment_
     # Check permissions
     if course.instructor != request.user:
         messages.error(request, "Access denied!")
-        return redirect('instructor:manage_courses')
+        return redirect('courses:manage_courses')  # ✅ FIXED
     
     # Toggle active status
     enrollment.is_active = not enrollment.is_active
@@ -3485,9 +3758,9 @@ def instructor_batch_enrollment_toggle(request, course_id, batch_id, enrollment_
     status = "activated" if enrollment.is_active else "deactivated"
     messages.success(request, f"Student {enrollment.student.username} {status}!")
     
-    return redirect('instructor:batch_enrollments', course_id=course.id, batch_id=batch.id)
+    return redirect('courses:instructor_batch_enrollments', course_id=course.id, batch_id=batch.id)  # ✅ FIXED
 
-
+    
 @login_required
 def instructor_batch_overview(request):
     """Instructor: Overview of all their batches"""
@@ -3527,6 +3800,7 @@ def instructor_batch_overview(request):
     return render(request, 'batch_management_instructor/batch_overview.html', context)
 
 
+
 @login_required
 def instructor_delete_batch_module(request, course_id, batch_id, module_id):
     """Instructor: Delete batch module"""
@@ -3540,13 +3814,13 @@ def instructor_delete_batch_module(request, course_id, batch_id, module_id):
     # Check permissions
     if course.instructor != request.user:
         messages.error(request, "Access denied!")
-        return redirect('instructor:manage_courses')
+        return redirect('courses:manage_courses')  # ✅ FIXED
     
     if request.method == 'POST':
         module_title = module.title
         module.delete()
         messages.success(request, f'Module "{module_title}" deleted successfully!')
-        return redirect('instructor:batch_detail', course_id=course.id, batch_id=batch.id)
+        return redirect('courses:instructor_batch_detail', course_id=course.id, batch_id=batch.id)  # ✅ FIXED
     
     context = {
         'course': course,
@@ -3555,7 +3829,7 @@ def instructor_delete_batch_module(request, course_id, batch_id, module_id):
         'page_title': f'Delete Module: {module.title}',
     }
     
-    return render(request, 'instructor/confirm_delete.html', context)
+    return render(request, 'batch_management_instructor/confirm_delete.html', context)
 
 
 @login_required
@@ -3572,13 +3846,13 @@ def instructor_delete_batch_lesson(request, course_id, batch_id, module_id, less
     # Check permissions
     if course.instructor != request.user:
         messages.error(request, "Access denied!")
-        return redirect('instructor:manage_courses')
+        return redirect('courses:manage_courses')  # ✅ FIXED
     
     if request.method == 'POST':
         lesson_title = lesson.title
         lesson.delete()
         messages.success(request, f'Lesson "{lesson_title}" deleted successfully!')
-        return redirect('instructor:batch_detail', course_id=course.id, batch_id=batch.id)
+        return redirect('courses:instructor_batch_detail', course_id=course.id, batch_id=batch.id)  # ✅ FIXED
     
     context = {
         'course': course,
@@ -3588,54 +3862,60 @@ def instructor_delete_batch_lesson(request, course_id, batch_id, module_id, less
         'page_title': f'Delete Lesson: {lesson.title}',
     }
     
-    return render(request, 'instructor/confirm_delete.html', context)
+    return render(request, 'batch_management_instructor/confirm_delete.html', context)
 
+# courses/views.py - Device Management Views
 
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib import messages
+from django.http import JsonResponse
+from django.core.paginator import Paginator
+from django.db.models import Q
+from django.utils import timezone
+from datetime import timedelta
 
-from .models import (
-    Course, CourseCategory, CourseModule, CourseLesson,
-    Enrollment, CourseReview, CourseFAQ,
-    Batch, BatchModule, BatchLesson, BatchEnrollment,
-    StudentSubscription, DeviceSession, StudentLoginLog  # <-- YEH ADD KARO
-)
-# courses/views.py - ADD AT THE END
+from .models import StudentDeviceLimit, DeviceSession, StudentLoginLog
+from userss.models import AbstractUser
 
-# courses/views.py - ADD THESE AT THE VERY END
+# ==================== DEVICE MANAGEMENT ====================
 
-# ==================== SUBSCRIPTIONS ====================
+# courses/views.py
 
 @login_required
 def subscription_list(request):
-    """List all student subscriptions"""
+    """List all student device limits"""
     if request.user.role != 'superadmin':
-        messages.error(request, 'Only superadmin can access subscriptions.')
+        messages.error(request, 'Only superadmin can access device management.')
         return redirect('courses:course_dashboard')
     
-    subscriptions = StudentSubscription.objects.all().select_related('student', 'course').order_by('-subscribed_at')
+    # Get all device limits
+    device_limits = StudentDeviceLimit.objects.all().select_related('student').order_by('-created_at')
     
     # Filters
     search = request.GET.get('search', '')
     status_filter = request.GET.get('status', '')
     
     if search:
-        subscriptions = subscriptions.filter(
+        device_limits = device_limits.filter(
             Q(student__username__icontains=search) |
             Q(student__email__icontains=search) |
-            Q(course__title__icontains=search)
+            Q(student__first_name__icontains=search) |
+            Q(student__last_name__icontains=search)
         )
     
     if status_filter == 'active':
-        subscriptions = subscriptions.filter(is_active=True)
-    elif status_filter == 'expired':
-        subscriptions = subscriptions.filter(is_active=False)
+        device_limits = device_limits.filter(is_active=True)
+    elif status_filter == 'inactive':
+        device_limits = device_limits.filter(is_active=False)
     
     # Stats
-    total_subs = StudentSubscription.objects.count()
-    active_subs = StudentSubscription.objects.filter(is_active=True).count()
+    total_subs = StudentDeviceLimit.objects.count()
+    active_subs = StudentDeviceLimit.objects.filter(is_active=True).count()
     expired_subs = total_subs - active_subs
     
     # Pagination
-    paginator = Paginator(subscriptions, 20)
+    paginator = Paginator(device_limits, 20)
     page = request.GET.get('page')
     subscriptions = paginator.get_page(page)
     
@@ -3651,101 +3931,38 @@ def subscription_list(request):
 
 
 @login_required
-def remove_device_session(request, device_id):
-    """Remove a device session"""
-    
-    if request.user.role != 'superadmin':
-        return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
-    
-    try:
-        device = get_object_or_404(DeviceSession, id=device_id)
-        subscription = device.subscription
-        
-        device.delete()
-        
-        # Update device count
-        subscription.current_devices = subscription.devices.filter(is_active=True).count()
-        subscription.save()
-        
-        return JsonResponse({'success': True, 'message': 'Device removed successfully'})
-        
-    except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
-@login_required
-def create_subscription(request):
-    """Create new subscription via form"""
-    if request.user.role != 'superadmin':
-        messages.error(request, 'Access denied.')
-        return redirect('courses:course_dashboard')
-    
-    if request.method == 'POST':
-        try:
-            student_id = request.POST.get('student')
-            course_id = request.POST.get('course')
-            max_devices = int(request.POST.get('max_devices', 2))
-            expires_days = request.POST.get('expires_days', '')
-            
-            student = get_object_or_404(User, id=student_id, role='student')
-            course = get_object_or_404(Course, id=course_id)
-            
-            # Check if already exists
-            if StudentSubscription.objects.filter(student=student, course=course).exists():
-                messages.error(request, f'{student.username} already has subscription for {course.title}')
-                return redirect('courses:create_subscription')
-            
-            # Calculate expiry
-            expires_at = None
-            if expires_days:
-                from datetime import timedelta
-                expires_at = timezone.now() + timedelta(days=int(expires_days))
-            
-            # Create subscription
-            subscription = StudentSubscription.objects.create(
-                student=student,
-                course=course,
-                max_devices=max_devices,
-                current_devices=0,
-                expires_at=expires_at,
-                is_active=True
-            )
-            
-            messages.success(request, f'Subscription created for {student.username} - {course.title}')
-            return redirect('courses:subscription_list')
-            
-        except Exception as e:
-            messages.error(request, f'Error: {str(e)}')
-            return redirect('courses:create_subscription')
-    
-    # GET request - show form
-    students = User.objects.filter(role='student', is_active=True).order_by('first_name', 'last_name')
-    courses = Course.objects.filter(is_active=True, status='published').order_by('title')
-    
-    context = {
-        'students': students,
-        'courses': courses,
-    }
-    return render(request, 'courses/create_subscription.html', context)
-
-
-@login_required
 def subscription_details(request, student_id):
-    """Detailed subscription info for a student"""
+    """Detailed device info for a student"""
     if request.user.role != 'superadmin':
         messages.error(request, 'Access denied.')
         return redirect('courses:course_dashboard')
     
-    student = get_object_or_404(User, id=student_id, role='student')
-    subscriptions = student.course_subscriptions.all().select_related('course').order_by('-subscribed_at')
+    # Get student with error handling
+    try:
+        student = User.objects.get(id=student_id, role='student')
+    except User.DoesNotExist:
+        messages.error(request, f'Student with ID {student_id} not found or not a student.')
+        return redirect('courses:subscription_list')
+    
+    # Get or create device limit
+    device_limit, created = StudentDeviceLimit.objects.get_or_create(
+        student=student,
+        defaults={'max_devices': 2, 'is_active': True}
+    )
+    
+    if created:
+        messages.info(request, f'Device limit created for {student.username} with default settings.')
+    
+    subscriptions = [device_limit]
     
     # Get device sessions
     devices = DeviceSession.objects.filter(
-        subscription__student=student
-    ).select_related('subscription__course').order_by('-last_login')
+        student_limit=device_limit
+    ).order_by('-last_login')
     
     # Stats
-    total_subs = subscriptions.count()
-    active_subs = subscriptions.filter(is_active=True).count()
+    total_subs = 1
+    active_subs = 1 if device_limit.is_active else 0
     total_devices = devices.filter(is_active=True).count()
     
     context = {
@@ -3758,61 +3975,103 @@ def subscription_details(request, student_id):
     }
     return render(request, 'courses/subscription_details.html', context)
 
-
 @login_required
-def edit_subscription(request, subscription_id):
-    """Edit existing subscription"""
+def create_subscription(request):
+    """Create new device limit for student"""
     if request.user.role != 'superadmin':
         messages.error(request, 'Access denied.')
         return redirect('courses:course_dashboard')
     
-    subscription = get_object_or_404(StudentSubscription, id=subscription_id)
+    if request.method == 'POST':
+        try:
+            student_id = request.POST.get('student')
+            max_devices = int(request.POST.get('max_devices', 2))
+            expires_days = request.POST.get('expires_days', '')
+            
+            student = get_object_or_404(User, id=student_id, role='student')
+            
+            # Check if already exists
+            if StudentDeviceLimit.objects.filter(student=student).exists():
+                messages.error(request, f'{student.username} already has a device limit configured.')
+                return redirect('courses:create_subscription')
+            
+            # Calculate expiry (optional feature for future)
+            expires_at = None
+            if expires_days:
+                expires_at = timezone.now() + timedelta(days=int(expires_days))
+            
+            # Create device limit
+            device_limit = StudentDeviceLimit.objects.create(
+                student=student,
+                max_devices=max_devices,
+                is_active=True
+            )
+            
+            messages.success(request, f'Device limit created for {student.username} - Max devices: {max_devices}')
+            return redirect('courses:subscription_list')
+            
+        except Exception as e:
+            messages.error(request, f'Error: {str(e)}')
+            return redirect('courses:create_subscription')
+    
+    # GET request - show form
+    students = User.objects.filter(role='student', is_active=True).order_by('first_name', 'last_name')
+    
+    context = {
+        'students': students,
+    }
+    return render(request, 'courses/create_subscription.html', context)
+
+
+# courses/views.py - UPDATE subscription_details
+
+
+@login_required
+def edit_subscription(request, subscription_id):
+    """Edit existing device limit"""
+    if request.user.role != 'superadmin':
+        messages.error(request, 'Access denied.')
+        return redirect('courses:course_dashboard')
+    
+    device_limit = get_object_or_404(StudentDeviceLimit, id=subscription_id)
     
     if request.method == 'POST':
         try:
-            subscription.max_devices = int(request.POST.get('max_devices', 2))
-            subscription.is_active = request.POST.get('is_active') == 'on'
+            device_limit.max_devices = int(request.POST.get('max_devices', 2))
+            device_limit.is_active = request.POST.get('is_active') == 'on'
             
-            expires_days = request.POST.get('expires_days', '')
-            if expires_days:
-                from datetime import timedelta
-                subscription.expires_at = timezone.now() + timedelta(days=int(expires_days))
-            elif request.POST.get('remove_expiry'):
-                subscription.expires_at = None
+            device_limit.save()
             
-            subscription.save()
-            
-            messages.success(request, 'Subscription updated successfully!')
-            return redirect('courses:subscription_details', student_id=subscription.student.id)
+            messages.success(request, 'Device limit updated successfully!')
+            return redirect('courses:subscription_details', student_id=device_limit.student.id)
             
         except Exception as e:
             messages.error(request, f'Error: {str(e)}')
     
     context = {
-        'subscription': subscription,
+        'subscription': device_limit,
     }
     return render(request, 'courses/edit_subscription.html', context)
 
 
 @login_required
 def delete_subscription(request, subscription_id):
-    """Delete subscription"""
+    """Delete device limit"""
     if request.user.role != 'superadmin':
         messages.error(request, 'Access denied.')
         return redirect('courses:course_dashboard')
     
-    subscription = get_object_or_404(StudentSubscription, id=subscription_id)
+    device_limit = get_object_or_404(StudentDeviceLimit, id=subscription_id)
     
     if request.method == 'POST':
-        student_name = subscription.student.username
-        course_name = subscription.course.title
-        subscription.delete()
+        student_name = device_limit.student.username
+        device_limit.delete()
         
-        messages.success(request, f'Subscription deleted: {student_name} - {course_name}')
+        messages.success(request, f'Device limit deleted for: {student_name}')
         return redirect('courses:subscription_list')
     
     context = {
-        'subscription': subscription,
+        'subscription': device_limit,
     }
     return render(request, 'courses/delete_subscription.html', context)
 
@@ -3824,19 +4083,18 @@ def device_restrictions(request):
         messages.error(request, 'Access denied.')
         return redirect('courses:course_dashboard')
     
-    subscriptions = StudentSubscription.objects.all().select_related('student', 'course').order_by('-subscribed_at')
+    device_limits = StudentDeviceLimit.objects.all().select_related('student').order_by('-created_at')
     
     # Search
     search = request.GET.get('search', '')
     if search:
-        subscriptions = subscriptions.filter(
+        device_limits = device_limits.filter(
             Q(student__username__icontains=search) |
-            Q(student__email__icontains=search) |
-            Q(course__title__icontains=search)
+            Q(student__email__icontains=search)
         )
     
     context = {
-        'subscriptions': subscriptions,
+        'subscriptions': device_limits,
         'search': search,
     }
     return render(request, 'courses/device_restrictions.html', context)
@@ -3844,17 +4102,17 @@ def device_restrictions(request):
 
 @login_required
 def update_device_restriction(request, subscription_id):
-    """Update device restriction for subscription"""
+    """Update device restriction"""
     if request.user.role != 'superadmin':
         return JsonResponse({'success': False, 'error': 'Access denied'})
     
     if request.method == 'POST':
         try:
-            subscription = get_object_or_404(StudentSubscription, id=subscription_id)
+            device_limit = get_object_or_404(StudentDeviceLimit, id=subscription_id)
             max_devices = int(request.POST.get('max_devices', 2))
             
-            subscription.max_devices = max_devices
-            subscription.save()
+            device_limit.max_devices = max_devices
+            device_limit.save()
             
             messages.success(request, f'Device limit updated to {max_devices}')
             return redirect('courses:device_restrictions')
@@ -3866,6 +4124,31 @@ def update_device_restriction(request, subscription_id):
     return redirect('courses:device_restrictions')
 
 
+@login_required
+def remove_device_session(request, device_id):
+    """Remove a device session (AJAX)"""
+    
+    if request.user.role != 'superadmin':
+        return JsonResponse({'success': False, 'error': 'Access denied'}, status=403)
+    
+    if request.method == 'POST':
+        try:
+            device = get_object_or_404(DeviceSession, id=device_id)
+            device_name = device.device_name
+            student_name = device.student_limit.student.username
+            
+            # Delete device
+            device.delete()
+            
+            return JsonResponse({
+                'success': True, 
+                'message': f'Device "{device_name}" removed for {student_name}'
+            })
+            
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'}, status=400)
 # ==================== COURSE REVIEWS ====================
 
 @login_required
@@ -4239,7 +4522,6 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.urls import reverse
 from .models import Course, CourseReview, Enrollment
-
 @login_required
 def submit_course_review(request, course_id):
     """Submit a review for a course"""
@@ -4287,7 +4569,7 @@ def submit_course_review(request, course_id):
         # Create or update review
         if existing_review:
             existing_review.rating = rating
-            existing_review.review = review_text
+            existing_review.review_text = review_text  # ✅ YEH CORRECT FIELD NAME HAI
             existing_review.save()
             messages.success(request, "Your review has been updated successfully!")
         else:
@@ -4295,21 +4577,11 @@ def submit_course_review(request, course_id):
                 student=request.user,
                 course=course,
                 rating=rating,
-                review=review_text
+                review_text=review_text  # ✅ YEH CORRECT FIELD NAME HAI
             )
             messages.success(request, "Thank you for your review!")
         
-        # Redirect to student courses page - FIXED NAMESPACE
-        # Check which URL pattern exists in your project
-        try:
-            # Try common patterns
-            return redirect('student_courses')  # Without namespace
-        except:
-            try:
-                return redirect('userss:student_courses')  # With userss namespace
-            except:
-                # Fallback to course detail
-                return redirect('courses:course_detail', course_id=course_id)
+        return redirect('student_courses')
     
     # GET request - show review form
     context = {
@@ -4319,6 +4591,7 @@ def submit_course_review(request, course_id):
     }
     
     return render(request, 'courses/submit_review.html', context)
+
 
 def update_course_rating(course):
     """Update course average rating and total reviews"""
@@ -4536,6 +4809,11 @@ from django.db.models import Q
 from .models import Course, BatchEnrollment, LessonProgress, BatchModule, BatchLesson
 
 
+# views.py - course_detail_continue_learning_student view UPDATE karo:
+
+# views.py - course_detail_continue_learning_student UPDATE KARO:
+# views.py - course_detail_continue_learning_student FULL CODE
+
 @login_required
 def course_detail_continue_learning_student(request, course_id):
     """View course details"""
@@ -4570,6 +4848,18 @@ def course_detail_continue_learning_student(request, course_id):
     # Get FAQs
     faqs = course.faqs.filter(is_active=True)
     
+    # ✅✅✅ DISCOUNT CALCULATION - EXACT SAME AS BROWSE COURSES ✅✅✅
+    # Add dynamic discount method to course object (same as browse_courses view)
+    def get_discount_percentage():
+        """Calculate discount percentage dynamically"""
+        if hasattr(course, 'discounted_price') and course.discounted_price:
+            if course.price > 0 and course.discounted_price < course.price:
+                return round(((course.price - course.discounted_price) / course.price) * 100)
+        return 0
+    
+    # Attach method to course object
+    course.get_discount_percentage = get_discount_percentage
+    
     context = {
         'course': course,
         'modules': modules,
@@ -4579,7 +4869,6 @@ def course_detail_continue_learning_student(request, course_id):
     }
     
     return render(request, 'courses/course_detail_continue_learning_student.html', context)
-
 
 # courses/views.py - ADD THIS NEW VIEW
 
@@ -4661,16 +4950,49 @@ def continue_learning(request, course_id):
 # courses/views.py - UPDATED VIEW
 
 # courses/views.py - CROSS MODULE NAVIGATION
+import re
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .models import Course, CourseModule, CourseLesson, LessonProgress
+
+
+def extract_youtube_id(url):
+    """Extract YouTube video ID from various URL formats"""
+    if not url:
+        return None
+    
+    # Patterns for different YouTube URL formats
+    patterns = [
+        r'(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})',
+        r'(?:https?:\/\/)?(?:www\.)?youtu\.be\/([a-zA-Z0-9_-]{11})',
+        r'(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]{11})',
+        r'(?:https?:\/\/)?(?:www\.)?youtube\.com\/v\/([a-zA-Z0-9_-]{11})',
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            return f"https://www.youtube.com/embed/{match.group(1)}"
+    
+    return None
+
 
 @login_required
 def student_lesson_view(request, course_id, module_id, lesson_id):
     """Student lesson viewer - CROSS MODULE NAVIGATION"""
     
+    # Get course and lesson
     course = get_object_or_404(Course, id=course_id)
     
     # ✅ Don't check module_id strict - lesson might be in different module
     lesson = get_object_or_404(CourseLesson, id=lesson_id)
     module = lesson.module  # Get actual module from lesson
+    
+    # Check if student is enrolled
+    # if not course.enrollments.filter(student=request.user, status='active').exists():
+    #     messages.error(request, "You are not enrolled in this course!")
+    #     return redirect('courses:course_catalog')
     
     # Get or create lesson progress
     lesson_progress, created = LessonProgress.objects.get_or_create(
@@ -4687,6 +5009,13 @@ def student_lesson_view(request, course_id, module_id, lesson_id):
     attachments = []
     if hasattr(lesson, 'attachments'):
         attachments = lesson.attachments.all()
+    
+    # ✅ Extract YouTube video ID
+    youtube_embed_url = None
+    if lesson.youtube_url:
+        youtube_embed_url = extract_youtube_id(lesson.youtube_url)
+        print(f"📺 YouTube URL: {lesson.youtube_url}")
+        print(f"📺 Embed URL: {youtube_embed_url}")
     
     # ✅ GET ALL LESSONS FROM ALL MODULES (cross-module navigation)
     all_course_lessons = []
@@ -4725,6 +5054,18 @@ def student_lesson_view(request, course_id, module_id, lesson_id):
     
     print(f"=== END DEBUG ===\n")
     
+    # Calculate course progress
+    total_lessons = len(all_course_lessons)
+    completed_lessons = LessonProgress.objects.filter(
+        student=request.user,
+        course_lesson__module__course=course,
+        status='completed'
+    ).count()
+    
+    course_progress_percentage = 0
+    if total_lessons > 0:
+        course_progress_percentage = (completed_lessons / total_lessons) * 100
+    
     context = {
         'course': course,
         'module': module,
@@ -4734,6 +5075,10 @@ def student_lesson_view(request, course_id, module_id, lesson_id):
         'prev_lesson': prev_lesson,
         'next_lesson': next_lesson,
         'all_modules': all_modules,
+        'youtube_embed_url': youtube_embed_url,  # ✅ YouTube embed URL
+        'total_lessons': total_lessons,
+        'completed_lessons': completed_lessons,
+        'course_progress_percentage': course_progress_percentage,
     }
     
     return render(request, 'courses/lesson_viewer.html', context)
@@ -4741,27 +5086,382 @@ def student_lesson_view(request, course_id, module_id, lesson_id):
 
 @login_required
 def mark_lesson_complete(request, course_id, module_id, lesson_id):
-    """Mark course lesson as completed"""
+    """Mark lesson as complete"""
     
     if request.method != 'POST':
-        return JsonResponse({'success': False, 'error': 'Invalid method'})
-    
-    lesson = get_object_or_404(CourseLesson, id=lesson_id)
+        return JsonResponse({'success': False, 'error': 'Invalid request method'})
     
     try:
-        progress = LessonProgress.objects.get(
-            student=request.user,
-            course_lesson=lesson  # ✅ course_lesson field
-        )
-        progress.mark_as_completed()
+        lesson = get_object_or_404(CourseLesson, id=lesson_id)
         
-        return JsonResponse({
-            'success': True,
-            'message': 'Lesson marked as complete!'
-        })
-    
-    except LessonProgress.DoesNotExist:
+        # Get or create lesson progress
+        lesson_progress, created = LessonProgress.objects.get_or_create(
+            student=request.user,
+            course_lesson=lesson,
+            defaults={'status': 'completed', 'completion_percentage': 100}
+        )
+        
+        if lesson_progress.status != 'completed':
+            lesson_progress.status = 'completed'
+            lesson_progress.completion_percentage = 100
+            lesson_progress.completed_at = timezone.now()
+            lesson_progress.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Lesson marked as complete!',
+                'completion_percentage': 100
+            })
+        else:
+            return JsonResponse({
+                'success': True,
+                'message': 'Lesson already completed',
+                'completion_percentage': 100
+            })
+            
+    except Exception as e:
+        print(f"Error marking lesson complete: {str(e)}")
         return JsonResponse({
             'success': False,
-            'error': 'Progress record not found'
+            'error': str(e)
         })
+    
+
+
+# Student Batch Learning - COMPLETE VIEWS
+
+@login_required
+def batch_continue_learning(request, batch_id):
+    """Batch se continue learning - last lesson se"""
+    
+    batch = get_object_or_404(Batch, id=batch_id)
+    
+    # Check enrollment
+    enrollment = get_object_or_404(
+        BatchEnrollment,
+        student=request.user,
+        batch=batch,
+        is_active=True
+    )
+    
+    print(f"\n=== CONTINUE LEARNING DEBUG ===")
+    print(f"Student: {request.user.username}")
+    print(f"Batch: {batch.name}")
+    print(f"Enrollment is_locked: {enrollment.is_locked}")
+    print(f"Lock reason: {enrollment.get_lock_reason()}")
+    
+    # ✅ Check if batch is locked
+    if enrollment.is_locked:
+        lock_reason = enrollment.get_lock_reason()
+        
+        if lock_reason == 'payment':
+            messages.error(request, "⚠️ Batch access locked due to pending payment!")
+            return redirect('student_fee_details')
+        elif lock_reason == 'admin':
+            messages.error(request, "⚠️ Batch access restricted by admin!")
+            return redirect('courses:student_batches')
+        else:
+            messages.error(request, "⚠️ Batch access is currently locked!")
+            return redirect('courses:student_batches')
+    
+    # Get last accessed lesson
+    last_progress = LessonProgress.objects.filter(
+        student=request.user,
+        batch_lesson__batch_module__batch=batch
+    ).order_by('-last_accessed').first()
+    
+    print(f"Last progress found: {last_progress}")
+    
+    if last_progress and last_progress.batch_lesson:
+        lesson = last_progress.batch_lesson
+        module = lesson.batch_module
+        
+        print(f"Redirecting to lesson: {lesson.title}")
+        
+        return redirect(
+            'courses:student_batch_lesson_view',
+            batch_id=batch.id,
+            module_id=module.id,
+            lesson_id=lesson.id
+        )
+    
+    # No progress? Start from first lesson
+    first_module = batch.batch_modules.filter(is_active=True).order_by('order').first()
+    
+    print(f"First module: {first_module}")
+    
+    if not first_module:
+        messages.warning(request, "No modules available yet!")
+        return redirect('courses:student_batches')
+    
+    first_lesson = first_module.lessons.filter(is_active=True).order_by('order').first()
+    
+    print(f"First lesson: {first_lesson}")
+    
+    if not first_lesson:
+        messages.warning(request, "No lessons available yet!")
+        return redirect('courses:student_batches')
+    
+    return redirect(
+        'courses:student_batch_lesson_view',
+        batch_id=batch.id,
+        module_id=first_module.id,
+        lesson_id=first_lesson.id
+    )
+
+
+@login_required
+def student_batch_lesson_view(request, batch_id, module_id, lesson_id):
+    """Batch lesson viewer - CROSS MODULE NAVIGATION"""
+    
+    batch = get_object_or_404(Batch, id=batch_id)
+    lesson = get_object_or_404(BatchLesson, id=lesson_id)
+    module = lesson.batch_module
+    
+    # Check enrollment
+    enrollment = get_object_or_404(
+        BatchEnrollment,
+        student=request.user,
+        batch=batch,
+        is_active=True
+    )
+    
+    print(f"\n=== LESSON VIEW DEBUG ===")
+    print(f"Student: {request.user.username}")
+    print(f"Batch: {batch.name}")
+    print(f"Lesson: {lesson.title}")
+    print(f"Enrollment is_locked: {enrollment.is_locked}")
+    
+    # ✅ Check if batch is locked
+    if enrollment.is_locked:
+        lock_reason = enrollment.get_lock_reason()
+        
+        if lock_reason == 'payment':
+            messages.error(request, "⚠️ Batch access locked! Please complete payment.")
+            return redirect('student_fee_details')
+        elif lock_reason == 'admin':
+            messages.error(request, "⚠️ Access restricted by admin!")
+            return redirect('courses:student_batches')
+        else:
+            messages.error(request, "⚠️ Batch access is locked!")
+            return redirect('courses:student_batches')
+    
+    # Get or create lesson progress
+    lesson_progress, created = LessonProgress.objects.get_or_create(
+        student=request.user,
+        batch_lesson=lesson,
+        defaults={'status': 'in_progress'}
+    )
+    
+    if lesson_progress.status == 'not_started':
+        lesson_progress.status = 'in_progress'
+        lesson_progress.save()
+    
+    # ✅ Extract YouTube ID
+    youtube_embed_url = None
+    if lesson.youtube_url:
+        youtube_embed_url = extract_youtube_id(lesson.youtube_url)
+        print(f"📺 YouTube URL: {lesson.youtube_url}")
+        print(f"📺 Embed URL: {youtube_embed_url}")
+    
+    # ✅ Get ALL lessons across ALL modules (cross-module navigation)
+    all_batch_lessons = []
+    all_modules = batch.batch_modules.filter(is_active=True).order_by('order')
+    
+    for mod in all_modules:
+        for les in mod.lessons.filter(is_active=True).order_by('order'):
+            all_batch_lessons.append(les)
+    
+    print(f"Total lessons in batch: {len(all_batch_lessons)}")
+    
+    # Find current lesson index
+    current_index = None
+    for idx, l in enumerate(all_batch_lessons):
+        if l.id == lesson.id:
+            current_index = idx
+            break
+    
+    print(f"Current lesson index: {current_index}")
+    
+    prev_lesson = None
+    next_lesson = None
+    
+    if current_index is not None:
+        if current_index > 0:
+            prev_lesson = all_batch_lessons[current_index - 1]
+            print(f"✅ Prev lesson: {prev_lesson.title}")
+        
+        if current_index < len(all_batch_lessons) - 1:
+            next_lesson = all_batch_lessons[current_index + 1]
+            print(f"✅ Next lesson: {next_lesson.title}")
+    
+    # Calculate batch progress
+    total_lessons = len(all_batch_lessons)
+    completed_lessons = LessonProgress.objects.filter(
+        student=request.user,
+        batch_lesson__batch_module__batch=batch,
+        status='completed'
+    ).count()
+    
+    batch_progress_percentage = 0
+    if total_lessons > 0:
+        batch_progress_percentage = (completed_lessons / total_lessons) * 100
+    
+    print(f"Progress: {completed_lessons}/{total_lessons} = {batch_progress_percentage}%")
+    
+    context = {
+        'batch': batch,
+        'module': module,
+        'lesson': lesson,
+        'enrollment': enrollment,
+        'lesson_progress': lesson_progress,
+        'prev_lesson': prev_lesson,
+        'next_lesson': next_lesson,
+        'all_modules': all_modules,
+        'youtube_embed_url': youtube_embed_url,
+        'total_lessons': total_lessons,
+        'completed_lessons': completed_lessons,
+        'batch_progress_percentage': batch_progress_percentage,
+    }
+    
+    return render(request, 'students/batch_lesson_viewer.html', context)
+
+
+@login_required
+def mark_batch_lesson_complete(request, batch_id, module_id, lesson_id):
+    """Mark batch lesson as complete - AJAX"""
+    
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Invalid request method'})
+    
+    try:
+        lesson = get_object_or_404(BatchLesson, id=lesson_id)
+        
+        print(f"\n=== MARK COMPLETE DEBUG ===")
+        print(f"Student: {request.user.username}")
+        print(f"Lesson: {lesson.title}")
+        
+        # Get or create lesson progress
+        lesson_progress, created = LessonProgress.objects.get_or_create(
+            student=request.user,
+            batch_lesson=lesson,
+            defaults={'status': 'completed', 'completion_percentage': 100}
+        )
+        
+        if lesson_progress.status != 'completed':
+            lesson_progress.status = 'completed'
+            lesson_progress.completion_percentage = 100
+            lesson_progress.completed_at = timezone.now()
+            lesson_progress.save()
+            
+            print(f"✅ Lesson marked complete!")
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Lesson marked as complete!',
+                'completion_percentage': 100
+            })
+        else:
+            print(f"✅ Lesson already completed")
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Lesson already completed',
+                'completion_percentage': 100
+            })
+            
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        })
+    
+import re
+
+def extract_youtube_id(url):
+    """Extract YouTube video ID and return proper embed URL"""
+    if not url:
+        return None
+    
+    # Remove whitespace
+    url = url.strip()
+    
+    # Patterns for different YouTube URL formats
+    patterns = [
+        r'(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})',
+        r'(?:https?:\/\/)?(?:www\.)?youtu\.be\/([a-zA-Z0-9_-]{11})',
+        r'(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]{11})',
+        r'(?:https?:\/\/)?(?:www\.)?youtube\.com\/v\/([a-zA-Z0-9_-]{11})',
+        r'(?:https?:\/\/)?(?:www\.)?youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})',
+    ]
+    
+    video_id = None
+    for pattern in patterns:
+        match = re.search(pattern, url)
+        if match:
+            video_id = match.group(1)
+            break
+    
+    if video_id:
+        # Return proper embed URL with autoplay disabled
+        return f"https://www.youtube.com/embed/{video_id}?rel=0&modestbranding=1"
+    
+    # If already an embed URL, return as is
+    if 'youtube.com/embed/' in url:
+        return url
+    
+    return None
+
+    
+
+@login_required
+def assign_batch_to_student(request, user_id):
+    """Assign batch to a specific student from user details page"""
+    if request.user.role != 'superadmin':
+        return redirect('user_login')
+    
+    student = get_object_or_404(CustomUser, id=user_id, role='student')
+    
+    if request.method == 'POST':
+        batch_id = request.POST.get('batch_id')
+        batch = get_object_or_404(Batch, id=batch_id)
+        
+        # Check if already enrolled
+        existing_enrollment = BatchEnrollment.objects.filter(
+            student=student,
+            batch=batch
+        ).first()
+        
+        if existing_enrollment:
+            messages.warning(request, f'{student.get_full_name()} is already enrolled in {batch.name}')
+        else:
+            # Create enrollment
+            BatchEnrollment.objects.create(
+                student=student,
+                batch=batch,
+                
+                status='active'
+            )
+            messages.success(request, f'Successfully enrolled {student.get_full_name()} in {batch.name}')
+        
+        return redirect('user_details', user_id=user_id)
+    
+    # GET request - show available batches
+    # Get batches the student is NOT enrolled in
+    enrolled_batch_ids = BatchEnrollment.objects.filter(
+        student=student
+    ).values_list('batch_id', flat=True)
+    
+    available_batches = Batch.objects.exclude(
+        id__in=enrolled_batch_ids
+    ).filter(
+        status='active'
+    ).select_related('course', 'instructor')
+    
+    context = {
+        'student': student,
+        'available_batches': available_batches,
+    }
+    
+    return render(request, 'assign_batch_to_student.html', context)

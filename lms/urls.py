@@ -15,6 +15,7 @@ urlpatterns = [
     path('fees/', include('fees.urls')),
     path('zoom/', include('zoom.urls')),
     path('attendance/', include('attendance.urls')),
+    path('certificates/',include('certificates.urls')),
     path('ckeditor/', include('ckeditor_uploader.urls')),
 ]
 

@@ -280,7 +280,7 @@ class CourseLesson(models.Model):
     title = models.CharField(max_length=200)
     description = models.TextField()
     lesson_type = models.CharField(max_length=20, choices=LESSON_TYPE_CHOICES, default='text')
-    order = models.PositiveIntegerField(default=1)
+    order = models.IntegerField(default=1)
     
     # Duration
     duration_minutes = models.PositiveIntegerField(default=0, help_text="Lesson duration in minutes")
@@ -913,90 +913,80 @@ class BatchEnrollment(models.Model):
 
 # courses/models.py - ADD AT THE END (after BatchEnrollment)
 
-class StudentSubscription(models.Model):
-    """Track student subscriptions and device access"""
+# courses/models.py
+
+# courses/models.py
+
+from django.db import models
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+
+User = get_user_model()
+
+class StudentDeviceLimit(models.Model):
+    """Global device limit per student"""
     
-    student = models.ForeignKey(
-        User, on_delete=models.CASCADE,
+    student = models.OneToOneField(
+        User, 
+        on_delete=models.CASCADE,
         limit_choices_to={'role': 'student'},
-        related_name='course_subscriptions'
+        related_name='device_limit'
     )
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='subscriptions')
     
-    # Device tracking
-    max_devices = models.PositiveIntegerField(default=2, help_text="Maximum allowed devices")
-    current_devices = models.PositiveIntegerField(default=0)
-    
-    # Subscription dates
-    subscribed_at = models.DateTimeField(auto_now_add=True)
-    expires_at = models.DateTimeField(null=True, blank=True)
+    max_devices = models.PositiveIntegerField(default=2)
     is_active = models.BooleanField(default=True)
-    
-    class Meta:
-        unique_together = ['student', 'course']
-        ordering = ['-subscribed_at']
+    created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):
-        return f"{self.student.username} - {self.course.title}"
+        return f"{self.student.username} - Max: {self.max_devices}"
     
-    def is_valid(self):
-        """Check if subscription is valid"""
-        if not self.is_active:
-            return False
-        if self.expires_at and timezone.now() > self.expires_at:
-            return False
-        return True
+    def current_device_count(self):
+        return self.devices.filter(is_active=True).count()
     
     def can_add_device(self):
-        """Check if can add more devices"""
-        return self.current_devices < self.max_devices
+        return self.current_device_count() < self.max_devices
 
 
 class DeviceSession(models.Model):
-    """Track student device sessions"""
+    """Track devices using fingerprint"""
     
-    subscription = models.ForeignKey(StudentSubscription, on_delete=models.CASCADE, related_name='devices')
-    device_id = models.CharField(max_length=200, help_text="Unique device identifier")
+    student_limit = models.ForeignKey(
+        StudentDeviceLimit, 
+        on_delete=models.CASCADE, 
+        related_name='devices'
+    )
+    
+    device_id = models.CharField(max_length=200,  help_text="SHA256 fingerprint")
     device_name = models.CharField(max_length=200, blank=True)
+    device_info = models.JSONField(default=dict, blank=True)
     
     first_login = models.DateTimeField(auto_now_add=True)
     last_login = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
     
-    class Meta:
-        unique_together = ['subscription', 'device_id']
-        ordering = ['-last_login']
-    
     def __str__(self):
-        return f"{self.subscription.student.username} - {self.device_name or self.device_id}"
+        return f"{self.student_limit.student.username} - {self.device_name}"
 
 
 class StudentLoginLog(models.Model):
-    """Track student login/logout for attendance"""
+    """Attendance tracking"""
     
-    student = models.ForeignKey(
-        User, on_delete=models.CASCADE,
-        limit_choices_to={'role': 'student'},
-        related_name='login_logs'
-    )
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, null=True, blank=True)
+    student = models.ForeignKey(User, on_delete=models.CASCADE, related_name='login_logs')
+    device_session = models.ForeignKey(DeviceSession, on_delete=models.SET_NULL, null=True, blank=True)
     
     login_time = models.DateTimeField(auto_now_add=True)
     logout_time = models.DateTimeField(null=True, blank=True)
-    session_duration = models.PositiveIntegerField(default=0, help_text="Duration in minutes")
+    session_duration = models.PositiveIntegerField(default=0)
     
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     device_info = models.TextField(blank=True)
     
-    class Meta:
-        ordering = ['-login_time']
-    
-    def __str__(self):
-        return f"{self.student.username} - {self.login_time}"
-    
     def calculate_duration(self):
-        """Calculate session duration"""
         if self.logout_time:
             delta = self.logout_time - self.login_time
             self.session_duration = int(delta.total_seconds() / 60)
             self.save()
+
+
+
+

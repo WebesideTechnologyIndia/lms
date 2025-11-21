@@ -1,0 +1,315 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Pending Grading{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-1">📋 Pending Grading</h2>
+            <p class="text-muted mb-0">Review and grade student submissions</p>
+        </div>
+        <div>
+            <span class="badge bg-warning text-dark fs-5">
+                <i class="fas fa-clock"></i> {{ total_pending }} Pending
+            </span>
+        </div>
+    </div>
+
+    <!-- Statistics Cards -->
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-left-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Q&A Exams</h6>
+                            <h3 class="mb-0 text-warning">{{ qa_attempts.count }}</h3>
+                        </div>
+                        <div class="text-warning">
+                            <i class="fas fa-pen fa-3x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card shadow-sm border-left-info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Assignment Submissions</h6>
+                            <h3 class="mb-0 text-info">{{ assignment_attempts.count }}</h3>
+                        </div>
+                        <div class="text-info">
+                            <i class="fas fa-file-upload fa-3x"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4" id="gradingTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" 
+                    id="qa-tab" 
+                    data-bs-toggle="tab" 
+                    data-bs-target="#qa-content" 
+                    type="button" 
+                    role="tab">
+                <i class="fas fa-pen"></i> Q&A Exams 
+                <span class="badge bg-warning text-dark ms-2">{{ qa_attempts.count }}</span>
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" 
+                    id="assignment-tab" 
+                    data-bs-toggle="tab" 
+                    data-bs-target="#assignment-content" 
+                    type="button" 
+                    role="tab">
+                <i class="fas fa-file-upload"></i> Assignments 
+                <span class="badge bg-info ms-2">{{ assignment_attempts.count }}</span>
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content" id="gradingTabsContent">
+        
+        <!-- Q&A Tab -->
+        <div class="tab-pane fade show active" id="qa-content" role="tabpanel">
+            {% if qa_attempts %}
+                <div class="row">
+                    {% for attempt in qa_attempts %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card shadow-sm h-100 hover-shadow">
+                            <div class="card-header bg-warning bg-opacity-10">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-pen text-warning"></i> 
+                                        {{ attempt.exam.title }}
+                                    </h6>
+                                    <span class="badge bg-warning text-dark">Q&A</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <!-- Student Info -->
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="avatar-circle bg-primary text-white me-3">
+                                        {{ attempt.student.first_name|first }}{{ attempt.student.last_name|first }}
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">{{ attempt.student.get_full_name }}</h6>
+                                        <small class="text-muted">{{ attempt.student.email }}</small>
+                                    </div>
+                                </div>
+
+                                <!-- Attempt Details -->
+                                <div class="mb-3">
+                                    <div class="row text-center">
+                                        <div class="col-6">
+                                            <small class="text-muted d-block">Total Marks</small>
+                                            <strong>{{ attempt.exam.total_marks }}</strong>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted d-block">Questions</small>
+                                            <strong>{{ attempt.exam.get_total_questions }}</strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Submission Time -->
+                                <div class="mb-3">
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock"></i> Submitted: 
+                                        {{ attempt.submitted_at|date:"d M Y, h:i A" }}
+                                    </small>
+                                    <br>
+                                    <small class="text-muted">
+                                        <i class="fas fa-hourglass"></i> Time Spent: 
+                                        {{ attempt.time_spent_minutes }} minutes
+                                    </small>
+                                </div>
+
+                                <!-- Status -->
+                                <div class="alert alert-warning mb-3">
+                                    <i class="fas fa-exclamation-circle"></i> 
+                                    <strong>Awaiting Grading</strong>
+                                </div>
+
+                                <!-- Action Button -->
+                                <a href="{% url 'grade_qa_exam' attempt.id %}" 
+                                   class="btn btn-warning w-100">
+                                    <i class="fas fa-edit"></i> Grade Now
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="card shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-check-circle text-success fa-4x mb-3"></i>
+                        <h5 class="text-muted">All Q&A exams are graded! 🎉</h5>
+                        <p class="text-muted">No pending Q&A submissions at the moment.</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Assignment Tab -->
+        <div class="tab-pane fade" id="assignment-content" role="tabpanel">
+            {% if assignment_attempts %}
+                <div class="row">
+                    {% for attempt in assignment_attempts %}
+                    <div class="col-md-6 mb-4">
+                        <div class="card shadow-sm h-100 hover-shadow">
+                            <div class="card-header bg-info bg-opacity-10">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">
+                                        <i class="fas fa-file-upload text-info"></i> 
+                                        {{ attempt.exam.title }}
+                                    </h6>
+                                    <span class="badge bg-info">Assignment</span>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <!-- Student Info -->
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="avatar-circle bg-info text-white me-3">
+                                        {{ attempt.student.first_name|first }}{{ attempt.student.last_name|first }}
+                                    </div>
+                                    <div>
+                                        <h6 class="mb-0">{{ attempt.student.get_full_name }}</h6>
+                                        <small class="text-muted">{{ attempt.student.email }}</small>
+                                    </div>
+                                </div>
+
+                                <!-- Attempt Details -->
+                                <div class="mb-3">
+                                    <div class="row text-center">
+                                        <div class="col-6">
+                                            <small class="text-muted d-block">Total Marks</small>
+                                            <strong>{{ attempt.exam.total_marks }}</strong>
+                                        </div>
+                                        <div class="col-6">
+                                            <small class="text-muted d-block">Files Uploaded</small>
+                                            <strong>
+                                                {% if attempt.assignment_submission %}
+                                                    {{ attempt.assignment_submission.uploaded_files|length }}
+                                                {% else %}
+                                                    0
+                                                {% endif %}
+                                            </strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Submission Time -->
+                                <div class="mb-3">
+                                    <small class="text-muted">
+                                        <i class="fas fa-clock"></i> Submitted: 
+                                        {{ attempt.submitted_at|date:"d M Y, h:i A" }}
+                                    </small>
+                                    <br>
+                                    {% if attempt.assignment_submission %}
+                                    <small class="text-muted">
+                                        <i class="fas fa-file"></i> Has Submission: 
+                                        {% if attempt.assignment_submission.submission_text or attempt.assignment_submission.uploaded_files %}
+                                            <span class="text-success">✓ Yes</span>
+                                        {% else %}
+                                            <span class="text-danger">✗ No</span>
+                                        {% endif %}
+                                    </small>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Status -->
+                                <div class="alert alert-info mb-3">
+                                    <i class="fas fa-exclamation-circle"></i> 
+                                    <strong>Awaiting Grading</strong>
+                                </div>
+
+                                <!-- Action Button -->
+                                <a href="{% url 'grade_assignment' attempt.id %}" 
+                                   class="btn btn-info w-100">
+                                    <i class="fas fa-edit"></i> Grade Now
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="card shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-check-circle text-success fa-4x mb-3"></i>
+                        <h5 class="text-muted">All assignments are graded! 🎉</h5>
+                        <p class="text-muted">No pending assignment submissions at the moment.</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+</div>
+
+<style>
+.border-left-warning {
+    border-left: 4px solid #ffc107;
+}
+
+.border-left-info {
+    border-left: 4px solid #0dcaf0;
+}
+
+.hover-shadow {
+    transition: all 0.3s ease;
+}
+
+.hover-shadow:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.1) !important;
+}
+
+.avatar-circle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+.nav-tabs .nav-link {
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link.active {
+    color: #0d6efd;
+    font-weight: 600;
+}
+
+.card-header {
+    border-bottom: 2px solid rgba(0,0,0,0.05);
+}
+</style>
+
+<script>
+// Auto refresh every 2 minutes to check for new submissions
+setTimeout(function() {
+    location.reload();
+}, 120000);
+</script>
+{% endblock %}

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Certificate - {{ certificate.certificate_id }}</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            background: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 10px;
+            margin-bottom: 30px;
+        }
+        .actions {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            margin: 0 10px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+        .certificate-content {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            padding: 20px;
+            background: white;
+        }
+        .verification-info {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .header,
+            .actions,
+            .verification-info {
+                display: none;
+            }
+            .container {
+                box-shadow: none;
+                padding: 0;
+            }
+            .certificate-content {
+                border: none;
+            }
+        }
+        {{ css_content|safe }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h2>Your Certificate</h2>
+            <p>Certificate ID: {{ certificate.certificate_id }}</p>
+        </div>
+
+        <div class="actions">
+            <a href="{% url 'certificates:download' certificate.id %}" class="btn btn-primary">
+                <i class="bi bi-download"></i> Download PDF
+            </a>
+            <button onclick="window.print()" class="btn btn-primary">
+                <i class="bi bi-printer"></i> Print
+            </button>
+            <a href="{% url 'certificates:student_certificates' %}" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Certificates
+            </a>
+        </div>
+
+        <div class="certificate-content">
+            {{ html_content|safe }}
+        </div>
+
+        <div class="verification-info">
+            <h5>Certificate Verification</h5>
+            <p>This certificate can be verified using the following code:</p>
+            <h4 style="color: #667eea;">{{ certificate.verification_code }}</h4>
+            <p>
+                <small>
+                    Issued on: {{ certificate.issue_date|date:"F d, Y" }}
+                    <br>
+                    Verification URL: {{ request.scheme }}://{{ request.get_host }}{% url 'certificates:verify' certificate.verification_code %}
+                </small>
+            </p>
+        </div>
+    </div>
+</body>
+</html>

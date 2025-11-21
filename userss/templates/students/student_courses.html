@@ -362,6 +362,16 @@
                             class="btn btn-outline-info action-btn mt-1">
                             <i class="fas fa-info-circle"></i> Course Details
                         </a>
+                        <!-- ✅ WRITE REVIEW BUTTON - YEH ADD KARO -->
+<a href="{% url 'courses:submit_course_review' item.course.id %}"
+    class="btn btn-outline-warning action-btn mt-1">
+    <i class="fas fa-star"></i>
+    {% if item.has_reviewed %}
+        Edit Review
+    {% else %}
+        Write Review
+    {% endif %}
+</a>
                         {% endif %}
 
                         <!-- Payment Warning -->

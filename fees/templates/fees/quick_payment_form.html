@@ -9,7 +9,8 @@
         <li class="breadcrumb-item"><a href="{% url 'admin_dashboard' %}">Dashboard</a></li>
         <li class="breadcrumb-item"><a href="{% url 'fees:admin_fees_dashboard' %}">Fees</a></li>
         <li class="breadcrumb-item"><a href="{% url 'fees:manage_student_fees' %}">Student Fees</a></li>
-        <li class="breadcrumb-item"><a href="{% url 'fees:student_fee_detail' assignment.id %}">{{ assignment.student.get_full_name }}</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'fees:student_fee_detail' assignment.id %}">{{
+                assignment.student.get_full_name }}</a></li>
         <li class="breadcrumb-item active">Quick Payment</li>
     </ol>
 </nav>
@@ -45,7 +46,8 @@
                 <h6 class="text-muted mb-2">Student Details</h6>
                 <div class="d-flex align-items-center mb-3">
                     <div class="flex-shrink-0">
-                        <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                        <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center"
+                            style="width: 50px; height: 50px;">
                             <i class="fas fa-user text-white"></i>
                         </div>
                     </div>
@@ -59,7 +61,8 @@
                 <h6 class="text-muted mb-2">Course Details</h6>
                 <div class="d-flex align-items-center mb-3">
                     <div class="flex-shrink-0">
-                        <div class="bg-info rounded-circle d-flex align-items-center justify-content-center" style="width: 50px; height: 50px;">
+                        <div class="bg-info rounded-circle d-flex align-items-center justify-content-center"
+                            style="width: 50px; height: 50px;">
                             <i class="fas fa-book text-white"></i>
                         </div>
                     </div>
@@ -70,38 +73,38 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Payment Summary -->
         <div class="row mt-3">
             <div class="col-md-3">
                 <div class="text-center p-3 bg-light rounded">
                     <h6 class="text-muted mb-1">Total Fee</h6>
-                    <h4 class="mb-0 text-primary">${{ assignment.total_amount|floatformat:2 }}</h4>
+                    <h4 class="mb-0 text-primary">₹{{ assignment.total_amount|floatformat:2 }}</h4>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="text-center p-3 bg-light rounded">
                     <h6 class="text-muted mb-1">Amount Paid</h6>
-                    <h4 class="mb-0 text-success">${{ assignment.amount_paid|floatformat:2 }}</h4>
+                    <h4 class="mb-0 text-success">₹{{ assignment.amount_paid|floatformat:2 }}</h4>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="text-center p-3 bg-light rounded">
                     <h6 class="text-muted mb-1">Amount Pending</h6>
-                    <h4 class="mb-0 text-warning">${{ assignment.amount_pending|floatformat:2 }}</h4>
+                    <h4 class="mb-0 text-warning">₹{{ assignment.amount_pending|floatformat:2 }}</h4>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="text-center p-3 bg-light rounded">
                     <h6 class="text-muted mb-1">Course Status</h6>
                     {% if assignment.is_course_locked %}
-                        <span class="badge bg-danger fs-6">
-                            <i class="fas fa-lock me-1"></i>Locked
-                        </span>
+                    <span class="badge bg-danger fs-6">
+                        <i class="fas fa-lock me-1"></i>Locked
+                    </span>
                     {% else %}
-                        <span class="badge bg-success fs-6">
-                            <i class="fas fa-unlock me-1"></i>Active
-                        </span>
+                    <span class="badge bg-success fs-6">
+                        <i class="fas fa-unlock me-1"></i>Active
+                    </span>
                     {% endif %}
                 </div>
             </div>
@@ -119,7 +122,7 @@
     <div class="card-body">
         <form method="post" id="quickPaymentForm">
             {% csrf_token %}
-            
+
             <!-- Payment Type Selection -->
             <div class="row mb-4">
                 <div class="col-12">
@@ -134,7 +137,7 @@
                                     <h6>Current EMI</h6>
                                     <p class="text-muted small mb-2">Pay next due EMI</p>
                                     <div class="amount-display">
-                                        <strong class="text-primary">$<span id="current-emi-amount">0.00</span></strong>
+                                        <strong class="text-primary">₹<span id="current-emi-amount">0.00</span></strong>
                                     </div>
                                 </div>
                             </div>
@@ -146,19 +149,21 @@
                                     <h6>Overdue EMIs</h6>
                                     <p class="text-muted small mb-2">Pay all overdue amounts</p>
                                     <div class="amount-display">
-                                        <strong class="text-warning">$<span id="overdue-emi-amount">0.00</span></strong>
+                                        <strong class="text-warning">₹<span id="overdue-emi-amount">0.00</span></strong>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <div class="col-md-3">
-                            <div class="card payment-option" data-type="full_course" data-amount="{{ assignment.amount_pending }}">
+                            <div class="card payment-option" data-type="full_course"
+                                data-amount="{{ assignment.amount_pending }}">
                                 <div class="card-body text-center">
                                     <i class="fas fa-check-circle fa-2x text-success mb-2"></i>
                                     <h6>Full Payment</h6>
                                     <p class="text-muted small mb-2">Pay complete pending amount</p>
                                     <div class="amount-display">
-                                        <strong class="text-success">${{ assignment.amount_pending|floatformat:2 }}</strong>
+                                        <strong class="text-success">₹{{ assignment.amount_pending|floatformat:2
+                                            }}</strong>
                                     </div>
                                 </div>
                             </div>
@@ -186,24 +191,28 @@
                     <div class="mb-3">
                         <label for="amount" class="form-label">Payment Amount <span class="text-danger">*</span></label>
                         <div class="input-group">
-                            <span class="input-group-text">$</span>
-                            <input type="number" class="form-control" id="amount" name="amount" step="0.01" min="0.01" required readonly>
+                            <span class="input-group-text">₹</span>
+                            <input type="number" class="form-control" id="amount" name="amount" step="0.01" min="0.01"
+                                required readonly>
                         </div>
                         <div class="form-text">Amount will be auto-filled based on payment type selection</div>
                     </div>
 
                     <!-- Custom Amount (Hidden by default) -->
                     <div class="mb-3" id="custom-amount-field" style="display: none;">
-                        <label for="custom_amount" class="form-label">Custom Amount <span class="text-danger">*</span></label>
+                        <label for="custom_amount" class="form-label">Custom Amount <span
+                                class="text-danger">*</span></label>
                         <div class="input-group">
-                            <span class="input-group-text">$</span>
-                            <input type="number" class="form-control" id="custom_amount" name="custom_amount" step="0.01" min="0.01">
+                            <span class="input-group-text">₹</span>
+                            <input type="number" class="form-control" id="custom_amount" name="custom_amount"
+                                step="0.01" min="0.01">
                         </div>
                     </div>
 
                     <!-- Payment Method -->
                     <div class="mb-3">
-                        <label for="payment_method" class="form-label">Payment Method <span class="text-danger">*</span></label>
+                        <label for="payment_method" class="form-label">Payment Method <span
+                                class="text-danger">*</span></label>
                         <select class="form-select" id="payment_method" name="payment_method" required>
                             <option value="">Select payment method</option>
                             <option value="cash">Cash</option>
@@ -217,8 +226,10 @@
 
                     <!-- Payment Date -->
                     <div class="mb-3">
-                        <label for="payment_date" class="form-label">Payment Date <span class="text-danger">*</span></label>
-                        <input type="date" class="form-control" id="payment_date" name="payment_date" value="{{ today|date:'Y-m-d' }}" required>
+                        <label for="payment_date" class="form-label">Payment Date <span
+                                class="text-danger">*</span></label>
+                        <input type="date" class="form-control" id="payment_date" name="payment_date"
+                            value="{{ today|date:'Y-m-d' }}" required>
                     </div>
                 </div>
 
@@ -226,14 +237,16 @@
                     <!-- Transaction ID -->
                     <div class="mb-3">
                         <label for="transaction_id" class="form-label">Transaction ID</label>
-                        <input type="text" class="form-control" id="transaction_id" name="transaction_id" placeholder="Transaction ID (for online payments)">
+                        <input type="text" class="form-control" id="transaction_id" name="transaction_id"
+                            placeholder="Transaction ID (for online payments)">
                         <div class="form-text">Required for online payments</div>
                     </div>
 
                     <!-- Reference Number -->
                     <div class="mb-3">
                         <label for="reference_number" class="form-label">Reference Number</label>
-                        <input type="text" class="form-control" id="reference_number" name="reference_number" placeholder="Reference number">
+                        <input type="text" class="form-control" id="reference_number" name="reference_number"
+                            placeholder="Reference number">
                     </div>
 
                     <!-- Bank Details (Hidden by default) -->
@@ -244,13 +257,15 @@
 
                     <div class="mb-3" id="cheque-fields" style="display: none;">
                         <label for="cheque_number" class="form-label">Cheque Number</label>
-                        <input type="text" class="form-control" id="cheque_number" name="cheque_number" placeholder="Cheque number">
+                        <input type="text" class="form-control" id="cheque_number" name="cheque_number"
+                            placeholder="Cheque number">
                     </div>
 
                     <!-- Notes -->
                     <div class="mb-3">
                         <label for="notes" class="form-label">Payment Notes</label>
-                        <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="Additional notes about this payment..."></textarea>
+                        <textarea class="form-control" id="notes" name="notes" rows="3"
+                            placeholder="Additional notes about this payment..."></textarea>
                     </div>
                 </div>
             </div>
@@ -289,27 +304,27 @@
         transition: all 0.2s ease;
         border: 2px solid transparent;
     }
-    
+
     .payment-option:hover {
         border-color: #0d6efd;
         transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
-    
+
     .payment-option.selected {
         border-color: #198754;
         background-color: #f8f9fa;
     }
-    
+
     .payment-option.selected .card-body {
         background-color: rgba(25, 135, 84, 0.1);
     }
-    
+
     .amount-display {
         min-height: 24px;
         margin-top: 8px;
     }
-    
+
     .stats-card {
         border: none;
         border-radius: 0.5rem;
@@ -320,7 +335,7 @@
 
 {% block extra_js %}
 <script>
-    let selectedPaymentType = null;
+     let selectedPaymentType = null;
     let paymentAmounts = {
         'current_emi': 0,
         'overdue_emis': 0,
@@ -328,16 +343,16 @@
         'custom': 0
     };
 
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         // Load payment amounts from server
         loadPaymentAmounts();
-        
+
         // Setup payment option selection
         setupPaymentOptions();
-        
+
         // Setup payment method change handler
         setupPaymentMethodHandler();
-        
+
         // Setup form validation
         setupFormValidation();
     });
@@ -368,21 +383,21 @@
 
     function setupPaymentOptions() {
         const paymentOptions = document.querySelectorAll('.payment-option');
-        
+
         paymentOptions.forEach(option => {
-            option.addEventListener('click', function() {
+            option.addEventListener('click', function () {
                 // Remove previous selection
                 paymentOptions.forEach(opt => opt.classList.remove('selected'));
-                
+
                 // Add selection to clicked option
                 this.classList.add('selected');
-                
+
                 // Get payment type and amount
                 const paymentType = this.getAttribute('data-type');
                 const amount = parseFloat(this.getAttribute('data-amount'));
-                
+
                 selectedPaymentType = paymentType;
-                
+
                 // Update form
                 updatePaymentForm(paymentType, amount);
             });
@@ -393,20 +408,20 @@
         const amountField = document.getElementById('amount');
         const customAmountField = document.getElementById('custom-amount-field');
         const paymentTypeField = document.getElementById('payment_type');
-        
+
         paymentTypeField.value = paymentType;
-        
+
         if (paymentType === 'custom') {
             // Show custom amount field
             customAmountField.style.display = 'block';
             amountField.value = '';
             amountField.readOnly = true;
-            
+
             // Focus on custom amount field
             document.getElementById('custom_amount').focus();
-            
+
             // Update amount when custom amount changes
-            document.getElementById('custom_amount').addEventListener('input', function() {
+            document.getElementById('custom_amount').addEventListener('input', function () {
                 amountField.value = this.value;
                 validateForm();
             });
@@ -416,7 +431,7 @@
             amountField.value = amount.toFixed(2);
             amountField.readOnly = true;
         }
-        
+
         validateForm();
     }
 
@@ -425,28 +440,28 @@
         const bankFields = document.getElementById('bank-fields');
         const chequeFields = document.getElementById('cheque-fields');
         const transactionField = document.getElementById('transaction_id');
-        
-        paymentMethodField.addEventListener('change', function() {
+
+        paymentMethodField.addEventListener('change', function () {
             const method = this.value;
-            
+
             // Hide all conditional fields first
             bankFields.style.display = 'none';
             chequeFields.style.display = 'none';
             transactionField.required = false;
-            
+
             // Show relevant fields based on payment method
             if (method === 'bank_transfer' || method === 'cheque') {
                 bankFields.style.display = 'block';
             }
-            
+
             if (method === 'cheque') {
                 chequeFields.style.display = 'block';
             }
-            
+
             if (method === 'online' || method === 'card' || method === 'upi') {
                 transactionField.required = true;
             }
-            
+
             validateForm();
         });
     }
@@ -454,7 +469,7 @@
     function setupFormValidation() {
         const form = document.getElementById('quickPaymentForm');
         const requiredFields = form.querySelectorAll('[required]');
-        
+
         requiredFields.forEach(field => {
             field.addEventListener('input', validateForm);
             field.addEventListener('change', validateForm);
@@ -467,35 +482,35 @@
         const amount = document.getElementById('amount').value;
         const paymentMethod = document.getElementById('payment_method').value;
         const paymentDate = document.getElementById('payment_date').value;
-        
+
         let isValid = true;
-        
+
         // Check if payment type is selected
         if (!selectedPaymentType) {
             isValid = false;
         }
-        
+
         // Check amount
         if (!amount || parseFloat(amount) <= 0) {
             isValid = false;
         }
-        
+
         // Check payment method
         if (!paymentMethod) {
             isValid = false;
         }
-        
+
         // Check payment date
         if (!paymentDate) {
             isValid = false;
         }
-        
+
         // Check transaction ID for online payments
         const transactionField = document.getElementById('transaction_id');
         if (transactionField.required && !transactionField.value) {
             isValid = false;
         }
-        
+
         // For custom payment, check custom amount
         if (selectedPaymentType === 'custom') {
             const customAmount = document.getElementById('custom_amount').value;
@@ -503,18 +518,18 @@
                 isValid = false;
             }
         }
-        
+
         submitBtn.disabled = !isValid;
     }
 
     // Form submission handler
-    document.getElementById('quickPaymentForm').addEventListener('submit', function(e) {
+    document.getElementById('quickPaymentForm').addEventListener('submit', function (e) {
         if (!selectedPaymentType) {
             e.preventDefault();
             alert('Please select a payment type.');
             return;
         }
-        
+
         // Show loading state
         const submitBtn = document.getElementById('submit-btn');
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Processing...';
