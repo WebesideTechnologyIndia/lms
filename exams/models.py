@@ -428,43 +428,56 @@ class ExamAttempt(models.Model):
     def __str__(self):
         return f"{self.student.username} - {self.exam.title} (Attempt {self.attempt_number})"
     
+    # exams/models.py - ExamAttempt model mein yeh methods update karo
     def calculate_percentage(self):
-        """Calculate percentage based on total marks"""
+        """Calculate percentage based on total marks and check pass/fail"""
         if self.exam.total_marks > 0:
+            # Calculate percentage
             self.percentage = (self.total_marks_obtained / self.exam.total_marks) * 100
-            self.is_passed = self.percentage >= self.exam.passing_marks
+            
+            # ✅ Compare ACTUAL MARKS (not percentage)
+            self.is_passed = self.total_marks_obtained >= self.exam.passing_marks
         else:
             self.percentage = 0
             self.is_passed = False
-    
-    def auto_submit(self):
-        """Auto submit when time is up"""
-        self.status = 'auto_submitted'
-        self.submitted_at = timezone.now()
+        
         self.save()
-        
-        # Calculate final marks for MCQ exams
-        if self.exam.exam_type == 'mcq':
-            self.calculate_mcq_marks()
-    
-    def calculate_mcq_marks(self):
-        """Calculate marks for MCQ exam"""
-        correct_answers = 0
-        total_questions = self.exam.mcq_questions.filter(is_active=True).count()
-        
-        for response in self.mcq_responses.all():
-            if response.selected_option and response.selected_option.is_correct:
-                correct_answers += 1
-        
-        # Calculate marks based on correct answers
-        if total_questions > 0:
-            marks_per_question = self.exam.total_marks / total_questions
-            self.total_marks_obtained = correct_answers * marks_per_question
-            self.calculate_percentage()
-            self.is_graded = True
-            self.graded_at = timezone.now()
-            self.save()
 
+
+   # exams/models.py - ExamAttempt model
+
+    def calculate_mcq_marks(self):
+        """Calculate MCQ marks automatically based on question-wise marks"""
+        total_marks = 0
+
+        # Get all MCQ responses for this attempt
+        responses = self.mcq_responses.select_related('question', 'selected_option')
+
+        for response in responses:
+            # ✅ CRITICAL: Only add marks if answer is correct
+            if response.selected_option and response.selected_option.is_correct:
+                # Add the ACTUAL marks of the question (not 1 per question)
+                total_marks += float(response.question.marks)
+
+        # Update attempt with calculated marks
+        self.total_marks_obtained = total_marks
+
+        # Calculate percentage and pass/fail
+        if self.exam.total_marks > 0:
+            self.percentage = (self.total_marks_obtained / self.exam.total_marks) * 100
+
+            # Calculate passing percentage
+            passing_percentage = (self.exam.passing_marks / self.exam.total_marks) * 100
+
+            # Check if passed
+            self.is_passed = self.total_marks_obtained >= self.exam.passing_marks
+        else:
+            self.percentage = 0
+            self.is_passed = False
+
+        self.is_graded = True
+        self.graded_at = timezone.now()
+        self.save()
 
 class MCQResponse(models.Model):
     """Student responses to MCQ questions"""

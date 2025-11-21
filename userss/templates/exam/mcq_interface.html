@@ -5,13 +5,15 @@
 {% block page_title %}{{ exam.title }}{% endblock %}
 
 {% block extra_css %}
+
 <style>
     .exam-container {
-        max-width: 1200px;
+        max-width: 1400px;
         margin: 0 auto;
         padding: 20px;
     }
     
+    /* 🔥 SLIDER FIX - Only show active question */
     .question-card {
         background: white;
         border: 2px solid #e9ecef;
@@ -19,6 +21,34 @@
         margin-bottom: 25px;
         transition: all 0.3s ease;
         box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        display: none !important; /* 🔥 FORCE HIDE by default */
+        opacity: 0;
+        transform: translateX(50px);
+        visibility: hidden;
+        position: absolute;
+        left: -9999px;
+    }
+    
+    /* 🔥 Only active question is visible */
+    .question-card.active {
+        display: block !important; /* 🔥 FORCE SHOW only active */
+        opacity: 1 !important;
+        transform: translateX(0) !important;
+        visibility: visible !important;
+        position: relative !important;
+        left: auto !important;
+        animation: slideIn 0.4s ease;
+    }
+    
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateX(50px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
     }
     
     .question-card.answered {
@@ -26,34 +56,81 @@
         background-color: #f8fff9;
     }
     
+    .question-card.time-warning {
+        border-color: #ff6b6b;
+        animation: pulse-border 1s infinite;
+    }
+    
+    .question-card.time-expired {
+        pointer-events: none;
+        opacity: 0.6;
+        background-color: #f8f9fa;
+    }
+    
+    @keyframes pulse-border {
+        0%, 100% { border-color: #ff6b6b; }
+        50% { border-color: #ff9999; }
+    }
+    
     .question-header {
         background: linear-gradient(135deg, #4f46e5, #6366f1);
         color: white;
-        padding: 15px 20px;
+        padding: 20px 25px;
         border-radius: 10px 10px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .question-timer {
+        background: rgba(255, 255, 255, 0.2);
+        padding: 10px 20px;
+        border-radius: 25px;
+        font-weight: bold;
+        font-size: 1.2rem;
+        font-family: 'Courier New', monospace;
+        min-width: 120px;
+        text-align: center;
+    }
+    
+    .question-timer.warning {
+        background: #ff6b6b;
+        animation: pulse-timer 0.5s infinite;
+    }
+    
+    .question-timer.expired {
+        background: #dc3545;
+    }
+    
+    @keyframes pulse-timer {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
     }
     
     .question-body {
-        padding: 20px;
+        padding: 30px;
+        min-height: 400px;
     }
     
     .question-text {
-        font-size: 1.1rem;
-        margin-bottom: 20px;
-        line-height: 1.6;
+        font-size: 1.2rem;
+        margin-bottom: 25px;
+        line-height: 1.8;
         color: #333;
+        font-weight: 500;
     }
     
     .options-container {
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 15px;
+        margin-top: 30px;
     }
     
     .option-item {
-        padding: 15px 18px;
+        padding: 18px 20px;
         border: 2px solid #dee2e6;
-        border-radius: 10px;
+        border-radius: 12px;
         cursor: pointer;
         transition: all 0.3s ease;
         background-color: white;
@@ -63,32 +140,53 @@
         user-select: none;
     }
     
-    .option-item:hover {
+    .option-item:hover:not(.disabled) {
         background-color: #f8f9fa;
         border-color: #4f46e5;
-        transform: translateX(5px);
-        box-shadow: 0 2px 8px rgba(79, 70, 229, 0.2);
+        transform: translateX(8px);
+        box-shadow: 0 3px 10px rgba(79, 70, 229, 0.25);
     }
     
     .option-item.selected {
         background-color: #e7f3ff;
         border-color: #0066cc;
         border-width: 3px;
-        box-shadow: 0 4px 12px rgba(0, 102, 204, 0.2);
+        box-shadow: 0 5px 15px rgba(0, 102, 204, 0.25);
+        transform: translateX(8px);
+    }
+    
+    .option-item.disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+    }
+    
+    .option-radio {
+        width: 20px;
+        height: 20px;
+        min-width: 20px;
+        margin-right: 15px;
+        cursor: pointer;
+        accent-color: #0066cc;
+        flex-shrink: 0;
+        margin-top: 3px;
+    }
+    
+    .option-radio:disabled {
+        cursor: not-allowed;
     }
     
     .option-label {
         font-weight: bold;
         color: #4f46e5;
-        min-width: 35px;
-        height: 35px;
+        min-width: 40px;
+        height: 40px;
         border-radius: 50%;
         background-color: #e9ecef;
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        margin-right: 15px;
-        font-size: 1rem;
+        margin-right: 18px;
+        font-size: 1.1rem;
         flex-shrink: 0;
     }
     
@@ -100,7 +198,7 @@
     
     @keyframes pulse {
         0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.1); }
+        50% { transform: scale(1.15); }
     }
     
     .option-content {
@@ -111,13 +209,62 @@
     }
     
     .option-text {
-        font-size: 1rem;
-        line-height: 1.5;
+        font-size: 1.05rem;
+        line-height: 1.6;
         color: #333;
     }
     
-    .option-radio {
-        display: none !important;
+    .navigation-buttons {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px 30px;
+        background-color: #f8f9fa;
+        border-radius: 0 0 10px 10px;
+        border-top: 2px solid #e9ecef;
+    }
+    
+    .nav-btn {
+        padding: 12px 30px;
+        font-size: 1rem;
+        font-weight: 600;
+        border-radius: 8px;
+        border: none;
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .nav-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .btn-previous {
+        background: linear-gradient(135deg, #6c757d, #5a6268);
+        color: white;
+    }
+    
+    .btn-previous:hover:not(:disabled) {
+        transform: translateX(-5px);
+        box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+    }
+    
+    .btn-next {
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        color: white;
+    }
+    
+    .btn-next:hover:not(:disabled) {
+        transform: translateX(5px);
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
+    }
+    
+    .question-counter {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #495057;
     }
     
     .timer-card {
@@ -157,13 +304,13 @@
     .question-grid {
         display: grid;
         grid-template-columns: repeat(5, 1fr);
-        gap: 8px;
+        gap: 10px;
         margin-bottom: 15px;
     }
     
     .question-btn {
         width: 100%;
-        height: 45px;
+        height: 50px;
         border-radius: 8px;
         border: 2px solid #dee2e6;
         background-color: white;
@@ -173,9 +320,15 @@
         font-size: 1rem;
     }
     
-    .question-btn:hover {
+    .question-btn:hover:not(:disabled) {
         background-color: #f8f9fa;
         border-color: #4f46e5;
+        transform: scale(1.05);
+    }
+    
+    .question-btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
     }
     
     .question-btn.answered {
@@ -188,7 +341,14 @@
         background-color: #4f46e5;
         border-color: #4f46e5;
         color: white;
-        transform: scale(1.05);
+        transform: scale(1.1);
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+    }
+    
+    .question-btn.expired {
+        background-color: #dc3545;
+        border-color: #dc3545;
+        color: white;
     }
     
     .submit-section {
@@ -237,9 +397,11 @@
         margin-right: 10px;
     }
 </style>
+
 {% endblock %}
 
 {% block content %}
+
 <div class="exam-container">
     <!-- Exam Header -->
     <div class="exam-header-card">
@@ -253,6 +415,7 @@
                     <div><strong>Questions:</strong> {{ total_questions }}</div>
                     <div><strong>Total Marks:</strong> {{ exam.total_marks }}</div>
                     <div><strong>Attempt:</strong> #{{ attempt.attempt_number }}</div>
+                    <div><strong>Timing:</strong> {{ exam.get_time_limit_display }}</div>
                 </div>
             </div>
         </div>
@@ -269,15 +432,31 @@
             </div>
             {% endif %}
 
-            <!-- Questions -->
+            <!-- 🔥 Questions Container - PROPER SLIDER -->
             <form id="examForm">
                 {% csrf_token %}
                 {% for question in questions %}
-                <div class="question-card" id="question-{{ question.id }}" data-question-id="{{ question.id }}">
+                <div class="question-card {% if forloop.first %}active{% endif %}" 
+                     id="question-{{ question.id }}" 
+                     data-question-id="{{ question.id }}" 
+                     data-order="{{ question.order }}">
+                    
                     <div class="question-header">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h6 class="mb-0"><i class="fas fa-question-circle"></i> Question {{ question.order }}</h6>
-                            <span class="badge bg-light text-dark px-3 py-2">{{ question.marks }} mark{{ question.marks|pluralize }}</span>
+                        <div>
+                            <h5 class="mb-0">
+                                <i class="fas fa-question-circle"></i> 
+                                Question {{ question.order }} of {{ total_questions }}
+                            </h5>
+                        </div>
+                        <div class="d-flex align-items-center gap-3">
+                            {% if exam.timing_type == 'per_question' %}
+                            <div class="question-timer" id="question-timer-{{ question.id }}">
+                                <span class="timer-minutes">{{ exam.time_per_question_minutes }}</span>:<span class="timer-seconds">00</span>
+                            </div>
+                            {% endif %}
+                            <span class="badge bg-light text-dark px-3 py-2" style="font-size: 1rem;">
+                                {{ question.marks }} mark{{ question.marks|pluralize }}
+                            </span>
                         </div>
                     </div>
                     
@@ -295,12 +474,17 @@
                         </div>
                         {% endif %}
                         
-                        <div class="options-container">
+                        <!-- Options with Radio Buttons -->
+                        <div class="options-container" data-question-id="{{ question.id }}">
                             {% for option in question.shuffled_options %}
                             <div class="option-item" 
                                  data-option-id="{{ option.id }}"
-                                 data-question-id="{{ question.id }}"
-                                 onclick="selectOption(this)">
+                                 data-question-id="{{ question.id }}">
+                                <input type="radio" 
+                                       class="option-radio" 
+                                       name="question_{{ question.id }}" 
+                                       value="{{ option.id }}"
+                                       id="option_{{ option.id }}">
                                 <span class="option-label">
                                     {% if forloop.counter == 1 %}A
                                     {% elif forloop.counter == 2 %}B
@@ -321,16 +505,38 @@
                                     </div>
                                     {% endif %}
                                 </div>
-                                <input type="radio" 
-                                       name="question_{{ question.id }}" 
-                                       value="{{ option.id }}" 
-                                       class="option-radio"
-                                       data-question-id="{{ question.id }}"
-                                       data-option-id="{{ option.id }}"
-                                       {% if responses|lookup:question.id == option.id %}checked{% endif %}>
                             </div>
                             {% endfor %}
                         </div>
+                    </div>
+                    
+                    <!-- Navigation Buttons -->
+                    <div class="navigation-buttons">
+                        <button type="button" 
+                                class="nav-btn btn-previous" 
+                                onclick="previousQuestion()"
+                                {% if forloop.first %}disabled{% endif %}>
+                            <i class="fas fa-arrow-left"></i> Previous
+                        </button>
+                        
+                        <div class="question-counter">
+                            <span id="current-question-number">1</span> / {{ total_questions }}
+                        </div>
+                        
+                        {% if forloop.last %}
+                        <button type="button" 
+                                class="nav-btn btn-next" 
+                                style="background: linear-gradient(135deg, #28a745, #20c997);"
+                                onclick="confirmSubmit()">
+                            Finish <i class="fas fa-check-circle"></i>
+                        </button>
+                        {% else %}
+                        <button type="button" 
+                                class="nav-btn btn-next" 
+                                onclick="nextQuestion()">
+                            Next <i class="fas fa-arrow-right"></i>
+                        </button>
+                        {% endif %}
                     </div>
                 </div>
                 {% endfor %}
@@ -339,14 +545,19 @@
 
         <!-- Sidebar -->
         <div class="col-lg-4">
-            <!-- Timer -->
-            {% if exam.timing_type != 'no_timing' %}
+            <!-- Timer (Only for Total Exam Time) -->
+            {% if exam.timing_type == 'total_exam' %}
             <div class="timer-card mb-4">
                 <h6><i class="fas fa-clock"></i> Time Remaining</h6>
                 <div class="timer-display" id="timer">
                     <span id="hours">00</span>:<span id="minutes">00</span>:<span id="seconds">00</span>
                 </div>
                 <small>Exam will auto-submit when time expires</small>
+            </div>
+            {% elif exam.timing_type == 'per_question' %}
+            <div class="alert alert-warning">
+                <h6><i class="fas fa-info-circle"></i> Timed Questions</h6>
+                <p class="mb-0 small">Each question has {{ exam.time_per_question_minutes }} minute{{ exam.time_per_question_minutes|pluralize }} time limit!</p>
             </div>
             {% endif %}
 
@@ -371,10 +582,11 @@
                 <div class="question-grid">
                     {% for question in questions %}
                     <button type="button" 
-                            class="question-btn" 
+                            class="question-btn {% if forloop.first %}current{% endif %}" 
                             data-question="{{ question.id }}"
                             data-order="{{ question.order }}"
-                            onclick="navigateToQuestion({{ question.id }}, {{ question.order }})">
+                            id="nav-btn-{{ question.id }}"
+                            onclick="navigateToQuestion({{ question.order }})">
                         {{ question.order }}
                     </button>
                     {% endfor %}
@@ -394,6 +606,12 @@
                     <div class="legend-box" style="background-color: white; border: 2px solid #dee2e6;"></div>
                     <span>Not Attempted</span>
                 </div>
+                {% if exam.timing_type == 'per_question' %}
+                <div class="legend-item">
+                    <div class="legend-box" style="background-color: #dc3545;"></div>
+                    <span>Time Expired</span>
+                </div>
+                {% endif %}
             </div>
 
             <!-- Submit Section -->
@@ -433,131 +651,358 @@
                     <i class="fas fa-times"></i> Cancel
                 </button>
                 <a href="{% url 'submit_exam' attempt.id %}" class="btn btn-success" onclick="isSubmitting = true;">
-    <i class="fas fa-check"></i> Yes, Submit Now
-</a>
+                    <i class="fas fa-check"></i> Yes, Submit Now
+                </a>
             </div>
         </div>
     </div>
 </div>
+
 {% endblock %}
 
 {% block extra_js %}
+
 <script>
-// Global variables
+// Global Variables
 let totalQuestions = {{ total_questions }};
 let answeredQuestions = 0;
 let currentQuestion = 1;
 let responses = {};
-let isSubmitting = false; // ✅ NEW: Flag to prevent warning on submit
+let isSubmitting = false;
+let timingType = '{{ exam.timing_type }}';
+let timePerQuestion = {{ exam.time_per_question_minutes|default:0 }};
+let questionTimers = {};
+let currentActiveQuestion = null;
+let expiredQuestions = new Set();
 
 // Initialize responses from server
 {% if responses %}
-responses = {{ responses|safe }};
+    {% for qid, optid in responses.items %}
+        responses['{{ qid }}'] = '{{ optid }}';
+    {% endfor %}
 {% endif %}
 
-// Initialize exam on page load
+console.log('🎯 Initial responses:', responses);
+
+// DOM Loaded
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('✅ Starting exam initialization...');
+    
+    // 🔥 FORCE HIDE ALL QUESTIONS EXCEPT FIRST
+    hideAllQuestionsExceptFirst();
+    
+    setupOptionClickHandlers();
     initializeExam();
     setupAutoSave();
     
-    {% if exam.timing_type != 'no_timing' %}
-    startTimer();
-    {% endif %}
+    if (timingType === 'total_exam') {
+        startTotalExamTimer();
+    } else if (timingType === 'per_question') {
+        setupPerQuestionTimers();
+        startQuestionTimer(1);
+    }
     
     preventAccidentalExit();
+    
+    console.log('✅ Exam ready! Current question:', currentQuestion);
 });
 
-function selectOption(element) {
-    let questionId = element.getAttribute('data-question-id');
-    let optionId = element.getAttribute('data-option-id');
+// 🔥 NEW FUNCTION - Force hide all questions except first
+function hideAllQuestionsExceptFirst() {
+    console.log('🔥 Forcing slider mode - hiding all questions...');
     
-    // Remove selection from all options in this question
-    document.querySelectorAll(`[data-question-id="${questionId}"]`).forEach(opt => {
+    let allQuestionCards = document.querySelectorAll('.question-card');
+    console.log(`  ↳ Found ${allQuestionCards.length} question cards`);
+    
+    allQuestionCards.forEach((card, index) => {
+        if (index === 0) {
+            // First question - show it
+            card.classList.add('active');
+            card.style.display = 'block';
+            card.style.visibility = 'visible';
+            card.style.position = 'relative';
+            card.style.left = 'auto';
+            console.log(`  ✅ Question ${index + 1} - VISIBLE (active)`);
+        } else {
+            // All other questions - hide them
+            card.classList.remove('active');
+            card.style.display = 'none';
+            card.style.visibility = 'hidden';
+            card.style.position = 'absolute';
+            card.style.left = '-9999px';
+            console.log(`  ❌ Question ${index + 1} - HIDDEN`);
+        }
+    });
+    
+    console.log('✅ Slider mode activated!');
+}
+
+// Setup Click Handlers
+function setupOptionClickHandlers() {
+    // Handle option item clicks
+    document.querySelectorAll('.option-item').forEach(function(optionElement) {
+        optionElement.addEventListener('click', function(e) {
+            if (e.target.classList.contains('option-radio')) return;
+            
+            let questionId = this.getAttribute('data-question-id');
+            let optionId = this.getAttribute('data-option-id');
+            let radio = this.querySelector('.option-radio');
+            
+            if (timingType === 'per_question' && expiredQuestions.has(questionId)) {
+                return;
+            }
+            
+            if (radio && !radio.disabled) {
+                radio.checked = true;
+                selectOption(questionId, optionId, this);
+            }
+        });
+    });
+    
+    // Handle radio button changes
+    document.querySelectorAll('.option-radio').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+            let optionElement = this.closest('.option-item');
+            let questionId = optionElement.getAttribute('data-question-id');
+            let optionId = optionElement.getAttribute('data-option-id');
+            
+            selectOption(questionId, optionId, optionElement);
+        });
+    });
+}
+
+// Initialize Exam
+function initializeExam() {
+    for (let questionId in responses) {
+        let optionId = responses[questionId];
+        
+        let radio = document.querySelector(
+            `input[name="question_${questionId}"][value="${optionId}"]`
+        );
+        
+        if (radio) {
+            radio.checked = true;
+            let optionElement = radio.closest('.option-item');
+            if (optionElement) {
+                optionElement.classList.add('selected');
+            }
+        }
+        
+        markQuestionAnswered(questionId);
+    }
+    
+    updateProgress();
+}
+
+// Select Option
+function selectOption(questionId, optionId, element) {
+    console.log(`📝 Selected Q${questionId} -> Option ${optionId}`);
+    
+    if (timingType === 'per_question' && expiredQuestions.has(questionId)) {
+        return;
+    }
+    
+    let container = element.closest('.options-container');
+    container.querySelectorAll('.option-item').forEach(opt => {
         opt.classList.remove('selected');
     });
     
-    // Add selection to clicked option
     element.classList.add('selected');
+    responses[questionId] = optionId;
     
-    // Check the radio button
-    let radio = element.querySelector('.option-radio');
-    if (radio) {
-        radio.checked = true;
-    }
-    
-    // Mark question as answered
     markQuestionAnswered(questionId);
-    
-    // Save response
     saveResponse(questionId, optionId);
-    
-    // Update progress
     updateProgress();
 }
 
-function initializeExam() {
-    // Mark already answered questions
-    for (let questionId in responses) {
-        if (responses[questionId]) {
-            markQuestionAnswered(questionId);
-            
-            // Select the option
-            let optionElement = document.querySelector(`[data-question-id="${questionId}"][data-option-id="${responses[questionId]}"]`);
-            if (optionElement) {
-                optionElement.classList.add('selected');
-                let radio = optionElement.querySelector('.option-radio');
-                if (radio) radio.checked = true;
-            }
-        }
-    }
-    
-    updateProgress();
-    updateCurrentQuestion(1);
-}
-
+// Mark Question Answered
 function markQuestionAnswered(questionId) {
-    let btn = document.querySelector(`.question-btn[data-question="${questionId}"]`);
-    if (btn) {
-        btn.classList.add('answered');
+    let navBtn = document.querySelector(`#nav-btn-${questionId}`);
+    if (navBtn && !navBtn.classList.contains('answered') && !navBtn.classList.contains('expired')) {
+        navBtn.classList.add('answered');
     }
     
     let card = document.querySelector(`#question-${questionId}`);
-    if (card) {
+    if (card && !card.classList.contains('answered')) {
         card.classList.add('answered');
     }
 }
 
+// Update Progress
 function updateProgress() {
-    answeredQuestions = document.querySelectorAll('.question-btn.answered').length;
+    answeredQuestions = Object.keys(responses).filter(key => responses[key] !== null).length;
     let percentage = (answeredQuestions / totalQuestions) * 100;
     
     document.getElementById('progress-text').innerHTML = `<strong>${answeredQuestions} / ${totalQuestions}</strong>`;
     document.getElementById('progress-bar').style.width = `${percentage}%`;
 }
 
-function updateCurrentQuestion(order) {
+// 🔥 NAVIGATION - Next Question
+function nextQuestion() {
+    if (currentQuestion < totalQuestions) {
+        showQuestion(currentQuestion + 1);
+    }
+}
+
+// 🔥 NAVIGATION - Previous Question
+function previousQuestion() {
+    if (timingType === 'per_question') {
+        let currentCard = document.querySelector(`.question-card[data-order="${currentQuestion}"]`);
+        let currentQuestionId = currentCard ? currentCard.getAttribute('data-question-id') : null;
+        
+        if (currentQuestionId && expiredQuestions.has(currentQuestionId)) {
+            alert('⚠️ Time expired! Cannot go back.');
+            return;
+        }
+    }
+    
+    if (currentQuestion > 1) {
+        showQuestion(currentQuestion - 1);
+    }
+}
+
+// 🔥 NAVIGATION - Jump to Question
+function navigateToQuestion(order) {
+    if (timingType === 'per_question') {
+        let targetCard = document.querySelector(`.question-card[data-order="${order}"]`);
+        let targetQuestionId = targetCard ? targetCard.getAttribute('data-question-id') : null;
+        
+        if (targetQuestionId && expiredQuestions.has(targetQuestionId)) {
+            alert('⚠️ Time expired for that question!');
+            return;
+        }
+    }
+    
+    showQuestion(order);
+}
+
+// 🔥 SHOW QUESTION (Core Slider Logic)
+function showQuestion(order) {
+    console.log(`🎯 Showing question ${order}`);
+    
+    // Check if expired
+    let targetCard = document.querySelector(`.question-card[data-order="${order}"]`);
+    if (targetCard) {
+        let targetQuestionId = targetCard.getAttribute('data-question-id');
+        if (timingType === 'per_question' && expiredQuestions.has(targetQuestionId)) {
+            console.log('⚠️ Cannot navigate to expired question');
+            return;
+        }
+    }
+    
+    // 🔥 FORCE HIDE ALL QUESTIONS
+    let allCards = document.querySelectorAll('.question-card');
+    console.log(`  ↳ Hiding ${allCards.length} questions...`);
+    
+    allCards.forEach((card, index) => {
+        card.classList.remove('active');
+        card.style.display = 'none';
+        card.style.visibility = 'hidden';
+        card.style.position = 'absolute';
+        card.style.left = '-9999px';
+        console.log(`    ❌ Question ${index + 1} hidden`);
+    });
+    
+    // 🔥 FORCE SHOW TARGET QUESTION ONLY
+    if (targetCard) {
+        targetCard.classList.add('active');
+        targetCard.style.display = 'block';
+        targetCard.style.visibility = 'visible';
+        targetCard.style.position = 'relative';
+        targetCard.style.left = 'auto';
+        targetCard.style.opacity = '1';
+        targetCard.style.transform = 'translateX(0)';
+        
+        console.log(`    ✅ Question ${order} NOW VISIBLE`);
+        
+        targetCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+        // Restore selection
+        let questionId = targetCard.getAttribute('data-question-id');
+        restoreSelection(questionId);
+    }
+    
+    // Update current question
+    currentQuestion = order;
+    document.getElementById('current-question-number').textContent = order;
+    
+    // Update navigation buttons
+    updateNavigationButtons();
+    
+    // Update navigator
     document.querySelectorAll('.question-btn').forEach(btn => {
         btn.classList.remove('current');
     });
-    
     let currentBtn = document.querySelector(`.question-btn[data-order="${order}"]`);
     if (currentBtn) {
         currentBtn.classList.add('current');
     }
-    currentQuestion = order;
+    
+    // Timer
+    if (timingType === 'per_question') {
+        startQuestionTimer(order);
+    }
+    
+    // 🔥 VERIFY ONLY ONE VISIBLE
+    setTimeout(() => {
+        let visibleCards = document.querySelectorAll('.question-card[style*="display: block"]');
+        console.log(`🔍 Verification: ${visibleCards.length} questions visible (should be 1)`);
+    }, 100);
 }
 
-function navigateToQuestion(questionId, order) {
-    let questionCard = document.getElementById(`question-${questionId}`);
-    if (questionCard) {
-        questionCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        updateCurrentQuestion(order);
+// Restore Selection
+function restoreSelection(questionId) {
+    let container = document.querySelector(`.options-container[data-question-id="${questionId}"]`);
+    if (!container) return;
+    
+    container.querySelectorAll('.option-item').forEach(opt => opt.classList.remove('selected'));
+    
+    if (responses[questionId]) {
+        let savedOptionId = responses[questionId];
+        let radio = container.querySelector(`input[value="${savedOptionId}"]`);
+        if (radio) {
+            radio.checked = true;
+            let savedOption = radio.closest('.option-item');
+            if (savedOption) {
+                savedOption.classList.add('selected');
+            }
+        }
     }
 }
 
+// Update Navigation Buttons
+function updateNavigationButtons() {
+    document.querySelectorAll('.question-card').forEach((card) => {
+        let order = parseInt(card.getAttribute('data-order'));
+        let prevBtn = card.querySelector('.btn-previous');
+        
+        if (prevBtn) {
+            if (order === 1) {
+                prevBtn.disabled = true;
+            } else {
+                if (timingType === 'per_question') {
+                    let canGoBack = true;
+                    for (let i = 1; i < order; i++) {
+                        let prevCard = document.querySelector(`.question-card[data-order="${i}"]`);
+                        if (prevCard) {
+                            let prevQuestionId = prevCard.getAttribute('data-question-id');
+                            if (expiredQuestions.has(prevQuestionId)) {
+                                canGoBack = false;
+                                break;
+                            }
+                        }
+                    }
+                    prevBtn.disabled = !canGoBack;
+                } else {
+                    prevBtn.disabled = false;
+                }
+            }
+        }
+    });
+}
+
+// Save Response to Server
 function saveResponse(questionId, optionId) {
-    responses[questionId] = optionId;
-    
     fetch('{% url "save_mcq_response" attempt.id %}', {
         method: 'POST',
         headers: {
@@ -565,100 +1010,190 @@ function saveResponse(questionId, optionId) {
             'X-CSRFToken': getCookie('csrftoken')
         },
         body: JSON.stringify({
-            'question_id': questionId,
-            'option_id': optionId
+            'question_id': parseInt(questionId),
+            'option_id': parseInt(optionId)
         })
     })
     .then(response => response.json())
     .then(data => {
-        if (!data.success) {
-            console.error('Failed to save response:', data.message);
+        if (data.success) {
+            console.log('✅ Saved to server');
+        } else {
+            console.error('❌ Save failed:', data.message);
+            alert('Error saving answer: ' + data.message);
         }
     })
     .catch(error => {
-        console.error('Error saving response:', error);
+        console.error('❌ Network error:', error);
+        alert('Network error. Your answer may not be saved.');
     });
 }
 
+// Auto-Save Setup
 function setupAutoSave() {
-    setInterval(() => {
-        document.querySelectorAll('.option-radio:checked').forEach(radio => {
-            let questionId = radio.getAttribute('data-question-id');
-            let optionId = radio.getAttribute('data-option-id');
-            saveResponse(questionId, optionId);
-        });
-    }, 30000); // Auto-save every 30 seconds
+    setInterval(function() {
+        if (Object.keys(responses).length > 0) {
+            console.log('🔄 Auto-save check');
+        }
+    }, 30000);
 }
 
+// Total Exam Timer
+function startTotalExamTimer() {
+    let totalMinutes = {{ exam.time_limit_minutes|default:0 }};
+    let totalSeconds = totalMinutes * 60;
+    
+    let timerInterval = setInterval(function() {
+        if (isSubmitting) {
+            clearInterval(timerInterval);
+            return;
+        }
+        
+        totalSeconds--;
+        
+        let hours = Math.floor(totalSeconds / 3600);
+        let minutes = Math.floor((totalSeconds % 3600) / 60);
+        let seconds = totalSeconds % 60;
+        
+        document.getElementById('hours').textContent = String(hours).padStart(2, '0');
+        document.getElementById('minutes').textContent = String(minutes).padStart(2, '0');
+        document.getElementById('seconds').textContent = String(seconds).padStart(2, '0');
+        
+        if (totalSeconds <= 300 && totalSeconds > 0) {
+            document.querySelector('.timer-card').style.background = 'linear-gradient(135deg, #ff6b6b, #ee5a24)';
+            document.querySelector('.timer-display').style.animation = 'pulse-timer 1s infinite';
+        }
+        
+        if (totalSeconds <= 0) {
+            clearInterval(timerInterval);
+            alert('⏰ Time is up! Submitting automatically.');
+            isSubmitting = true;
+            window.location.href = '{% url "submit_exam" attempt.id %}';
+        }
+    }, 1000);
+}
+
+// Per Question Timer Setup
+function setupPerQuestionTimers() {
+    document.querySelectorAll('.question-card').forEach(card => {
+        let questionId = card.getAttribute('data-question-id');
+        questionTimers[questionId] = {
+            seconds: timePerQuestion * 60,
+            interval: null
+        };
+    });
+}
+
+// Start Question Timer
+function startQuestionTimer(order) {
+    if (currentActiveQuestion && questionTimers[currentActiveQuestion] && questionTimers[currentActiveQuestion].interval) {
+        clearInterval(questionTimers[currentActiveQuestion].interval);
+    }
+    
+    let card = document.querySelector(`.question-card[data-order="${order}"]`);
+    if (!card) return;
+    
+    let questionId = card.getAttribute('data-question-id');
+    let timerDisplay = card.querySelector('.question-timer');
+    
+    if (!timerDisplay) return;
+    
+    if (expiredQuestions.has(questionId)) {
+        markQuestionAsExpired(questionId);
+        return;
+    }
+    
+    currentActiveQuestion = questionId;
+    let timerObj = questionTimers[questionId];
+    
+    updateQuestionTimerDisplay(timerDisplay, timerObj.seconds);
+    
+    timerObj.interval = setInterval(function() {
+        if (isSubmitting) {
+            clearInterval(timerObj.interval);
+            return;
+        }
+        
+        timerObj.seconds--;
+        updateQuestionTimerDisplay(timerDisplay, timerObj.seconds);
+        
+        if (timerObj.seconds <= 30 && timerObj.seconds > 0) {
+            timerDisplay.classList.add('warning');
+            card.classList.add('time-warning');
+        }
+        
+        if (timerObj.seconds <= 0) {
+            clearInterval(timerObj.interval);
+            timerDisplay.classList.remove('warning');
+            timerDisplay.classList.add('expired');
+            card.classList.remove('time-warning');
+            
+            expiredQuestions.add(questionId);
+            markQuestionAsExpired(questionId);
+            
+            alert('⏰ Time is up for this question!');
+            
+            if (currentQuestion < totalQuestions) {
+                nextQuestion();
+            } else {
+                confirmSubmit();
+            }
+        }
+    }, 1000);
+}
+
+// Mark Question as Expired
+function markQuestionAsExpired(questionId) {
+    let card = document.querySelector(`#question-${questionId}`);
+    if (card) {
+        card.classList.add('time-expired');
+        card.querySelectorAll('.option-item').forEach(opt => {
+            opt.classList.add('disabled');
+            let radio = opt.querySelector('.option-radio');
+            if (radio) radio.disabled = true;
+        });
+    }
+    
+    let navBtn = document.querySelector(`#nav-btn-${questionId}`);
+    if (navBtn) {
+        navBtn.classList.remove('current', 'answered');
+        navBtn.classList.add('expired');
+        navBtn.disabled = true;
+    }
+}
+
+// Update Question Timer Display
+function updateQuestionTimerDisplay(timerDisplay, seconds) {
+    let minutes = Math.floor(seconds / 60);
+    let secs = seconds % 60;
+    
+    let minutesSpan = timerDisplay.querySelector('.timer-minutes');
+    let secondsSpan = timerDisplay.querySelector('.timer-seconds');
+    
+    if (minutesSpan) minutesSpan.textContent = String(minutes);
+    if (secondsSpan) secondsSpan.textContent = String(secs).padStart(2, '0');
+}
+
+// Confirm Submit
 function confirmSubmit() {
     document.getElementById('modal-answered').textContent = answeredQuestions;
+    
     let submitModal = new bootstrap.Modal(document.getElementById('submitModal'));
     submitModal.show();
 }
 
-{% if exam.timing_type != 'no_timing' %}
-function startTimer() {
-    let startTime = new Date('{{ attempt.started_at|date:"c" }}');
-    let currentTime = new Date();
-    
-    {% if exam.timing_type == 'total_exam' %}
-    let totalMinutes = {{ exam.total_exam_time_minutes|default:0 }};
-    {% else %}
-    let totalMinutes = {{ total_questions }} * {{ exam.time_per_question_minutes|default:2 }};
-    {% endif %}
-    
-    let elapsedSeconds = Math.floor((currentTime - startTime) / 1000);
-    let totalSeconds = totalMinutes * 60;
-    let remainingSeconds = Math.max(0, totalSeconds - elapsedSeconds);
-    
-    let timerInterval = setInterval(() => {
-        if (remainingSeconds <= 0) {
-            clearInterval(timerInterval);
-            autoSubmit();
-            return;
-        }
-        
-        let hours = Math.floor(remainingSeconds / 3600);
-        let minutes = Math.floor((remainingSeconds % 3600) / 60);
-        let seconds = remainingSeconds % 60;
-        
-        document.getElementById('hours').textContent = hours.toString().padStart(2, '0');
-        document.getElementById('minutes').textContent = minutes.toString().padStart(2, '0');
-        document.getElementById('seconds').textContent = seconds.toString().padStart(2, '0');
-        
-        // Change timer color based on remaining time
-        let timerCard = document.querySelector('.timer-card');
-        if (remainingSeconds <= 60) {
-            timerCard.style.background = 'linear-gradient(135deg, #e74c3c, #c0392b)';
-        } else if (remainingSeconds <= 300) {
-            timerCard.style.background = 'linear-gradient(135deg, #f39c12, #e67e22)';
-        }
-        
-        remainingSeconds--;
-    }, 1000);
-}
-
-function autoSubmit() {
-    // ✅ Set flag before auto-submit
-    isSubmitting = true;
-    alert('⏰ Time is up! The exam will be submitted automatically.');
-    window.location.href = '{% url "submit_exam" attempt.id %}';
-}
-{% endif %}
-
-// ✅ FIXED: Check if submitting before showing warning
+// Prevent Accidental Exit
 function preventAccidentalExit() {
     window.addEventListener('beforeunload', function(e) {
-        // Don't show warning if user is submitting the exam
-        if (isSubmitting) {
-            return undefined;
+        if (!isSubmitting) {
+            e.preventDefault();
+            e.returnValue = 'Are you sure you want to leave?';
+            return e.returnValue;
         }
-        e.preventDefault();
-        e.returnValue = 'Are you sure you want to leave? Your progress has been saved.';
-        return e.returnValue;
     });
 }
 
+// Get CSRF Cookie
 function getCookie(name) {
     let cookieValue = null;
     if (document.cookie && document.cookie !== '') {
@@ -674,17 +1209,18 @@ function getCookie(name) {
     return cookieValue;
 }
 
-// Keyboard navigation
+// Keyboard Shortcuts
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'ArrowUp' && currentQuestion > 1) {
-        let prevQuestion = currentQuestion - 1;
-        let questionId = document.querySelector(`.question-btn[data-order="${prevQuestion}"]`).getAttribute('data-question');
-        navigateToQuestion(questionId, prevQuestion);
-    } else if (e.key === 'ArrowDown' && currentQuestion < totalQuestions) {
-        let nextQuestion = currentQuestion + 1;
-        let questionId = document.querySelector(`.question-btn[data-order="${nextQuestion}"]`).getAttribute('data-question');
-        navigateToQuestion(questionId, nextQuestion);
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    
+    if (e.key === 'ArrowRight' && currentQuestion < totalQuestions) {
+        nextQuestion();
+    } else if (e.key === 'ArrowLeft' && currentQuestion > 1) {
+        previousQuestion();
     }
 });
+
+console.log('✅ Exam slider loaded successfully!');
 </script>
+
 {% endblock %}

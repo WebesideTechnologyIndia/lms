@@ -235,7 +235,9 @@
                         {% if attempt.is_passed %}
                             You have successfully passed this exam with {{ attempt.percentage|floatformat:1 }}%
                         {% else %}
-                            You scored {{ attempt.percentage|floatformat:1 }}%. Passing score is {{ attempt.exam.passing_marks }}%
+                            You scored {{ attempt.percentage|floatformat:1 }}%. 
+                            Minimum passing score is {{ attempt.exam.passing_marks|floatformat:1 }} marks 
+                            ({% widthratio attempt.exam.passing_marks attempt.exam.total_marks 100 as passing_pct %}{{ passing_pct|floatformat:0 }}%)
                         {% endif %}
                     </p>
                 </div>
@@ -257,20 +259,20 @@
                                 <h6 class="mb-0">Question {{ response.question.order }}</h6>
                                 <div class="badges">
                                     {% if response.is_correct_answer %}
-                                        <span class="badge bg-success">Correct</span>
+                                        <span class="badge bg-success">Correct +{{ response.question.marks }} marks</span>
                                     {% elif response.selected_option %}
-                                        <span class="badge bg-danger">Incorrect</span>
+                                        <span class="badge bg-danger">Incorrect 0 marks</span>
                                     {% else %}
                                         <span class="badge bg-warning">Not Answered</span>
                                     {% endif %}
-                                    <span class="badge bg-info">{{ response.question.marks }} mark{{ response.question.marks|pluralize }}</span>
+                                    <span class="badge bg-info">Worth {{ response.question.marks }} mark{{ response.question.marks|pluralize }}</span>
                                 </div>
                             </div>
                         </div>
                         
                         <div class="question-content p-3">
                             <div class="question-text mb-3">
-                                <p class="mb-2">{{ response.question.question_text }}</p>
+                                <p class="mb-2"><strong>{{ response.question.question_text }}</strong></p>
                                 {% if response.question.question_image %}
                                     <div class="text-center my-2">
                                         <img src="{{ response.question.question_image.url }}" 
@@ -292,9 +294,11 @@
                                     <div class="option-content">
                                         <span>{{ option.option_text }}</span>
                                         {% if option == response.selected_option and not option.is_correct %}
-                                            <small class="text-danger ms-2">(Your Answer)</small>
+                                            <small class="text-danger ms-2"><strong>(Your Answer - Incorrect)</strong></small>
+                                        {% elif option == response.selected_option and option.is_correct %}
+                                            <small class="text-success ms-2"><strong>(Your Answer - Correct! +{{ response.question.marks }} marks)</strong></small>
                                         {% elif option.is_correct %}
-                                            <small class="text-success ms-2">(Correct Answer)</small>
+                                            <small class="text-success ms-2"><strong>(Correct Answer)</strong></small>
                                         {% endif %}
                                         {% if option.option_image %}
                                             <div class="mt-1">
@@ -423,17 +427,20 @@
                 </div>
                 
                 <div class="stat-item">
-                    <span>Passing Score:</span>
-                    <strong>{{ attempt.exam.passing_marks }}%</strong>
+                    <span>Passing Marks:</span>
+                    <strong>
+                        {{ attempt.exam.passing_marks|floatformat:1 }} / {{ attempt.exam.total_marks }}
+                        ({% widthratio attempt.exam.passing_marks attempt.exam.total_marks 100 as passing_pct %}{{ passing_pct|floatformat:0 }}%)
+                    </strong>
                 </div>
                 
                 <div class="stat-item">
                     <span>Result:</span>
                     <strong>
                         {% if attempt.is_passed %}
-                            <span class="badge bg-success badge-large">PASSED</span>
+                            <span class="badge bg-success badge-large">PASSED ✅</span>
                         {% else %}
-                            <span class="badge bg-danger badge-large">FAILED</span>
+                            <span class="badge bg-danger badge-large">FAILED ❌</span>
                         {% endif %}
                     </strong>
                 </div>
@@ -450,12 +457,13 @@
                 {% if total > 0 %}
                 <div class="mb-3">
                     <small class="text-muted">Accuracy Rate</small>
-                    <div class="progress">
+                    <div class="progress" style="height: 25px;">
                         <div class="progress-bar bg-success" 
-                             style="width: {{ correct|percentage:total }}%">
+                             style="width: {% widthratio correct total 100 %}%">
+                            {% widthratio correct total 100 %}%
                         </div>
                     </div>
-                    <small class="text-muted">{{ correct|percentage:total }}% accuracy</small>
+                    <small class="text-muted">{{ correct }} out of {{ total }} questions correct</small>
                 </div>
                 {% endif %}
                 {% endwith %}
@@ -464,14 +472,15 @@
                     <h6 class="text-secondary mb-2">Study Tips:</h6>
                     <ul class="small">
                         {% if attempt.is_passed %}
-                            <li>Great job! Keep up the good work</li>
-                            <li>Review any incorrect answers</li>
-                            <li>Share your success with others</li>
+                            <li>🎉 Great job! Keep up the good work</li>
+                            <li>📚 Review any incorrect answers to improve further</li>
+                            <li>💪 Share your success and help others</li>
                         {% else %}
-                            <li>Review the topics you missed</li>
-                            <li>Practice more questions</li>
-                            <li>Ask your instructor for help</li>
-                            <li>Don't give up - you can retake if allowed</li>
+                            <li>📖 Review the topics you missed</li>
+                            <li>✍️ Practice more similar questions</li>
+                            <li>👨‍🏫 Ask your instructor for clarification</li>
+                            <li>🔄 Don't give up - you can retake if allowed</li>
+                            <li>⏰ Focus on questions worth more marks</li>
                         {% endif %}
                     </ul>
                 </div>
@@ -491,7 +500,7 @@
                     
                     {% if attempt.exam.allow_retake and attempt.attempt_number < attempt.exam.max_attempts %}
                     <a href="{% url 'take_exam' attempt.exam.id %}" class="btn btn-warning">
-                        <i class="fas fa-redo"></i> Retake Exam
+                        <i class="fas fa-redo"></i> Retake Exam (Attempt {{ attempt.attempt_number|add:1 }}/{{ attempt.exam.max_attempts }})
                     </a>
                     {% endif %}
                     
@@ -510,13 +519,13 @@
                 <div class="card-body text-center">
                     {% if attempt.is_passed %}
                         <i class="fas fa-trophy fa-2x text-warning mb-2"></i>
-                        <h6 class="text-success">Excellent Work!</h6>
+                        <h6 class="text-success">Excellent Work! 🎉</h6>
                         <p class="small text-muted mb-0">
                             Your hard work has paid off. Keep learning and growing!
                         </p>
                     {% else %}
                         <i class="fas fa-heart fa-2x text-danger mb-2"></i>
-                        <h6 class="text-primary">Don't Give Up!</h6>
+                        <h6 class="text-primary">Don't Give Up! 💪</h6>
                         <p class="small text-muted mb-0">
                             Every expert was once a beginner. Learn from this experience and try again!
                         </p>
@@ -544,12 +553,12 @@ function shareResult() {
     if (navigator.share) {
         navigator.share({
             title: '{{ attempt.exam.title }} - Exam Result',
-            text: 'I scored {{ attempt.percentage|floatformat:1 }}% in {{ attempt.exam.title }}!',
+            text: 'I scored {{ attempt.percentage|floatformat:1 }}% ({{ attempt.total_marks_obtained|floatformat:1 }}/{{ attempt.exam.total_marks }}) in {{ attempt.exam.title }}!',
             url: window.location.href
         });
     } else {
         // Fallback for browsers that don't support Web Share API
-        let text = `I scored {{ attempt.percentage|floatformat:1 }}% in {{ attempt.exam.title }}! ${window.location.href}`;
+        let text = `I scored {{ attempt.percentage|floatformat:1 }}% ({{ attempt.total_marks_obtained|floatformat:1 }}/{{ attempt.exam.total_marks }}) in {{ attempt.exam.title }}! ${window.location.href}`;
         navigator.clipboard.writeText(text).then(function() {
             alert('Result link copied to clipboard!');
         });
@@ -593,5 +602,6 @@ window.addEventListener('afterprint', function() {
         break-inside: avoid;
         margin-bottom: 20px;
     }
+
 </style>
 {% endblock %}

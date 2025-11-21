@@ -1,4 +1,5 @@
 {% extends 'students/student_base.html' %}
+{% load exam_filters %}
 
 {% block title %}{{ exam.title }} - LMS{% endblock %}
 {% block page_title %}{{ exam.title }}{% endblock %}
@@ -431,14 +432,16 @@ $(document).ready(function() {
     function initializeExam() {
         // Mark already answered questions and update word counts
         {% for question in questions %}
-            {% if responses|lookup:question.id %}
-                let questionId = {{ question.id }};
-                let answerText = `{{ responses|lookup:question.id|escapejs }}`;
-                if (answerText.trim().length > 0) {
-                    markQuestionAnswered(questionId);
-                    updateWordCount(questionId, answerText);
-                }
-            {% endif %}
+            {% with answer=responses|lookup:question.id %}
+                {% if answer %}
+                    let questionId_{{ question.id }} = {{ question.id }};
+                    let answerText_{{ question.id }} = `{{ answer|escapejs }}`;
+                    if (answerText_{{ question.id }}.trim().length > 0) {
+                        markQuestionAnswered(questionId_{{ question.id }});
+                        updateWordCount(questionId_{{ question.id }}, answerText_{{ question.id }});
+                    }
+                {% endif %}
+            {% endwith %}
         {% endfor %}
         
         updateProgress();
@@ -595,13 +598,6 @@ $(document).ready(function() {
         e.preventDefault();
         e.returnValue = 'Are you sure you want to leave? Your progress will be saved.';
     });
-});
-
-// Custom lookup function for templates
-$.extend({
-    lookup: function(obj, key) {
-        return obj[key];
-    }
 });
 </script>
 {% endblock %}

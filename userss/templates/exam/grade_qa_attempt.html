@@ -1,0 +1,665 @@
+{% extends 'base.html' %}
+
+{% block title %}Grade Exam - {{ attempt.exam.title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Header Section -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body bg-gradient-primary text-white" style="border-radius: 12px;">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h4 class="mb-2">
+                                <i class="fas fa-clipboard-check"></i>
+                                Grade Q&A Exam
+                            </h4>
+                            <h6 class="mb-1 opacity-90">{{ attempt.exam.title }}</h6>
+                            <p class="mb-0 small opacity-75">
+                                <i class="fas fa-user"></i> Student: <strong>{{ attempt.student.get_full_name }}</strong> | 
+                                <i class="fas fa-calendar"></i> Submitted: {{ attempt.submitted_at|date:"d M Y, h:i A" }}
+                            </p>
+                        </div>
+                        <div class="col-md-4 text-md-end">
+                            <div class="exam-stats">
+                                <div class="mb-2">
+                                    <span class="badge bg-light text-dark">
+                                        <i class="fas fa-question-circle"></i> 
+                                        {{ attempt.qa_responses.count }} Questions
+                                    </span>
+                                </div>
+                                <div class="mb-2">
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="fas fa-star"></i> 
+                                        Total Marks: {{ attempt.exam.total_marks }}
+                                    </span>
+                                </div>
+                                <div>
+                                    <span class="badge bg-info">
+                                        <i class="fas fa-clock"></i> 
+                                        Attempt #{{ attempt.attempt_number }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grading Instructions -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-info border-0 shadow-sm">
+                <div class="d-flex">
+                    <div class="me-3">
+                        <i class="fas fa-info-circle fa-2x"></i>
+                    </div>
+                    <div>
+                        <h6 class="alert-heading mb-2">
+                            <i class="fas fa-lightbulb"></i> Grading Instructions
+                        </h6>
+                        <ul class="mb-0 small">
+                            <li>Review each answer carefully and assign marks based on accuracy and completeness</li>
+                            <li>Provide constructive feedback to help students improve</li>
+                            <li>Maximum marks for each question are displayed - ensure marks don't exceed this</li>
+                            <li>All questions must be graded before you can submit the final grade</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Grading Form -->
+    <form method="post" id="gradingForm">
+        {% csrf_token %}
+        
+        <div class="row">
+            <div class="col-lg-8">
+                <!-- Questions and Responses -->
+                {% for item in response_forms %}
+                <div class="card mb-4 shadow-sm question-card" id="question-{{ item.response.id }}">
+                    <!-- Question Header -->
+                    <div class="card-header bg-light border-0">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">
+                                <span class="badge bg-primary me-2">Question {{ item.response.question.order }}</span>
+                                <span class="badge bg-secondary">Max: {{ item.response.question.marks }} marks</span>
+                            </h6>
+                            {% if item.response.is_graded %}
+                            <span class="badge bg-success">
+                                <i class="fas fa-check-circle"></i> Graded
+                            </span>
+                            {% else %}
+                            <span class="badge bg-warning">
+                                <i class="fas fa-clock"></i> Pending
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <!-- Question Text -->
+                        <div class="question-section mb-4">
+                            <label class="form-label text-muted small fw-bold">QUESTION:</label>
+                            <div class="question-text p-3 bg-light rounded">
+                                <p class="mb-0">{{ item.response.question.question_text|linebreaks }}</p>
+                                
+                                {% if item.response.question.question_image %}
+                                <div class="mt-3 text-center">
+                                    <img src="{{ item.response.question.question_image.url }}" 
+                                         alt="Question Image" 
+                                         class="img-fluid rounded border" 
+                                         style="max-height: 300px;">
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Student's Answer -->
+                        <div class="answer-section mb-4">
+                            <label class="form-label text-muted small fw-bold">STUDENT'S ANSWER:</label>
+                            <div class="answer-text p-3 border rounded bg-white">
+                                {% if item.response.answer_text %}
+                                    <p class="mb-0" style="white-space: pre-wrap;">{{ item.response.answer_text }}</p>
+                                    
+                                    <!-- Word Count -->
+                                    <div class="mt-2 pt-2 border-top">
+                                        <small class="text-muted">
+                                            <i class="fas fa-font"></i> 
+                                            Words: <strong>{{ item.response.answer_text|wordcount }}</strong> | 
+                                            Characters: <strong>{{ item.response.answer_text|length }}</strong>
+                                        </small>
+                                    </div>
+                                {% else %}
+                                    <p class="text-muted mb-0">
+                                        <i class="fas fa-exclamation-circle"></i> 
+                                        No answer provided
+                                    </p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Model Answer (Reference) -->
+                        {% if item.response.question.model_answer %}
+                        <div class="model-answer-section mb-4">
+                            <button class="btn btn-outline-info btn-sm mb-2" type="button" 
+                                    data-bs-toggle="collapse" 
+                                    data-bs-target="#modelAnswer{{ item.response.id }}">
+                                <i class="fas fa-eye"></i> View Model Answer
+                            </button>
+                            
+                            <div class="collapse" id="modelAnswer{{ item.response.id }}">
+                                <div class="alert alert-info mb-0">
+                                    <h6 class="alert-heading">
+                                        <i class="fas fa-graduation-cap"></i> Model Answer (Reference)
+                                    </h6>
+                                    <p class="mb-0 small">{{ item.response.question.model_answer|linebreaks }}</p>
+                                    
+                                    {% if item.response.question.keywords %}
+                                    <div class="mt-2 pt-2 border-top">
+                                        <small class="text-muted">
+                                            <strong>Key Points:</strong> {{ item.response.question.keywords }}
+                                        </small>
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Grading Section -->
+                        <div class="grading-section">
+                            <div class="row">
+                                <!-- Marks Input -->
+                                <div class="col-md-4 mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="fas fa-award text-warning"></i> Marks Obtained *
+                                    </label>
+                                    <div class="input-group">
+                                        <input type="number" 
+                                               class="form-control form-control-lg marks-input" 
+                                               name="marks_{{ item.response.id }}" 
+                                               id="marks_{{ item.response.id }}"
+                                               min="0" 
+                                               max="{{ item.response.question.marks }}" 
+                                               step="0.5"
+                                               value="{{ item.response.marks_obtained|default:'' }}"
+                                               data-max="{{ item.response.question.marks }}"
+                                               required>
+                                        <span class="input-group-text">/ {{ item.response.question.marks }}</span>
+                                    </div>
+                                    <small class="form-text text-muted">
+                                        Max: {{ item.response.question.marks }} marks
+                                    </small>
+                                </div>
+
+                                <!-- Feedback Input -->
+                                <div class="col-md-8 mb-3">
+                                    <label class="form-label fw-bold">
+                                        <i class="fas fa-comment-dots text-info"></i> Feedback (Optional)
+                                    </label>
+                                    <textarea class="form-control" 
+                                              name="feedback_{{ item.response.id }}" 
+                                              id="feedback_{{ item.response.id }}"
+                                              rows="3" 
+                                              placeholder="Provide constructive feedback to help the student improve...">{{ item.response.feedback|default:'' }}</textarea>
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-info-circle"></i> 
+                                        Helpful feedback improves learning outcomes
+                                    </small>
+                                </div>
+                            </div>
+
+                            <!-- Quick Feedback Buttons -->
+                            <div class="mb-2">
+                                <label class="form-label small text-muted">Quick Feedback Templates:</label>
+                                <div class="btn-group btn-group-sm" role="group">
+                                    <button type="button" class="btn btn-outline-success feedback-btn" 
+                                            data-target="feedback_{{ item.response.id }}"
+                                            data-text="Excellent answer! Well-structured and comprehensive.">
+                                        <i class="fas fa-thumbs-up"></i> Excellent
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary feedback-btn"
+                                            data-target="feedback_{{ item.response.id }}"
+                                            data-text="Good effort. Consider adding more specific examples.">
+                                        <i class="fas fa-check"></i> Good
+                                    </button>
+                                    <button type="button" class="btn btn-outline-warning feedback-btn"
+                                            data-target="feedback_{{ item.response.id }}"
+                                            data-text="Needs improvement. Review the key concepts and try to provide more detailed explanations.">
+                                        <i class="fas fa-edit"></i> Needs Work
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Previous Grading Info -->
+                            {% if item.response.is_graded %}
+                            <div class="alert alert-secondary mt-3 mb-0">
+                                <small>
+                                    <i class="fas fa-history"></i> 
+                                    Previously graded by <strong>{{ item.response.graded_by.get_full_name }}</strong> 
+                                    on {{ item.response.graded_at|date:"d M Y, h:i A" }}
+                                </small>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Grading Summary -->
+                <div class="card sticky-top shadow-sm" style="top: 20px;">
+                    <div class="card-header bg-gradient-success text-white">
+                        <h6 class="mb-0">
+                            <i class="fas fa-chart-bar"></i> Grading Summary
+                        </h6>
+                    </div>
+                    <div class="card-body">
+                        <!-- Progress -->
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="small">Progress</span>
+                                <span class="small fw-bold" id="gradingProgress">0 / {{ response_forms|length }}</span>
+                            </div>
+                            <div class="progress" style="height: 10px;">
+                                <div class="progress-bar bg-success" 
+                                     role="progressbar" 
+                                     id="gradingProgressBar"
+                                     style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Total Marks Calculation -->
+                        <div class="marks-summary p-3 bg-light rounded mb-3">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Total Marks Obtained:</span>
+                                <strong class="text-primary" id="totalMarks">0</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Maximum Marks:</span>
+                                <strong>{{ attempt.exam.total_marks }}</strong>
+                            </div>
+                            <hr>
+                            <div class="d-flex justify-content-between">
+                                <span class="fw-bold">Percentage:</span>
+                                <strong class="text-success" id="percentage">0%</strong>
+                            </div>
+                            <div class="d-flex justify-content-between mt-2">
+                                <span class="fw-bold">Status:</span>
+                                <span id="resultStatus" class="badge bg-secondary">-</span>
+                            </div>
+                        </div>
+
+                        <!-- Question Navigator -->
+                        <div class="question-navigator mb-3">
+                            <h6 class="small fw-bold mb-2">
+                                <i class="fas fa-list"></i> Question Navigator
+                            </h6>
+                            <div class="d-flex flex-wrap gap-2">
+                                {% for item in response_forms %}
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-primary nav-btn"
+                                        data-question="{{ item.response.id }}"
+                                        title="Question {{ item.response.question.order }}">
+                                    {{ item.response.question.order }}
+                                </button>
+                                {% endfor %}
+                            </div>
+                            
+                            <div class="mt-3">
+                                <small class="d-block mb-1">
+                                    <span class="badge bg-success"></span> Graded
+                                </small>
+                                <small class="d-block">
+                                    <span class="badge bg-warning"></span> Pending
+                                </small>
+                            </div>
+                        </div>
+
+                        <!-- Grading Guidelines -->
+                        <div class="card bg-light border-0 mb-3">
+                            <div class="card-body p-3">
+                                <h6 class="small fw-bold mb-2">
+                                    <i class="fas fa-graduation-cap"></i> Grading Guidelines
+                                </h6>
+                                <ul class="small mb-0 ps-3">
+                                    <li>Full marks: Complete & accurate</li>
+                                    <li>75%: Good understanding</li>
+                                    <li>50%: Partial understanding</li>
+                                    <li>25%: Minimal effort</li>
+                                    <li>0: Incorrect/No answer</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button type="submit" class="btn btn-success btn-lg w-100 mb-2" id="submitGradingBtn">
+                            <i class="fas fa-check-circle"></i> Submit Grading
+                        </button>
+                        
+                        <a href="{% url 'pending_grading' %}" class="btn btn-outline-secondary w-100">
+                            <i class="fas fa-arrow-left"></i> Back to Pending
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="submitConfirmModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-check-circle"></i> Confirm Grading Submission
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="text-center mb-3">
+                    <i class="fas fa-clipboard-check fa-4x text-success"></i>
+                </div>
+                <h6 class="text-center mb-3">Are you sure you want to submit this grading?</h6>
+                
+                <div class="grading-summary-modal p-3 bg-light rounded">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Questions Graded:</span>
+                        <strong id="modalGradedCount">0 / {{ response_forms|length }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Total Marks:</span>
+                        <strong id="modalTotalMarks">0 / {{ attempt.exam.total_marks }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Percentage:</span>
+                        <strong id="modalPercentage">0%</strong>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info mt-3 mb-0">
+                    <small>
+                        <i class="fas fa-info-circle"></i>
+                        Once submitted, the student will be able to view their results and feedback.
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-success" id="confirmSubmitBtn">
+                    <i class="fas fa-check"></i> Yes, Submit
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    const totalQuestions = {{ response_forms|length }};
+    const maxMarks = {{ attempt.exam.total_marks }};
+    const passingMarks = {{ attempt.exam.passing_marks }};
+    
+    // Initialize
+    updateGradingSummary();
+    
+    // Marks input validation and real-time calculation
+    $('.marks-input').on('input change', function() {
+        const max = parseFloat($(this).data('max'));
+        const value = parseFloat($(this).val());
+        
+        // Validate marks
+        if (value > max) {
+            $(this).val(max);
+            alert(`Maximum marks for this question is ${max}`);
+        }
+        
+        if (value < 0) {
+            $(this).val(0);
+        }
+        
+        // Update summary
+        updateGradingSummary();
+        
+        // Update question status
+        const questionCard = $(this).closest('.question-card');
+        if ($(this).val() !== '') {
+            questionCard.find('.badge.bg-warning').removeClass('bg-warning').addClass('bg-success')
+                .html('<i class="fas fa-check-circle"></i> Graded');
+        }
+    });
+    
+    // Quick feedback buttons
+    $('.feedback-btn').click(function() {
+        const target = $(this).data('target');
+        const text = $(this).data('text');
+        const textarea = $(`#${target}`);
+        
+        if (textarea.val().trim() === '') {
+            textarea.val(text);
+        } else {
+            if (confirm('Replace existing feedback?')) {
+                textarea.val(text);
+            }
+        }
+    });
+    
+    // Question navigator
+    $('.nav-btn').click(function() {
+        const questionId = $(this).data('question');
+        $('html, body').animate({
+            scrollTop: $(`#question-${questionId}`).offset().top - 100
+        }, 500);
+    });
+    
+    // Form submission
+    $('#submitGradingBtn').click(function(e) {
+        e.preventDefault();
+        
+        // Validate all questions are graded
+        let allGraded = true;
+        let ungradedQuestions = [];
+        
+        $('.marks-input').each(function(index) {
+            if ($(this).val() === '') {
+                allGraded = false;
+                ungradedQuestions.push(index + 1);
+            }
+        });
+        
+        if (!allGraded) {
+            alert(`Please grade all questions! Ungraded: Question(s) ${ungradedQuestions.join(', ')}`);
+            return;
+        }
+        
+        // Update modal with current values
+        updateModalSummary();
+        
+        // Show confirmation modal
+        $('#submitConfirmModal').modal('show');
+    });
+    
+    // Confirm submit
+    $('#confirmSubmitBtn').click(function() {
+        $('#gradingForm').submit();
+    });
+    
+    // Update grading summary
+    function updateGradingSummary() {
+        let totalMarksObtained = 0;
+        let gradedCount = 0;
+        
+        $('.marks-input').each(function() {
+            const value = parseFloat($(this).val());
+            if (!isNaN(value) && $(this).val() !== '') {
+                totalMarksObtained += value;
+                gradedCount++;
+            }
+        });
+        
+        const percentage = maxMarks > 0 ? (totalMarksObtained / maxMarks * 100).toFixed(2) : 0;
+        
+        // Update summary display
+        $('#totalMarks').text(totalMarksObtained.toFixed(1));
+        $('#percentage').text(percentage + '%');
+        $('#gradingProgress').text(`${gradedCount} / ${totalQuestions}`);
+        
+        const progressPercentage = (gradedCount / totalQuestions * 100).toFixed(0);
+        $('#gradingProgressBar').css('width', progressPercentage + '%');
+        
+        // Update result status
+        const statusBadge = $('#resultStatus');
+        if (gradedCount === totalQuestions) {
+            if (totalMarksObtained >= passingMarks) {
+                statusBadge.removeClass('bg-secondary bg-danger').addClass('bg-success').text('PASS');
+            } else {
+                statusBadge.removeClass('bg-secondary bg-success').addClass('bg-danger').text('FAIL');
+            }
+        } else {
+            statusBadge.removeClass('bg-success bg-danger').addClass('bg-secondary').text('-');
+        }
+        
+        // Update navigator button states
+        $('.marks-input').each(function(index) {
+            const navBtn = $('.nav-btn').eq(index);
+            if ($(this).val() !== '') {
+                navBtn.removeClass('btn-outline-primary btn-outline-warning')
+                      .addClass('btn-success text-white');
+            } else {
+                navBtn.removeClass('btn-success btn-outline-primary text-white')
+                      .addClass('btn-outline-warning');
+            }
+        });
+    }
+    
+    // Update modal summary
+    function updateModalSummary() {
+        let totalMarksObtained = 0;
+        let gradedCount = 0;
+        
+        $('.marks-input').each(function() {
+            const value = parseFloat($(this).val());
+            if (!isNaN(value) && $(this).val() !== '') {
+                totalMarksObtained += value;
+                gradedCount++;
+            }
+        });
+        
+        const percentage = maxMarks > 0 ? (totalMarksObtained / maxMarks * 100).toFixed(2) : 0;
+        
+        $('#modalGradedCount').text(`${gradedCount} / ${totalQuestions}`);
+        $('#modalTotalMarks').text(`${totalMarksObtained.toFixed(1)} / ${maxMarks}`);
+        $('#modalPercentage').text(percentage + '%');
+    }
+    
+    // Keyboard shortcuts
+    $(document).keydown(function(e) {
+        // Ctrl + S to save (prevent default and show modal)
+        if (e.ctrlKey && e.keyCode === 83) {
+            e.preventDefault();
+            $('#submitGradingBtn').click();
+        }
+    });
+    
+    // Auto-save draft (optional - can be implemented)
+    let autoSaveTimeout;
+    $('.marks-input, textarea').on('input', function() {
+        clearTimeout(autoSaveTimeout);
+        autoSaveTimeout = setTimeout(function() {
+            console.log('Auto-save draft...');
+            // Implement auto-save to session/localStorage if needed
+        }, 3000);
+    });
+    
+    // Warn before leaving if not all graded
+    window.addEventListener('beforeunload', function(e) {
+        let allGraded = true;
+        $('.marks-input').each(function() {
+            if ($(this).val() === '') {
+                allGraded = false;
+            }
+        });
+        
+        if (!allGraded) {
+            e.preventDefault();
+            e.returnValue = 'You have ungraded questions. Are you sure you want to leave?';
+        }
+    });
+});
+</script>
+
+<style>
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.bg-gradient-success {
+    background: linear-gradient(135deg, #56ab2f 0%, #a8e063 100%);
+}
+
+.question-card {
+    transition: all 0.3s ease;
+}
+
+.question-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+}
+
+.question-text, .answer-text {
+    line-height: 1.8;
+}
+
+.marks-input {
+    font-size: 1.25rem;
+    font-weight: bold;
+    text-align: center;
+}
+
+.marks-input:focus {
+    border-color: #28a745;
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+}
+
+.feedback-btn {
+    transition: all 0.2s ease;
+}
+
+.feedback-btn:hover {
+    transform: translateY(-1px);
+}
+
+.nav-btn {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    font-weight: bold;
+}
+
+.sticky-top {
+    z-index: 100;
+}
+
+.marks-summary {
+    font-size: 0.95rem;
+}
+
+@media print {
+    .sidebar, .btn, .modal, .alert {
+        display: none !important;
+    }
+}
+</style>
+{% endblock %}
