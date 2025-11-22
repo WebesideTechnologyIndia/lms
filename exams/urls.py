@@ -67,8 +67,11 @@ urlpatterns = [
     # Question Management AJAX
     path('ajax/save-mcq-response/<int:attempt_id>/', views.save_mcq_response, name='save_mcq_response'),
     path('ajax/save-qa-response/<int:attempt_id>/', views.save_qa_response, name='save_qa_response'),
-    # path('ajax/save-assignment/<int:attempt_id>/', views.save_assignment_submission, name='save_assignment_submission'),
+ path('ajax/save-assignment/<int:attempt_id>/', views.save_assignment_submission, name='save_assignment_submission'),
+    path('ajax/remove-file/<int:attempt_id>/', views.remove_assignment_file, name='remove_assignment_file'),
     
+    # Assignment setup
+    path('setup-assignment/<int:exam_id>/', views.setup_assignment, name='setup_assignment'),    
     # Timing and Progress AJAX
     # path('ajax/attempt/<int:attempt_id>/time-left/', views.get_time_left, name='get_time_left'),
     # path('ajax/attempt/<int:attempt_id>/auto-submit/', views.auto_submit_exam, name='auto_submit_exam'),

@@ -155,6 +155,9 @@
 
 {% block content %}
 <div class="assignment-container">
+    <!-- CSRF Token - IMPORTANT! -->
+    {% csrf_token %}
+    
     <!-- Auto-save indicator -->
     <div class="auto-save-indicator" id="autoSaveIndicator">
         <i class="fas fa-check"></i> Saved
@@ -251,33 +254,18 @@
                                multiple 
                                accept=".{{ assignment_details.get_allowed_extensions|join:",." }}"
                                style="display: none;">
-                        <button type="button" class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
-                            <i class="fas fa-folder-open"></i> Choose Files
-                        </button>
                     </div>
+                </div>
+                
+                <!-- Button OUTSIDE the zone to avoid conflicts -->
+                <div class="text-center mt-3">
+                    <button type="button" class="btn btn-primary btn-lg" id="chooseFilesBtn">
+                        <i class="fas fa-folder-open"></i> Choose Files
+                    </button>
                 </div>
 
                 <!-- Uploaded Files Display -->
-                <div id="uploadedFiles" class="mt-4">
-                    {% if submission and submission.uploaded_files %}
-                        {% for file in submission.uploaded_files %}
-                        <div class="uploaded-file">
-                            <div class="file-info">
-                                <div class="file-icon bg-primary text-white">
-                                    <i class="fas fa-file"></i>
-                                </div>
-                                <div>
-                                    <div class="fw-bold">{{ file.name }}</div>
-                                    <small class="text-muted">{{ file.size|filesizeformat }}</small>
-                                </div>
-                            </div>
-                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeFile('{{ file.id }}')">
-                                <i class="fas fa-trash"></i>
-                            </button>
-                        </div>
-                        {% endfor %}
-                    {% endif %}
-                </div>
+                <div id="uploadedFiles" class="mt-4"></div>
             </div>
 
             <!-- Additional Comments -->
@@ -407,9 +395,9 @@
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times"></i> Cancel
                 </button>
-                <a href="{% url 'submit_exam' attempt.id %}" class="btn btn-success">
+                <button type="button" class="btn btn-success" id="confirmSubmitBtn">
                     <i class="fas fa-check"></i> Submit Assignment
-                </a>
+                </button>
             </div>
         </div>
     </div>
@@ -418,12 +406,25 @@
 
 {% block extra_js %}
 <script>
+// Global variables - DECLARE ONCE!
+var uploadedFiles = [];
+var maxFiles = {{ assignment_details.max_files_allowed }};
+var maxSizeMB = {{ assignment_details.max_file_size_mb }};
+var allowedExtensions = [{% for ext in assignment_details.get_allowed_extensions %}'{{ ext }}'{% if not forloop.last %},{% endif %}{% endfor %}];
+var autoSaveTimeout;
+var csrfToken = $('[name=csrfmiddlewaretoken]').val();
+
+// Get CSRF token properly
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]').value;
+}
+
 $(document).ready(function() {
-    let uploadedFiles = [];
-    let maxFiles = {{ assignment_details.max_files_allowed }};
-    let maxSizeMB = {{ assignment_details.max_file_size_mb }};
-    let allowedExtensions = [{% for ext in assignment_details.get_allowed_extensions %}'{{ ext }}'{% if not forloop.last %},{% endif %}{% endfor %}];
-    let autoSaveTimeout;
+    console.log('Assignment interface loaded');
+    console.log('CSRF Token:', csrfToken);
+    console.log('Max files:', maxFiles);
+    console.log('Max size:', maxSizeMB);
+    console.log('Allowed extensions:', allowedExtensions);
     
     // Initialize existing files if any
     {% if submission and submission.uploaded_files %}
@@ -431,14 +432,20 @@ $(document).ready(function() {
         updateFileDisplay();
     {% endif %}
     
-    // File upload zone click
-    $('#fileUploadZone').click(function() {
-        $('#fileInput').click();
+    // Button click - simple and clean
+    $('#chooseFilesBtn').on('click', function() {
+        $('#fileInput')[0].click();
+    });
+    
+    // File upload zone click - for drag/drop area
+    $('#fileUploadZone').on('click', function() {
+        $('#fileInput')[0].click();
     });
     
     // File input change
-    $('#fileInput').change(function() {
+    $('#fileInput').on('change', function() {
         handleFileSelect(this.files);
+        $(this).val(''); // Clear input
     });
     
     // Drag and drop functionality
@@ -459,7 +466,7 @@ $(document).ready(function() {
         e.stopPropagation();
         $(this).removeClass('dragover');
         
-        let files = e.originalEvent.dataTransfer.files;
+        var files = e.originalEvent.dataTransfer.files;
         handleFileSelect(files);
     });
     
@@ -472,264 +479,360 @@ $(document).ready(function() {
     });
     
     // Submit button
-    $('#submitAssignmentBtn').click(function() {
-        $('#modal-file-count').text(uploadedFiles.length);
+    $('#submitAssignmentBtn').on('click', function() {
+        var completedFiles = uploadedFiles.filter(function(f) { return !f.uploading; });
+        $('#modal-file-count').text(completedFiles.length);
         $('#modal-comments-status').text($('#submissionText').val().trim() ? 'Yes' : 'No');
+        
+        if (completedFiles.length === 0 && !$('#submissionText').val().trim()) {
+            alert('Please upload at least one file or add comments before submitting.');
+            return;
+        }
+        
         $('#submitModal').modal('show');
+    });
+    
+    // Confirm submit button in modal
+    $('#confirmSubmitBtn').on('click', function() {
+        // Remove beforeunload warning before submitting
+        window.removeEventListener('beforeunload', beforeUnloadHandler);
+        
+        // Redirect to submit page
+        window.location.href = '{% url "submit_exam" attempt.id %}';
     });
     
     // Timer functionality
     {% if exam.timing_type != 'no_timing' %}
-    let timeRemaining = calculateTimeRemaining();
+    var timeRemaining = calculateTimeRemaining();
     if (timeRemaining > 0) {
         startTimer(timeRemaining);
     }
     {% endif %}
     
-    function handleFileSelect(files) {
-        if (uploadedFiles.length >= maxFiles) {
-            alert(`You can only upload a maximum of ${maxFiles} files.`);
-            return;
+    // Prevent accidental page refresh - but allow submit
+    var beforeUnloadHandler = function(e) {
+        if (uploadedFiles.length > 0) {
+            e.preventDefault();
+            e.returnValue = '';
         }
-        
-        for (let file of files) {
-            if (uploadedFiles.length >= maxFiles) {
-                alert(`Maximum file limit (${maxFiles}) reached.`);
-                break;
-            }
-            
-            // Check file extension
-            let extension = file.name.split('.').pop().toLowerCase();
-            if (!allowedExtensions.includes(extension)) {
-                alert(`File type .${extension} is not allowed. Allowed types: ${allowedExtensions.join(', ')}`);
-                continue;
-            }
-            
-            // Check file size
-            let fileSizeMB = file.size / (1024 * 1024);
-            if (fileSizeMB > maxSizeMB) {
-                alert(`File ${file.name} is too large. Maximum size: ${maxSizeMB}MB`);
-                continue;
-            }
-            
-            // Add file to upload queue
-            uploadFile(file);
-        }
-    }
-    
-    function uploadFile(file) {
-        let formData = new FormData();
-        formData.append('file', file);
-        formData.append('csrfmiddlewaretoken', $('[name=csrfmiddlewaretoken]').val());
-        
-        // Add file to display immediately
-        let fileObj = {
-            name: file.name,
-            size: file.size,
-            id: 'temp_' + Date.now(),
-            uploading: true
-        };
-        uploadedFiles.push(fileObj);
-        updateFileDisplay();
-        
-        $.ajax({
-            url: '{% url "save_assignment_submission" attempt.id %}',
-            type: 'POST',
-            data: formData,
-            processData: false,
-            contentType: false,
-            xhr: function() {
-                let xhr = new window.XMLHttpRequest();
-                xhr.upload.addEventListener('progress', function(e) {
-                    if (e.lengthComputable) {
-                        let percent = (e.loaded / e.total) * 100;
-                        updateProgressBar(percent);
-                    }
-                });
-                return xhr;
-            },
-            success: function(response) {
-                if (response.success) {
-                    // Update file with server response
-                    let index = uploadedFiles.findIndex(f => f.id === fileObj.id);
-                    if (index !== -1) {
-                        uploadedFiles[index] = response.file;
-                        updateFileDisplay();
-                        showAutoSaveIndicator();
-                    }
-                } else {
-                    // Remove failed file
-                    uploadedFiles = uploadedFiles.filter(f => f.id !== fileObj.id);
-                    updateFileDisplay();
-                    alert('Upload failed: ' + response.message);
-                }
-            },
-            error: function() {
-                // Remove failed file
-                uploadedFiles = uploadedFiles.filter(f => f.id !== fileObj.id);
-                updateFileDisplay();
-                alert('Upload failed. Please try again.');
-            }
-        });
-    }
-    
-    function updateFileDisplay() {
-        let container = $('#uploadedFiles');
-        container.empty();
-        
-        uploadedFiles.forEach(function(file) {
-            let fileElement = $(`
-                <div class="uploaded-file">
-                    <div class="file-info">
-                        <div class="file-icon bg-primary text-white">
-                            <i class="fas fa-file"></i>
-                        </div>
-                        <div>
-                            <div class="fw-bold">${file.name}</div>
-                            <small class="text-muted">${formatFileSize(file.size)}</small>
-                            ${file.uploading ? '<small class="text-info">Uploading...</small>' : ''}
-                        </div>
-                    </div>
-                    ${!file.uploading ? `<button type="button" class="btn btn-outline-danger btn-sm" onclick="removeFile('${file.id}')"><i class="fas fa-trash"></i></button>` : ''}
-                </div>
-            `);
-            container.append(fileElement);
-        });
-        
-        // Update status
-        $('#fileCount').text(uploadedFiles.filter(f => !f.uploading).length);
-        updateProgressBar(0);
-    }
-    
-    function removeFile(fileId) {
-        if (confirm('Are you sure you want to remove this file?')) {
-            uploadedFiles = uploadedFiles.filter(f => f.id !== fileId);
-            updateFileDisplay();
-            // Here you would also make an AJAX call to remove from server
-        }
-    }
-    
-    function formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
-        let k = 1024;
-        let sizes = ['Bytes', 'KB', 'MB', 'GB'];
-        let i = Math.floor(Math.log(bytes) / Math.log(k));
-        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-    }
-    
-    function updateProgressBar(percent) {
-        $('#progressBar').css('width', percent + '%');
-    }
-    
-    function autoSaveSubmission() {
-        let submissionText = $('#submissionText').val();
-        
-        $.ajax({
-            url: '{% url "save_assignment_submission" attempt.id %}',
-            type: 'POST',
-            headers: {
-                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
-            },
-            data: {
-                'submission_text': submissionText
-            },
-            success: function(response) {
-                if (response.success) {
-                    showAutoSaveIndicator();
-                }
-            }
-        });
-    }
-    
-    function showAutoSaveIndicator() {
-        $('#autoSaveIndicator').addClass('show');
-        setTimeout(function() {
-            $('#autoSaveIndicator').removeClass('show');
-        }, 2000);
-    }
-    
-    {% if exam.timing_type != 'no_timing' %}
-    function calculateTimeRemaining() {
-        {% if exam.timing_type == 'total_exam' %}
-            let totalMinutes = {{ exam.total_exam_time_minutes }};
-        {% else %}
-            let totalMinutes = 60; // Default for assignments
-        {% endif %}
-        
-        let startTime = new Date('{{ attempt.started_at|date:"c" }}');
-        let currentTime = new Date();
-        let elapsedMinutes = (currentTime - startTime) / (1000 * 60);
-        let remainingMinutes = totalMinutes - elapsedMinutes;
-        
-        return Math.max(0, remainingMinutes * 60);
-    }
-    
-    function startTimer(seconds) {
-        let timer = seconds;
-        
-        let interval = setInterval(function() {
-            let hours = Math.floor(timer / 3600);
-            let minutes = Math.floor((timer % 3600) / 60);
-            let secs = Math.floor(timer % 60);
-            
-            $('#hours').text(hours.toString().padStart(2, '0'));
-            $('#minutes').text(minutes.toString().padStart(2, '0'));
-            $('#seconds').text(secs.toString().padStart(2, '0'));
-            
-            if (timer <= 300) {
-                $('.timer-card').css('background', 'linear-gradient(135deg, #f39c12, #e67e22)');
-            }
-            if (timer <= 60) {
-                $('.timer-card').css('background', 'linear-gradient(135deg, #e74c3c, #c0392b)');
-            }
-            
-            if (timer <= 0) {
-                clearInterval(interval);
-                autoSubmitAssignment();
-            }
-            
-            timer--;
-        }, 1000);
-    }
-    
-    function autoSubmitAssignment() {
-        alert('Time is up! The assignment will be submitted automatically.');
-        window.location.href = '{% url "submit_exam" attempt.id %}';
-    }
-    {% endif %}
-    
-    // Prevent accidental page refresh
-    window.addEventListener('beforeunload', function(e) {
-        autoSaveSubmission();
-        e.preventDefault();
-        e.returnValue = 'Are you sure you want to leave? Your progress will be saved.';
-    });
+    };
+    window.addEventListener('beforeunload', beforeUnloadHandler);
 });
 
-// Global function for removing files (called from dynamic HTML)
-function removeFile(fileId) {
-    if (confirm('Are you sure you want to remove this file?')) {
-        // Remove from frontend
-        uploadedFiles = uploadedFiles.filter(f => f.id !== fileId);
-        updateFileDisplay();
+function handleFileSelect(files) {
+    console.log('Files selected:', files.length);
+    
+    var completedFiles = uploadedFiles.filter(function(f) { return !f.uploading; });
+    if (completedFiles.length >= maxFiles) {
+        alert('You can only upload a maximum of ' + maxFiles + ' file(s).');
+        return;
+    }
+    
+    for (var i = 0; i < files.length; i++) {
+        var file = files[i];
         
-        // Remove from server
+        if (completedFiles.length >= maxFiles) {
+            alert('Maximum file limit (' + maxFiles + ') reached.');
+            break;
+        }
+        
+        // Check file extension
+        var extension = file.name.split('.').pop().toLowerCase();
+        if (allowedExtensions.indexOf(extension) === -1) {
+            alert('File type .' + extension + ' is not allowed.\nAllowed types: ' + allowedExtensions.join(', '));
+            continue;
+        }
+        
+        // Check file size
+        var fileSizeMB = file.size / (1024 * 1024);
+        if (fileSizeMB > maxSizeMB) {
+            alert('File "' + file.name + '" is too large (' + fileSizeMB.toFixed(2) + 'MB).\nMaximum size: ' + maxSizeMB + 'MB');
+            continue;
+        }
+        
+        // Upload file
+        uploadFile(file);
+    }
+}
+
+function uploadFile(file) {
+    console.log('Uploading file:', file.name);
+    
+    var formData = new FormData();
+    formData.append('file', file);
+    
+    // Add temp file to display
+    var tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    var fileObj = {
+        name: file.name,
+        size: file.size,
+        id: tempId,
+        uploading: true
+    };
+    uploadedFiles.push(fileObj);
+    updateFileDisplay();
+    
+    $.ajax({
+        url: '{% url "save_assignment_submission" attempt.id %}',
+        type: 'POST',
+        data: formData,
+        processData: false,
+        contentType: false,
+        headers: {
+            'X-CSRFToken': getCsrfToken()
+        },
+        xhr: function() {
+            var xhr = new window.XMLHttpRequest();
+            xhr.upload.addEventListener('progress', function(e) {
+                if (e.lengthComputable) {
+                    var percent = (e.loaded / e.total) * 100;
+                    updateProgressBar(percent);
+                }
+            }, false);
+            return xhr;
+        },
+        success: function(response) {
+            console.log('Upload response:', response);
+            
+            if (response.success) {
+                // Update file with server response
+                for (var i = 0; i < uploadedFiles.length; i++) {
+                    if (uploadedFiles[i].id === tempId) {
+                        uploadedFiles[i] = response.file;
+                        break;
+                    }
+                }
+                updateFileDisplay();
+                showAutoSaveIndicator();
+            } else {
+                // Remove failed file
+                uploadedFiles = uploadedFiles.filter(function(f) { return f.id !== tempId; });
+                updateFileDisplay();
+                alert('Upload failed: ' + (response.message || 'Unknown error'));
+            }
+            updateProgressBar(0);
+        },
+        error: function(xhr, status, error) {
+            console.error('Upload error:', xhr.responseText);
+            // Remove failed file
+            uploadedFiles = uploadedFiles.filter(function(f) { return f.id !== tempId; });
+            updateFileDisplay();
+            alert('Upload failed: ' + error + '\nPlease try again.');
+            updateProgressBar(0);
+        }
+    });
+}
+
+function updateFileDisplay() {
+    var container = $('#uploadedFiles');
+    container.empty();
+    
+    if (uploadedFiles.length === 0) {
+        return;
+    }
+    
+    for (var i = 0; i < uploadedFiles.length; i++) {
+        var file = uploadedFiles[i];
+        var fileHtml = '<div class="uploaded-file" data-file-id="' + file.id + '">' +
+            '<div class="file-info">' +
+                '<div class="file-icon bg-primary text-white">' +
+                    '<i class="fas fa-file"></i>' +
+                '</div>' +
+                '<div>' +
+                    '<div class="fw-bold">' + escapeHtml(file.name) + '</div>' +
+                    '<small class="text-muted">' + formatFileSize(file.size) + '</small>';
+        
+        if (file.uploading) {
+            fileHtml += '<small class="text-info d-block">Uploading...</small>';
+        }
+        
+        fileHtml += '</div></div>';
+        
+        if (!file.uploading) {
+            fileHtml += '<button type="button" class="btn btn-outline-danger btn-sm remove-file-btn" data-file-id="' + file.id + '">' +
+                '<i class="fas fa-trash"></i>' +
+                '</button>';
+        } else {
+            fileHtml += '<span class="spinner-border spinner-border-sm text-primary"></span>';
+        }
+        
+        fileHtml += '</div>';
+        container.append(fileHtml);
+    }
+    
+    // Attach click handlers
+    $('.remove-file-btn').on('click', function() {
+        var fileId = $(this).data('file-id');
+        removeFile(fileId);
+    });
+    
+    // Update status
+    var completedFiles = uploadedFiles.filter(function(f) { return !f.uploading; });
+    $('#fileCount').text(completedFiles.length);
+    
+    // Calculate total size
+    var totalSize = 0;
+    for (var i = 0; i < completedFiles.length; i++) {
+        totalSize += completedFiles[i].size;
+    }
+    $('#totalSize').text(formatFileSize(totalSize));
+}
+
+function removeFile(fileId) {
+    if (!confirm('Are you sure you want to remove this file?')) {
+        return;
+    }
+    
+    console.log('Removing file:', fileId);
+    
+    // Find the file
+    var file = null;
+    for (var i = 0; i < uploadedFiles.length; i++) {
+        if (uploadedFiles[i].id === fileId) {
+            file = uploadedFiles[i];
+            break;
+        }
+    }
+    
+    if (!file) {
+        console.error('File not found:', fileId);
+        return;
+    }
+    
+    // Remove from frontend
+    uploadedFiles = uploadedFiles.filter(function(f) { return f.id !== fileId; });
+    updateFileDisplay();
+    
+    // Remove from server
+    if (!file.uploading) {
         $.ajax({
             url: '{% url "remove_assignment_file" attempt.id %}',
             type: 'POST',
             headers: {
-                'X-CSRFToken': $('[name=csrfmiddlewaretoken]').val()
+                'X-CSRFToken': getCsrfToken()
             },
             data: {
                 'file_id': fileId
             },
             success: function(response) {
-                if (response.success) {
-                    console.log('File removed successfully');
-                }
+                console.log('File removed from server');
+                showAutoSaveIndicator();
+            },
+            error: function(xhr, status, error) {
+                console.error('Error removing file:', error);
+                alert('Failed to remove file from server.');
             }
         });
     }
 }
+
+function formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    var k = 1024;
+    var sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    var i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+function escapeHtml(text) {
+    var map = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;'
+    };
+    return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+}
+
+function updateProgressBar(percent) {
+    $('#progressBar').css('width', percent + '%');
+    if (percent === 100) {
+        $('#progressBar').addClass('bg-success');
+        setTimeout(function() {
+            $('#progressBar').removeClass('bg-success');
+        }, 1000);
+    }
+}
+
+function autoSaveSubmission() {
+    var submissionText = $('#submissionText').val();
+    
+    $.ajax({
+        url: '{% url "save_assignment_submission" attempt.id %}',
+        type: 'POST',
+        headers: {
+            'X-CSRFToken': getCsrfToken()
+        },
+        data: {
+            'submission_text': submissionText
+        },
+        success: function(response) {
+            if (response.success) {
+                showAutoSaveIndicator();
+            }
+        },
+        error: function(xhr, status, error) {
+            console.error('Auto-save error:', error);
+        }
+    });
+}
+
+function showAutoSaveIndicator() {
+    $('#autoSaveIndicator').addClass('show');
+    setTimeout(function() {
+        $('#autoSaveIndicator').removeClass('show');
+    }, 2000);
+}
+
+{% if exam.timing_type != 'no_timing' %}
+function calculateTimeRemaining() {
+    {% if exam.timing_type == 'total_exam' %}
+        var totalMinutes = {{ exam.total_exam_time_minutes }};
+    {% else %}
+        var totalMinutes = 60;
+    {% endif %}
+    
+    var startTime = new Date('{{ attempt.started_at|date:"c" }}');
+    var currentTime = new Date();
+    var elapsedMinutes = (currentTime - startTime) / (1000 * 60);
+    var remainingMinutes = totalMinutes - elapsedMinutes;
+    
+    return Math.max(0, remainingMinutes * 60);
+}
+
+function startTimer(seconds) {
+    var timer = seconds;
+    
+    var interval = setInterval(function() {
+        var hours = Math.floor(timer / 3600);
+        var minutes = Math.floor((timer % 3600) / 60);
+        var secs = Math.floor(timer % 60);
+        
+        $('#hours').text(hours.toString().padStart(2, '0'));
+        $('#minutes').text(minutes.toString().padStart(2, '0'));
+        $('#seconds').text(secs.toString().padStart(2, '0'));
+        
+        if (timer <= 300) {
+            $('.timer-card').css('background', 'linear-gradient(135deg, #f39c12, #e67e22)');
+        }
+        if (timer <= 60) {
+            $('.timer-card').css('background', 'linear-gradient(135deg, #e74c3c, #c0392b)');
+        }
+        
+        if (timer <= 0) {
+            clearInterval(interval);
+            autoSubmitAssignment();
+        }
+        
+        timer--;
+    }, 1000);
+}
+
+function autoSubmitAssignment() {
+    alert('Time is up! The assignment will be submitted automatically.');
+    window.location.href = '{% url "submit_exam" attempt.id %}';
+}
+{% endif %}
 </script>
 {% endblock %}

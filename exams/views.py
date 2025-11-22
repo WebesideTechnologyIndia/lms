@@ -236,6 +236,225 @@ def add_qa_questions(request, exam_id):
     return render(request, 'exam/add_qa_questions.html', context)
 
 
+import os
+import json
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+
+import os
+import json
+import uuid
+from django.utils import timezone
+from django.core.files.storage import default_storage
+from django.core.files.base import ContentFile
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404
+
+@login_required
+@require_POST
+def save_assignment_submission(request, attempt_id):
+    """
+    AJAX endpoint to save assignment submission (files and text)
+    """
+    try:
+        attempt = get_object_or_404(
+            ExamAttempt, 
+            id=attempt_id, 
+            student=request.user,
+            exam__exam_type='assignment'
+        )
+        
+        # Check if attempt is still in progress
+        if attempt.status not in ['in_progress', 'started']:
+            return JsonResponse({
+                'success': False,
+                'message': 'Cannot modify a submitted assignment.'
+            }, status=400)
+        
+        # Get or create assignment submission
+        submission, created = AssignmentSubmission.objects.get_or_create(
+            attempt=attempt,
+            defaults={
+                'submission_text': '',
+                'uploaded_files': []
+            }
+        )
+        
+        # Handle file upload
+        if 'file' in request.FILES:
+            uploaded_file = request.FILES['file']
+            assignment_details = attempt.exam.assignment_details
+            
+            # Validate file extension
+            file_extension = uploaded_file.name.split('.')[-1].lower()
+            allowed_extensions = assignment_details.get_allowed_extensions()
+            
+            if file_extension not in allowed_extensions:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'File type .{file_extension} is not allowed. Allowed types: {", ".join(allowed_extensions)}'
+                }, status=400)
+            
+            # Validate file size
+            max_size_bytes = assignment_details.max_file_size_mb * 1024 * 1024
+            if uploaded_file.size > max_size_bytes:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'File size exceeds maximum limit of {assignment_details.max_file_size_mb}MB'
+                }, status=400)
+            
+            # Check max files limit
+            current_files = submission.uploaded_files if submission.uploaded_files else []
+            if len(current_files) >= assignment_details.max_files_allowed:
+                return JsonResponse({
+                    'success': False,
+                    'message': f'Maximum file limit ({assignment_details.max_files_allowed}) reached'
+                }, status=400)
+            
+            # Generate unique filename
+            unique_id = str(uuid.uuid4())
+            safe_filename = uploaded_file.name.replace(' ', '_')
+            unique_filename = f"{unique_id}_{safe_filename}"
+            file_path = f"assignment_submissions/{attempt.student.id}/{attempt.exam.id}/{unique_filename}"
+            
+            # Save file
+            saved_path = default_storage.save(file_path, ContentFile(uploaded_file.read()))
+            
+            # Create file info object
+            file_info = {
+                'id': unique_id,
+                'name': uploaded_file.name,
+                'size': uploaded_file.size,
+                'path': saved_path,
+                'uploaded_at': timezone.now().isoformat()
+            }
+            
+            # Add to uploaded files list
+            if not submission.uploaded_files:
+                submission.uploaded_files = []
+            
+            submission.uploaded_files.append(file_info)
+            submission.save()
+            
+            print(f"✅ File saved: {uploaded_file.name} - Path: {saved_path}")
+            print(f"✅ Total files now: {len(submission.uploaded_files)}")
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'File uploaded successfully',
+                'file': file_info
+            })
+        
+        # Handle text submission (auto-save)
+        elif 'submission_text' in request.POST:
+            submission.submission_text = request.POST.get('submission_text', '')
+            submission.save()
+            
+            print(f"✅ Text saved for attempt {attempt_id}")
+            
+            return JsonResponse({
+                'success': True,
+                'message': 'Submission text saved'
+            })
+        
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'No file or text provided'
+            }, status=400)
+            
+    except AssignmentSubmission.DoesNotExist:
+        return JsonResponse({
+            'success': False,
+            'message': 'Assignment submission not found'
+        }, status=404)
+    except Exception as e:
+        print(f"❌ Error in save_assignment_submission: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }, status=500)
+
+
+@login_required
+@require_POST
+def remove_assignment_file(request, attempt_id):
+    """
+    AJAX endpoint to remove an uploaded file
+    """
+    try:
+        attempt = get_object_or_404(
+            ExamAttempt, 
+            id=attempt_id, 
+            student=request.user,
+            exam__exam_type='assignment'
+        )
+        
+        # Check if attempt is still in progress
+        if attempt.status not in ['in_progress', 'started']:
+            return JsonResponse({
+                'success': False,
+                'message': 'Cannot modify a submitted assignment.'
+            }, status=400)
+        
+        submission = attempt.assignment_submission
+        file_id = request.POST.get('file_id')
+        
+        if not file_id:
+            return JsonResponse({
+                'success': False,
+                'message': 'File ID not provided'
+            }, status=400)
+        
+        # Find and remove file from list
+        uploaded_files = submission.uploaded_files if submission.uploaded_files else []
+        file_to_remove = None
+        
+        for file_info in uploaded_files:
+            if file_info.get('id') == file_id:
+                file_to_remove = file_info
+                break
+        
+        if not file_to_remove:
+            return JsonResponse({
+                'success': False,
+                'message': 'File not found'
+            }, status=404)
+        
+        # Delete physical file
+        try:
+            if default_storage.exists(file_to_remove['path']):
+                default_storage.delete(file_to_remove['path'])
+                print(f"✅ File deleted: {file_to_remove['path']}")
+        except Exception as e:
+            print(f"⚠️ Error deleting file: {e}")
+        
+        # Remove from database
+        uploaded_files.remove(file_to_remove)
+        submission.uploaded_files = uploaded_files
+        submission.save()
+        
+        print(f"✅ File removed from DB. Remaining files: {len(uploaded_files)}")
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'File removed successfully'
+        })
+        
+    except Exception as e:
+        print(f"❌ Error in remove_assignment_file: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }, status=500)
+    
+
 @login_required
 def setup_assignment(request, exam_id):
     """Setup assignment exam details"""
@@ -271,7 +490,7 @@ def setup_assignment(request, exam_id):
         'assignment': assignment,
     }
     
-    return render(request, 'exams/setup_assignment.html', context)
+    return render(request, 'exam/setup_assignment.html', context)
 
 
 # exams/views.py - Add these views to your existing views.py
@@ -1288,7 +1507,7 @@ import json
 
 @login_required
 def submit_exam(request, attempt_id):
-    """Submit exam attempt with complete statistics and auto pass/fail check"""
+    """Submit exam attempt"""
     if request.user.role != 'student':
         messages.error(request, 'Access denied.')
         return redirect('user_login')
@@ -1299,7 +1518,26 @@ def submit_exam(request, attempt_id):
         messages.error(request, 'This exam attempt has already been submitted.')
         return redirect('student_exams')
     
+    exam = attempt.exam
+    
     if request.method == 'POST':
+        # Assignment specific validation
+        if exam.exam_type == 'assignment':
+            try:
+                submission = AssignmentSubmission.objects.get(attempt=attempt)
+                files_uploaded = submission.uploaded_files if submission.uploaded_files else []
+                
+                # Check if at least one file is uploaded
+                if not files_uploaded and not submission.submission_text:
+                    messages.error(request, 'Please upload at least one file or add comments before submitting.')
+                    return redirect('exam_interface', attempt_id=attempt.id)
+                
+                print(f"📁 Submitting assignment with {len(files_uploaded)} files")
+                
+            except AssignmentSubmission.DoesNotExist:
+                messages.error(request, 'No submission found. Please upload files before submitting.')
+                return redirect('exam_interface', attempt_id=attempt.id)
+        
         # Submit the exam
         attempt.status = 'submitted'
         attempt.submitted_at = timezone.now()
@@ -1311,133 +1549,67 @@ def submit_exam(request, attempt_id):
         
         attempt.save()
         
-        # ✅ MCQ: Calculate marks ONLY if show_results_immediately = True
-        if attempt.exam.exam_type == 'mcq':
-            if attempt.exam.show_results_immediately:
-                # ✅ YES! Calculate marks + Show result immediately
+        # Handle based on exam type
+        if exam.exam_type == 'mcq':
+            if exam.show_results_immediately:
                 attempt.calculate_mcq_marks()
                 attempt.refresh_from_db()
                 
                 if attempt.is_passed:
                     messages.success(
                         request, 
-                        f'🎉 Congratulations! You PASSED with {attempt.total_marks_obtained}/{attempt.exam.total_marks} marks ({attempt.percentage:.1f}%)'
+                        f'🎉 Congratulations! You PASSED with {attempt.total_marks_obtained}/{exam.total_marks} marks ({attempt.percentage:.1f}%)'
                     )
                 else:
                     messages.warning(
                         request, 
-                        f'You scored {attempt.total_marks_obtained}/{attempt.exam.total_marks} marks ({attempt.percentage:.1f}%). Passing marks: {attempt.exam.passing_marks}'
+                        f'You scored {attempt.total_marks_obtained}/{exam.total_marks} marks ({attempt.percentage:.1f}%). Passing marks: {exam.passing_marks}'
                     )
                 return redirect('exam_result', attempt_id=attempt.id)
             else:
-                # ✅ NO! Don't calculate marks, just submit
                 messages.success(request, 'Exam submitted successfully! Results will be published soon.')
                 return redirect('student_exams')
         
-        # ✅ QA & Assignment: Manual evaluation required (No immediate results)
-        elif attempt.exam.exam_type in ['qa', 'assignment']:
+        elif exam.exam_type in ['qa', 'assignment']:
             attempt.is_graded = False
             attempt.save()
-            messages.success(request, 'Exam submitted successfully! Results will be published after evaluation by instructor.')
+            messages.success(request, 'Assignment submitted successfully! Results will be published after evaluation.')
             return redirect('student_exams')
     
-    # ✅ GET request - Show submit confirmation page with statistics
-    exam = attempt.exam
+    # GET request - Show confirmation page
     context = {
         'attempt': attempt,
+        'exam': exam,
     }
     
-    # ✅ Calculate statistics based on exam type
-    if exam.exam_type == 'mcq':
-        all_questions = exam.mcq_questions.filter(is_active=True)
-        total_questions = all_questions.count()
-        
-        # Get existing responses
-        responses = {}
-        mcq_responses = MCQResponse.objects.filter(attempt=attempt).select_related('question', 'selected_option')
-        for response in mcq_responses:
-            if response.selected_option:
-                responses[response.question.id] = response.selected_option.id
-        
-        # Get answered questions
-        answered_responses = MCQResponse.objects.filter(
-            attempt=attempt,
-            selected_option__isnull=False
-        ).values('question').distinct()
-        answered_questions = answered_responses.count()
-        
-        # Calculate unanswered
-        unanswered_questions = total_questions - answered_questions
-        
-        # Calculate completion percentage
-        completion_percentage = (answered_questions / total_questions * 100) if total_questions > 0 else 0
-        
-        context.update({
-            'total_questions': total_questions,
-            'answered_questions': answered_questions,
-            'unanswered_questions': unanswered_questions,
-            'completion_percentage': completion_percentage,
-            'responses': responses,
-            'responses_json': json.dumps(responses),
-            'responses_list': list(responses.items()),
-        })
-    
-    elif exam.exam_type == 'qa':
-        all_questions = exam.qa_questions.filter(is_active=True)
-        total_questions = all_questions.count()
-        
-        # Get existing responses
-        responses = {}
-        qa_responses = QAResponse.objects.filter(attempt=attempt).select_related('question')
-        for response in qa_responses:
-            if response.answer_text:
-                responses[response.question.id] = response.answer_text
-        
-        # Get answered questions
-        answered_responses = QAResponse.objects.filter(
-            attempt=attempt
-        ).exclude(answer_text__isnull=True).exclude(answer_text__exact='').values('question').distinct()
-        answered_questions = answered_responses.count()
-        
-        # Calculate unanswered
-        unanswered_questions = total_questions - answered_questions
-        
-        # Calculate completion percentage
-        completion_percentage = (answered_questions / total_questions * 100) if total_questions > 0 else 0
-        
-        context.update({
-            'total_questions': total_questions,
-            'answered_questions': answered_questions,
-            'unanswered_questions': unanswered_questions,
-            'completion_percentage': completion_percentage,
-            'responses': responses,
-        })
-    
-    elif exam.exam_type == 'assignment':
+    # Add statistics based on exam type
+    if exam.exam_type == 'assignment':
         try:
             submission = AssignmentSubmission.objects.get(attempt=attempt)
             files_uploaded = submission.uploaded_files if submission.uploaded_files else []
-            has_submission = bool(submission.submission_text or files_uploaded)
+            
+            print(f"📊 Submit page - Files: {len(files_uploaded)}")
             
             context.update({
-                'files_uploaded': len(files_uploaded),
-                'has_submission': has_submission,
                 'submission': submission,
+                'files_uploaded': files_uploaded,
+                'file_count': len(files_uploaded),
+                'has_submission': bool(submission.submission_text or files_uploaded),
             })
         except AssignmentSubmission.DoesNotExist:
             context.update({
-                'files_uploaded': 0,
+                'files_uploaded': [],
+                'file_count': 0,
                 'has_submission': False,
             })
     
-    # ✅ Calculate time spent (for display on confirmation page)
+    # Calculate time spent
     if attempt.started_at:
         time_spent_seconds = (timezone.now() - attempt.started_at).total_seconds()
         time_spent_minutes = round(time_spent_seconds / 60, 1)
         context['time_spent'] = time_spent_minutes
     
     return render(request, 'exam/submit_exam.html', context)
-
 
 
 @login_required
